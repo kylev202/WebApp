@@ -2,378 +2,221 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Life — Design Mockup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Life — iPhone Mockup</title>
 <style>
   :root {
-    --text: #1d1d1f;
-    --text-2: rgba(29,29,31,.62);
-    --text-3: rgba(29,29,31,.42);
-    --glass: rgba(255,255,255,.52);
-    --glass-strong: rgba(255,255,255,.72);
-    --stroke: rgba(255,255,255,.75);
-    --diet: #34c759;
-    --move: #ff2d55;
-    --sleep: #5e5ce6;
-    --school: #ff9f0a;
-    --work: #0a84ff;
-    --mind: #bf5af2;
-    --money: #30b0c7;
-    --radius: 30px;
+    --text: #2c2c2e;
+    --text-2: rgba(44,44,46,.6);
+    --text-3: rgba(44,44,46,.38);
+    --glass: rgba(255,255,255,.62);
+    --stroke: rgba(255,255,255,.85);
+    /* soft pastel palette */
+    --diet: #8fd3a8;   --diet-bg: #eaf7ef;   --diet-ink: #3f8f5e;
+    --move: #f4a7b5;   --move-bg: #fdeef1;   --move-ink: #b9576b;
+    --sleep: #b4b2ef;  --sleep-bg: #efeefc;  --sleep-ink: #6462b8;
+    --school: #f7cd96; --school-bg: #fdf4e8; --school-ink: #b07a2e;
+    --work: #a9cdf2;   --work-bg: #ecf4fd;   --work-ink: #4a7fb5;
+    --mind: #d6b8ee;   --mind-bg: #f6effc;   --mind-ink: #8a5cae;
+    --radius: 22px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
   body {
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     color: var(--text);
-    background: #eef0f7;
+    background: #f7f7fa;
     -webkit-font-smoothing: antialiased;
-    letter-spacing: -0.011em;
-    overflow-x: hidden;
+    letter-spacing: -0.01em;
+    font-size: 14px;
   }
+  .wallpaper { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: #f8f8fb; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; }
+  .b1 { width: 320px; height: 320px; background: #dcdcfb; top: -110px; left: -90px; }
+  .b2 { width: 280px; height: 280px; background: #fbe1e7; top: 220px; right: -120px; }
+  .b3 { width: 300px; height: 300px; background: #dff3e6; bottom: -80px; left: -60px; }
 
-  /* Wallpaper: soft, vivid blobs like iOS 26 */
-  .wallpaper { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: linear-gradient(160deg, #f6f1ff 0%, #eaf3ff 45%, #fff3ea 100%); }
-  .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .75; }
-  .b1 { width: 620px; height: 620px; background: #a5b4ff; top: -180px; left: -120px; }
-  .b2 { width: 520px; height: 520px; background: #ffb3c7; top: 120px; right: -140px; }
-  .b3 { width: 560px; height: 560px; background: #9ff0d0; bottom: -220px; left: 30%; }
-  .b4 { width: 380px; height: 380px; background: #ffd69a; bottom: 40px; right: 18%; opacity: .6; }
-
-  /* Liquid Glass surface */
   .glass {
     position: relative;
     background: var(--glass);
-    backdrop-filter: blur(40px) saturate(190%);
-    -webkit-backdrop-filter: blur(40px) saturate(190%);
+    backdrop-filter: blur(30px) saturate(160%);
+    -webkit-backdrop-filter: blur(30px) saturate(160%);
     border: 1px solid var(--stroke);
     border-radius: var(--radius);
-    box-shadow:
-      inset 0 1.5px 0 rgba(255,255,255,.95),
-      inset 0 -1px 1px rgba(255,255,255,.35),
-      0 1px 2px rgba(30,30,60,.04),
-      0 18px 50px -12px rgba(40,40,90,.18);
-  }
-  .glass::before { /* specular sheen */
-    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(135deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 38%, rgba(255,255,255,0) 70%, rgba(255,255,255,.25) 100%);
-    mix-blend-mode: soft-light;
+    box-shadow: inset 0 1px 0 #fff, 0 6px 24px -10px rgba(60,60,100,.14);
   }
 
-  .app { display: grid; grid-template-columns: 248px 1fr; gap: 22px; padding: 22px; min-height: 100vh; }
+  .screen { max-width: 430px; margin: 0 auto; padding: 54px 16px 110px; display: flex; flex-direction: column; gap: 12px; }
 
-  /* Sidebar */
-  .sidebar { padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; height: calc(100vh - 44px); position: sticky; top: 22px; }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 20px; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; }
-  .logo { width: 34px; height: 34px; border-radius: 10px; background: conic-gradient(from 200deg, #ff2d55, #ff9f0a, #34c759, #0a84ff, #bf5af2, #ff2d55); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 4px 12px rgba(120,80,255,.35); }
-  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; font-size: 15px; font-weight: 500; color: var(--text-2); }
-  .nav-item.active { background: var(--glass-strong); color: var(--text); box-shadow: inset 0 1px 0 #fff, 0 4px 14px rgba(40,40,90,.08); }
-  .ico { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-size: 14px; flex: none; }
-  .ico svg { width: 16px; height: 16px; }
-  .nav-sep { height: 1px; background: rgba(0,0,0,.06); margin: 10px 8px; }
-  .nav-label { font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; padding: 6px 12px; }
-  .profile { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 18px; background: rgba(255,255,255,.4); }
-  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #64d2ff, #5e5ce6); color: #fff; display: grid; place-items: center; font-weight: 600; }
+  /* Header */
+  header { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px; }
+  .date { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; margin-top: 2px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #d9d7fa, #f6d3dc); display: grid; place-items: center; font-weight: 600; font-size: 14px; color: var(--sleep-ink); box-shadow: inset 0 1px 0 #fff; }
 
-  /* Main */
-  main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
-  header.top { display: flex; align-items: flex-end; justify-content: space-between; padding: 8px 6px 0; }
-  .date { font-size: 13px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; }
-  h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; margin-top: 4px; }
-  .top-actions { display: flex; gap: 10px; }
-  .pill { height: 44px; padding: 0 18px; border-radius: 22px; display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 15px; }
-  .pill.round { width: 44px; padding: 0; justify-content: center; }
-  .pill.primary { background: #1d1d1f; color: #fff; border: none; box-shadow: 0 8px 24px rgba(0,0,0,.2); }
-  .pill.primary::before { display: none; }
+  .card { padding: 14px; }
+  .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .title { display: flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
+  .ico { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; }
+  .chev { color: var(--text-3); font-size: 15px; }
+  .section-label { font-size: 13px; font-weight: 600; color: var(--text-2); padding: 6px 4px 0; display: flex; justify-content: space-between; }
+  .section-label a { color: var(--work-ink); font-weight: 500; text-decoration: none; }
 
-  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 22px; }
-  .card { padding: 22px; }
-  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .card-title { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
-  .card-title .ico { width: 26px; height: 26px; }
-  .chev { color: var(--text-3); font-size: 18px; }
-  .big { font-size: 34px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
-  .unit { font-size: 15px; font-weight: 600; color: var(--text-3); margin-left: 3px; letter-spacing: 0; }
-  .sub { font-size: 13px; color: var(--text-2); margin-top: 6px; }
+  /* Rings summary */
+  .summary { display: flex; align-items: center; gap: 16px; }
+  .rings { width: 96px; height: 96px; flex: none; }
+  .stats { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .stat { display: flex; align-items: baseline; justify-content: space-between; }
+  .stat .l { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); font-weight: 500; }
+  .stat .v { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat .v span { font-size: 11px; color: var(--text-3); font-weight: 500; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
 
-  .span-5 { grid-column: span 5; } .span-7 { grid-column: span 7; } .span-4 { grid-column: span 4; } .span-3 { grid-column: span 3; } .span-6 { grid-column: span 6; } .span-8 { grid-column: span 8; }
+  /* Widget grid */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .w .big { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+  .w .big small { font-size: 11px; font-weight: 500; color: var(--text-3); margin-left: 2px; letter-spacing: 0; }
+  .w .sub { font-size: 11px; color: var(--text-2); margin-top: 5px; }
+  .track { height: 5px; border-radius: 3px; background: rgba(0,0,0,.05); overflow: hidden; margin-top: 10px; }
+  .fill { height: 100%; border-radius: 3px; }
+  .bars { display: flex; align-items: flex-end; gap: 4px; height: 30px; margin-top: 10px; }
+  .bars i { flex: 1; border-radius: 3px; background: var(--sleep); opacity: .45; }
+  .bars i.t { opacity: 1; }
+  .drops { display: flex; gap: 4px; margin-top: 10px; }
+  .drops i { flex: 1; height: 14px; border-radius: 4px; background: var(--work); }
+  .drops i.off { background: rgba(0,0,0,.05); }
 
-  /* Hero rings */
-  .hero { display: flex; gap: 26px; align-items: center; }
-  .rings { width: 190px; height: 190px; flex: none; }
-  .legend { display: flex; flex-direction: column; gap: 16px; flex: 1; }
-  .legend-row .lbl { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
-  .legend-row .val { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin-top: 2px; }
-  .legend-row .val span { font-size: 15px; color: var(--text-3); font-weight: 600; }
-
-  /* Score */
-  .score-wrap { display: flex; align-items: center; justify-content: space-between; }
-  .score-num { font-size: 64px; font-weight: 700; letter-spacing: -0.05em; background: linear-gradient(135deg, #5e5ce6, #bf5af2 50%, #ff2d55); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-  .chip { font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,.65); box-shadow: inset 0 1px 0 #fff; display: flex; align-items: center; gap: 6px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; }
-
-  /* Timeline */
-  .timeline { display: flex; flex-direction: column; gap: 10px; }
-  .event { display: grid; grid-template-columns: 66px 4px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 18px; background: rgba(255,255,255,.45); }
-  .event .time { font-size: 13px; font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; }
-  .event .bar { height: 36px; border-radius: 4px; }
-  .event .t { font-weight: 600; font-size: 15px; }
-  .event .d { font-size: 13px; color: var(--text-2); margin-top: 2px; }
-  .tag { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
-  .event.now { background: rgba(255,255,255,.85); box-shadow: 0 6px 20px rgba(10,132,255,.15), inset 0 1px 0 #fff; }
-
-  /* Diet macros */
-  .macros { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
-  .macro { display: grid; grid-template-columns: 64px 1fr 56px; gap: 10px; align-items: center; font-size: 13px; font-weight: 500; }
-  .track { height: 8px; border-radius: 4px; background: rgba(0,0,0,.06); overflow: hidden; }
-  .fill { height: 100%; border-radius: 4px; }
-  .macro .n { text-align: right; color: var(--text-2); font-variant-numeric: tabular-nums; }
-
-  /* Sleep bars */
-  .sleep-bars { display: flex; align-items: flex-end; gap: 8px; height: 96px; margin-top: 18px; }
-  .sleep-bars div { flex: 1; border-radius: 8px; background: linear-gradient(180deg, #8e8cff, #5e5ce6); opacity: .9; }
-  .sleep-bars div.today { background: linear-gradient(180deg, #b3a6ff, #5e5ce6); box-shadow: 0 6px 16px rgba(94,92,230,.4); opacity: 1; }
-  .days { display: flex; gap: 8px; margin-top: 8px; }
-  .days span { flex: 1; text-align: center; font-size: 11px; font-weight: 600; color: var(--text-3); }
-
-  /* Workout */
-  .spark { width: 100%; height: 80px; margin-top: 14px; }
+  /* Up next */
+  .list { display: flex; flex-direction: column; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid rgba(0,0,0,.045); }
+  .row:last-child { border-bottom: none; padding-bottom: 2px; }
+  .row:first-child { padding-top: 2px; }
+  .time { width: 50px; white-space: nowrap; font-size: 11px; font-weight: 600; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .bar { width: 3px; height: 28px; border-radius: 2px; flex: none; }
+  .row .t { font-size: 13px; font-weight: 600; }
+  .row .d { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+  .tag { margin-left: auto; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 999px; }
+  .row.now .time { color: var(--work-ink); }
 
   /* Tasks */
-  .tasks { display: flex; flex-direction: column; gap: 2px; }
-  .task { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid rgba(0,0,0,.05); font-size: 15px; }
-  .task:last-child { border-bottom: none; }
-  .check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(0,0,0,.18); flex: none; display: grid; place-items: center; }
-  .task.done .check { background: var(--work); border-color: var(--work); }
-  .task.done .check::after { content: ""; width: 9px; height: 5px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translate(1px,-1px); }
-  .task.done .tx { color: var(--text-3); text-decoration: line-through; }
-  .task .meta { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--text-3); }
-
-  /* School */
-  .assign { display: flex; flex-direction: column; gap: 10px; }
-  .as { display: flex; align-items: center; gap: 12px; }
-  .as .badge { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; flex: none; box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
-  .as .t { font-weight: 600; font-size: 14px; }
-  .as .d { font-size: 12px; color: var(--text-2); margin-top: 2px; }
-  .due { margin-left: auto; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 8px; }
+  .check { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid rgba(0,0,0,.16); flex: none; position: relative; }
+  .done .check { background: var(--diet); border-color: var(--diet); }
+  .done .check::after { content: ""; position: absolute; left: 5px; top: 4px; width: 6px; height: 3px; border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff; transform: rotate(-45deg); }
+  .done .t { color: var(--text-3); text-decoration: line-through; font-weight: 500; }
 
   /* Habits */
-  .habits { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .habit { text-align: center; padding: 14px 6px; border-radius: 20px; background: rgba(255,255,255,.45); }
-  .habit .e { font-size: 24px; }
-  .habit .hn { font-size: 12px; font-weight: 600; margin-top: 6px; }
-  .habit .st { font-size: 11px; color: var(--text-3); margin-top: 2px; font-weight: 500; }
-  .habit.on { background: rgba(255,255,255,.85); box-shadow: inset 0 0 0 2px rgba(52,199,89,.55), inset 0 1px 0 #fff; }
+  .habits { display: flex; justify-content: space-between; }
+  .habit { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 10px; font-weight: 500; color: var(--text-2); }
+  .habit .c { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; background: rgba(255,255,255,.7); box-shadow: inset 0 0 0 1px rgba(0,0,0,.04); }
+  .habit.on .c { box-shadow: inset 0 0 0 2px var(--diet); background: var(--diet-bg); }
 
-  /* Mood */
-  .moods { display: flex; justify-content: space-between; margin-top: 14px; }
-  .mood { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 24px; background: rgba(255,255,255,.45); }
-  .mood.sel { background: #fff; box-shadow: 0 6px 18px rgba(191,90,242,.35), inset 0 0 0 2px var(--mind); transform: scale(1.1); }
-
-  /* Floating tab bar (mobile) */
-  .tabbar { display: none; }
-
-  /* ---------- Mobile ---------- */
-  @media (max-width: 760px) {
-    .app { grid-template-columns: 1fr; padding: 16px 16px 120px; gap: 16px; }
-    .sidebar { display: none; }
-    header.top { padding: 40px 4px 0; }
-    h1 { font-size: 30px; }
-    .top-actions .pill:not(.round) { display: none; }
-    .grid { grid-template-columns: 1fr 1fr; gap: 14px; }
-    .grid > * { grid-column: span 2 !important; }
-    .grid > .m-half { grid-column: span 1 !important; }
-    .card { padding: 18px; }
-    :root { --radius: 26px; }
-    .rings { width: 140px; height: 140px; }
-    .hero { gap: 18px; }
-    .legend-row .val { font-size: 20px; }
-    .m-hide { display: none !important; }
-    .m-half .big { font-size: 28px; }
-    .m-half .sleep-bars { height: 60px; }
-    .m-half .macros { display: none; }
-    .tabbar {
-      display: flex; position: fixed; left: 16px; right: 16px; bottom: 22px; height: 66px; border-radius: 33px;
-      justify-content: space-around; align-items: center; padding: 0 8px; z-index: 10;
-    }
-    .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; color: var(--text-2); padding: 7px 12px; border-radius: 24px; }
-    .tab svg { width: 22px; height: 22px; }
-    .tab.active { color: var(--work); background: rgba(255,255,255,.75); box-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(0,0,0,.06); }
-  }
+  /* Tab bar */
+  .tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: 20px; width: calc(100% - 40px); max-width: 390px; height: 58px; border-radius: 29px; display: flex; justify-content: space-around; align-items: center; padding: 0 6px; z-index: 10; background: rgba(255,255,255,.7); }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9.5px; font-weight: 600; color: var(--text-3); padding: 6px 12px; border-radius: 22px; }
+  .tab svg { width: 20px; height: 20px; }
+  .tab.active { color: var(--sleep-ink); background: var(--sleep-bg); }
+  .fab { position: fixed; right: 26px; bottom: 90px; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 24px; font-weight: 300; color: var(--sleep-ink); background: rgba(255,255,255,.75); z-index: 10; }
 </style>
 </head>
 <body>
-<div class="wallpaper"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div></div>
+<div class="wallpaper"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
 
-<div class="app">
-  <!-- Sidebar -->
-  <aside class="sidebar glass">
-    <div class="brand"><div class="logo"></div>Life</div>
-    <div class="nav-item active"><div class="ico" style="background:linear-gradient(135deg,#1d1d1f,#48484a)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></div>Today</div>
-    <div class="nav-item"><div class="ico" style="background:linear-gradient(135deg,#ff6482,#ff9f0a)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>Calendar</div>
-    <div class="nav-sep"></div>
-    <div class="nav-label">Areas</div>
-    <div class="nav-item"><div class="ico" style="background:linear-gradient(135deg,#5fe08a,#34c759)">🥗</div>Diet</div>
-    <div class="nav-item"><div class="ico" style="background:linear-gradient(135deg,#ff6482,#ff2d55)">🏃</div>Exercise</div>
-    <div class="nav-item"><div class="ico" style="background:linear-gradient(135deg,#8e8cff,#5e5ce6)">🌙</div>Sleep</div>
-    <div class="nav-item"><div class="ico" style="background:linear-gradient(135deg,#ffc35a,#ff9f0a)">🎓</div>School</div>
-    <div class="nav-item"><div class="ico" style="background:linear-gradient(135deg,#5ac8fa,#0a84ff)">💼</div>Work</div>
-    <div class="nav-item"><div class="ico" style="background:linear-gradient(135deg,#da8fff,#bf5af2)">🧘</div>Mind</div>
-    <div class="nav-item"><div class="ico" style="background:linear-gradient(135deg,#6ee0f0,#30b0c7)">💳</div>Finance</div>
-    <div class="profile"><div class="avatar">K</div><div><div style="font-weight:600;font-size:14px">Kyle</div><div style="font-size:12px;color:var(--text-3)">12-day streak 🔥</div></div></div>
-  </aside>
-
-  <main>
-    <header class="top">
-      <div>
-        <div class="date">Saturday, October 24</div>
-        <h1>Good evening, Kyle</h1>
-      </div>
-      <div class="top-actions">
-        <div class="pill glass"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Search</div>
-        <div class="pill round glass"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21h4"/></svg></div>
-        <div class="pill primary">＋ Log</div>
-      </div>
-    </header>
-
-    <div class="grid">
-      <!-- Rings -->
-      <section class="card glass span-7">
-        <div class="card-head"><div class="card-title">Daily Balance</div><div class="chev">›</div></div>
-        <div class="hero">
-          <svg class="rings" viewBox="0 0 200 200">
-            <g transform="rotate(-90 100 100)" fill="none" stroke-linecap="round" stroke-width="20">
-              <circle cx="100" cy="100" r="84" stroke="#ff2d55" opacity=".16"/>
-              <circle cx="100" cy="100" r="84" stroke="url(#g1)" stroke-dasharray="528" stroke-dashoffset="95"/>
-              <circle cx="100" cy="100" r="61" stroke="#34c759" opacity=".16"/>
-              <circle cx="100" cy="100" r="61" stroke="url(#g2)" stroke-dasharray="383" stroke-dashoffset="130"/>
-              <circle cx="100" cy="100" r="38" stroke="#5e5ce6" opacity=".16"/>
-              <circle cx="100" cy="100" r="38" stroke="url(#g3)" stroke-dasharray="239" stroke-dashoffset="30"/>
-            </g>
-            <defs>
-              <linearGradient id="g1"><stop offset="0" stop-color="#ff2d55"/><stop offset="1" stop-color="#ff6b9a"/></linearGradient>
-              <linearGradient id="g2"><stop offset="0" stop-color="#34c759"/><stop offset="1" stop-color="#a6f06a"/></linearGradient>
-              <linearGradient id="g3"><stop offset="0" stop-color="#5e5ce6"/><stop offset="1" stop-color="#64d2ff"/></linearGradient>
-            </defs>
-          </svg>
-          <div class="legend">
-            <div class="legend-row"><div class="lbl" style="color:var(--move)">Move</div><div class="val">482<span>/580 kcal</span></div></div>
-            <div class="legend-row"><div class="lbl" style="color:var(--diet)">Nutrition</div><div class="val">1,640<span>/2,400 kcal</span></div></div>
-            <div class="legend-row"><div class="lbl" style="color:var(--sleep)">Sleep</div><div class="val">7h 24m<span>/8h</span></div></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Life score -->
-      <section class="card glass span-5">
-        <div class="card-head"><div class="card-title">Life Score</div><div class="chev">›</div></div>
-        <div class="score-wrap">
-          <div><div class="score-num">86</div><div class="sub">↑ 4 points from last week</div></div>
-          <svg width="120" height="64" viewBox="0 0 120 64"><path d="M2 54 L20 46 L38 50 L56 30 L74 36 L92 18 L118 10" fill="none" stroke="#bf5af2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="118" cy="10" r="5" fill="#bf5af2"/></svg>
-        </div>
-        <div class="chips">
-          <div class="chip"><span class="dot" style="background:var(--diet)"></span>Diet 82</div>
-          <div class="chip"><span class="dot" style="background:var(--move)"></span>Fitness 91</div>
-          <div class="chip"><span class="dot" style="background:var(--sleep)"></span>Sleep 88</div>
-          <div class="chip"><span class="dot" style="background:var(--school)"></span>School 79</div>
-          <div class="chip m-hide"><span class="dot" style="background:var(--work)"></span>Work 84</div>
-        </div>
-      </section>
-
-      <!-- Diet -->
-      <section class="card glass span-4 m-half">
-        <div class="card-head"><div class="card-title"><div class="ico" style="background:linear-gradient(135deg,#5fe08a,#34c759)">🥗</div>Diet</div><div class="chev">›</div></div>
-        <div class="big">760<span class="unit">kcal left</span></div>
-        <div class="sub">3 meals · 6 glasses water</div>
-        <div class="macros">
-          <div class="macro"><span>Protein</span><div class="track"><div class="fill" style="width:78%;background:#ff375f"></div></div><span class="n">117/150g</span></div>
-          <div class="macro"><span>Carbs</span><div class="track"><div class="fill" style="width:62%;background:#ff9f0a"></div></div><span class="n">155/250g</span></div>
-          <div class="macro"><span>Fat</span><div class="track"><div class="fill" style="width:55%;background:#ffd60a"></div></div><span class="n">44/80g</span></div>
-        </div>
-      </section>
-
-      <!-- Sleep -->
-      <section class="card glass span-4 m-half">
-        <div class="card-head"><div class="card-title"><div class="ico" style="background:linear-gradient(135deg,#8e8cff,#5e5ce6)">🌙</div>Sleep</div><div class="chev">›</div></div>
-        <div class="big">7h 24m</div>
-        <div class="sub">Bedtime 11:30 PM · 92% quality</div>
-        <div class="sleep-bars"><div style="height:62%"></div><div style="height:80%"></div><div style="height:70%"></div><div style="height:88%"></div><div style="height:55%"></div><div style="height:75%"></div><div class="today" style="height:92%"></div></div>
-        <div class="days m-hide"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
-      </section>
-
-      <!-- Exercise -->
-      <section class="card glass span-4 m-hide">
-        <div class="card-head"><div class="card-title"><div class="ico" style="background:linear-gradient(135deg,#ff6482,#ff2d55)">🏃</div>Exercise</div><div class="chev">›</div></div>
-        <div class="big">5.2<span class="unit">km run</span></div>
-        <div class="sub">42 min · Avg HR 148 bpm · 4 of 5 workouts</div>
-        <svg class="spark" viewBox="0 0 300 80" preserveAspectRatio="none">
-          <defs><linearGradient id="sp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff2d55" stop-opacity=".35"/><stop offset="1" stop-color="#ff2d55" stop-opacity="0"/></linearGradient></defs>
-          <path d="M0 60 C30 50 50 20 80 30 S130 65 160 40 S220 10 250 22 S290 30 300 18 L300 80 L0 80Z" fill="url(#sp)"/>
-          <path d="M0 60 C30 50 50 20 80 30 S130 65 160 40 S220 10 250 22 S290 30 300 18" fill="none" stroke="#ff2d55" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-      </section>
-
-      <!-- Schedule -->
-      <section class="card glass span-7">
-        <div class="card-head"><div class="card-title">Up Next</div><div class="chev">›</div></div>
-        <div class="timeline">
-          <div class="event"><div class="time">5:00 PM</div><div class="bar" style="background:var(--move)"></div><div><div class="t">Gym — Push day</div><div class="d">Done · 52 min</div></div><span class="tag" style="background:rgba(255,45,85,.12);color:#d70015">Fitness</span></div>
-          <div class="event now"><div class="time" style="color:var(--work)">7:30 PM</div><div class="bar" style="background:var(--school)"></div><div><div class="t">Study: Calculus II</div><div class="d">Chapter 7 · Integration by parts</div></div><span class="tag" style="background:rgba(255,159,10,.15);color:#c25e00">School</span></div>
-          <div class="event"><div class="time">9:00 PM</div><div class="bar" style="background:var(--work)"></div><div><div class="t">Prep sprint review deck</div><div class="d">Work · 45 min</div></div><span class="tag" style="background:rgba(10,132,255,.12);color:#0062cc">Work</span></div>
-          <div class="event m-hide"><div class="time">11:00 PM</div><div class="bar" style="background:var(--sleep)"></div><div><div class="t">Wind down</div><div class="d">No screens · Bedtime 11:30</div></div><span class="tag" style="background:rgba(94,92,230,.12);color:#3634a3">Sleep</span></div>
-        </div>
-      </section>
-
-      <!-- School -->
-      <section class="card glass span-5">
-        <div class="card-head"><div class="card-title"><div class="ico" style="background:linear-gradient(135deg,#ffc35a,#ff9f0a)">🎓</div>School</div><div class="chev">›</div></div>
-        <div class="assign">
-          <div class="as"><div class="badge" style="background:linear-gradient(135deg,#ffc35a,#ff9f0a)">MA</div><div><div class="t">Problem Set 6</div><div class="d">Calculus II</div></div><span class="due" style="background:rgba(255,59,48,.12);color:#d70015">Tomorrow</span></div>
-          <div class="as"><div class="badge" style="background:linear-gradient(135deg,#5ac8fa,#0a84ff)">CS</div><div><div class="t">Data Structures Lab</div><div class="d">Intro to Algorithms</div></div><span class="due" style="background:rgba(255,159,10,.14);color:#c25e00">Tue</span></div>
-          <div class="as"><div class="badge" style="background:linear-gradient(135deg,#da8fff,#bf5af2)">EN</div><div><div class="t">Essay draft</div><div class="d">English Literature</div></div><span class="due" style="background:rgba(0,0,0,.05);color:var(--text-2)">Fri</span></div>
-        </div>
-      </section>
-
-      <!-- Work tasks -->
-      <section class="card glass span-5 m-hide">
-        <div class="card-head"><div class="card-title"><div class="ico" style="background:linear-gradient(135deg,#5ac8fa,#0a84ff)">💼</div>Work</div><div class="chev">›</div></div>
-        <div class="tasks">
-          <div class="task done"><div class="check"></div><span class="tx">Reply to client emails</span></div>
-          <div class="task done"><div class="check"></div><span class="tx">Update weekly report</span></div>
-          <div class="task"><div class="check"></div><span class="tx">Sprint review deck</span><span class="meta">Today</span></div>
-          <div class="task"><div class="check"></div><span class="tx">1:1 with manager</span><span class="meta">Mon 10 AM</span></div>
-        </div>
-      </section>
-
-      <!-- Habits -->
-      <section class="card glass span-4 m-hide">
-        <div class="card-head"><div class="card-title">Habits</div><div class="chev">›</div></div>
-        <div class="habits">
-          <div class="habit on"><div class="e">💧</div><div class="hn">Water</div><div class="st">6/8</div></div>
-          <div class="habit on"><div class="e">📖</div><div class="hn">Read</div><div class="st">20 min</div></div>
-          <div class="habit"><div class="e">🧘</div><div class="hn">Meditate</div><div class="st">0/10m</div></div>
-          <div class="habit on"><div class="e">💊</div><div class="hn">Vitamins</div><div class="st">Done</div></div>
-        </div>
-      </section>
-
-      <!-- Mood -->
-      <section class="card glass span-3 m-hide">
-        <div class="card-head"><div class="card-title">How are you?</div></div>
-        <div class="sub" style="margin-top:0">Log your mood for today</div>
-        <div class="moods"><div class="mood">😞</div><div class="mood">😐</div><div class="mood sel">🙂</div><div class="mood">😄</div></div>
-      </section>
+<div class="screen">
+  <header>
+    <div>
+      <div class="date">Saturday, Oct 24</div>
+      <h1>Good evening</h1>
     </div>
-  </main>
+    <div class="avatar">K</div>
+  </header>
+
+  <!-- Summary -->
+  <section class="card glass">
+    <div class="summary">
+      <svg class="rings" viewBox="0 0 100 100">
+        <g transform="rotate(-90 50 50)" fill="none" stroke-linecap="round" stroke-width="9">
+          <circle cx="50" cy="50" r="43" stroke="var(--move-bg)"/>
+          <circle cx="50" cy="50" r="43" stroke="var(--move)" stroke-dasharray="270" stroke-dashoffset="45"/>
+          <circle cx="50" cy="50" r="32" stroke="var(--diet-bg)"/>
+          <circle cx="50" cy="50" r="32" stroke="var(--diet)" stroke-dasharray="201" stroke-dashoffset="64"/>
+          <circle cx="50" cy="50" r="21" stroke="var(--sleep-bg)"/>
+          <circle cx="50" cy="50" r="21" stroke="var(--sleep)" stroke-dasharray="132" stroke-dashoffset="10"/>
+        </g>
+      </svg>
+      <div class="stats">
+        <div class="stat"><div class="l"><span class="dot" style="background:var(--move)"></span>Move</div><div class="v">482<span> / 580 kcal</span></div></div>
+        <div class="stat"><div class="l"><span class="dot" style="background:var(--diet)"></span>Eat</div><div class="v">1,640<span> / 2,400</span></div></div>
+        <div class="stat"><div class="l"><span class="dot" style="background:var(--sleep)"></span>Sleep</div><div class="v">7h 24m<span> / 8h</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Widgets -->
+  <div class="grid">
+    <section class="card glass w">
+      <div class="head"><div class="title"><div class="ico" style="background:var(--diet-bg)">🥗</div>Diet</div><div class="chev">›</div></div>
+      <div class="big">760<small>kcal left</small></div>
+      <div class="sub">Protein 117 / 150 g</div>
+      <div class="track"><div class="fill" style="width:78%;background:var(--diet)"></div></div>
+    </section>
+    <section class="card glass w">
+      <div class="head"><div class="title"><div class="ico" style="background:var(--sleep-bg)">🌙</div>Sleep</div><div class="chev">›</div></div>
+      <div class="big">7h 24m</div>
+      <div class="sub">92% quality</div>
+      <div class="bars"><i style="height:60%"></i><i style="height:80%"></i><i style="height:70%"></i><i style="height:88%"></i><i style="height:55%"></i><i style="height:75%"></i><i class="t" style="height:92%"></i></div>
+    </section>
+    <section class="card glass w">
+      <div class="head"><div class="title"><div class="ico" style="background:var(--move-bg)">🏃</div>Exercise</div><div class="chev">›</div></div>
+      <div class="big">5.2<small>km</small></div>
+      <div class="sub">42 min · 4 of 5 this week</div>
+      <div class="track"><div class="fill" style="width:80%;background:var(--move)"></div></div>
+    </section>
+    <section class="card glass w">
+      <div class="head"><div class="title"><div class="ico" style="background:var(--work-bg)">💧</div>Water</div><div class="chev">›</div></div>
+      <div class="big">6<small>of 8 glasses</small></div>
+      <div class="sub">Next reminder 8:00 PM</div>
+      <div class="drops"><i></i><i></i><i></i><i></i><i></i><i></i><i class="off"></i><i class="off"></i></div>
+    </section>
+  </div>
+
+  <!-- Up next -->
+  <div class="section-label">Up Next <a>Calendar</a></div>
+  <section class="card glass">
+    <div class="list">
+      <div class="row now"><div class="time">7:30 PM</div><div class="bar" style="background:var(--school)"></div><div><div class="t">Study: Calculus II</div><div class="d">Chapter 7 · 60 min</div></div><span class="tag" style="background:var(--school-bg);color:var(--school-ink)">School</span></div>
+      <div class="row"><div class="time">9:00 PM</div><div class="bar" style="background:var(--work)"></div><div><div class="t">Sprint review deck</div><div class="d">45 min</div></div><span class="tag" style="background:var(--work-bg);color:var(--work-ink)">Work</span></div>
+      <div class="row"><div class="time">11:00 PM</div><div class="bar" style="background:var(--sleep)"></div><div><div class="t">Wind down</div><div class="d">Bedtime 11:30</div></div><span class="tag" style="background:var(--sleep-bg);color:var(--sleep-ink)">Sleep</span></div>
+    </div>
+  </section>
+
+  <!-- To-do -->
+  <div class="section-label">To-Do <a>See all</a></div>
+  <section class="card glass">
+    <div class="list">
+      <div class="row"><div class="check"></div><div><div class="t">Problem Set 6</div><div class="d">Calculus II</div></div><span class="tag" style="background:var(--move-bg);color:var(--move-ink)">Tomorrow</span></div>
+      <div class="row"><div class="check"></div><div><div class="t">1:1 with manager</div><div class="d">Work</div></div><span class="tag" style="background:var(--work-bg);color:var(--work-ink)">Mon</span></div>
+      <div class="row done"><div class="check"></div><div><div class="t">Reply to client emails</div></div></div>
+    </div>
+  </section>
+
+  <!-- Habits -->
+  <div class="section-label">Habits</div>
+  <section class="card glass">
+    <div class="habits">
+      <div class="habit on"><div class="c">📖</div>Read</div>
+      <div class="habit on"><div class="c">💊</div>Vitamins</div>
+      <div class="habit"><div class="c">🧘</div>Meditate</div>
+      <div class="habit on"><div class="c">🚶</div>10k steps</div>
+      <div class="habit"><div class="c">📵</div>No phone</div>
+    </div>
+  </section>
 </div>
 
-<!-- Mobile floating tab bar -->
+<div class="fab glass">＋</div>
 <nav class="tabbar glass">
-  <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Today</div>
-  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z"/></svg>Health</div>
-  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/></svg>School</div>
-  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>Work</div>
-  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/></svg>Me</div>
+  <div class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Today</div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s-7-4.5-7-11a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 6.5-7 11-7 11z"/></svg>Health</div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plan</div>
+  <div class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6"/></svg>Me</div>
 </nav>
 </body>
 </html>
