@@ -39,7 +39,13 @@ export const nowHHMM = () => { const d = new Date(); return `${pad(d.getHours())
 export const mean = xs => xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
 export const avgLogged = values => { const v = values.filter(Boolean); return v.length ? mean(v) : 0; };
 export const sum = (list, field) => list.reduce((t, e) => t + (Number(field ? e[field] : e) || 0), 0);
-export const num = v => { const n = parseFloat(String(v ?? '').replace(/[^0-9.,-]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+// "$1,234.56", "A$12.50", "7,50" → number. A comma is a thousands separator when a dot follows or 3 digits end it.
+export const num = v => {
+  let s = String(v ?? '').replace(/[^0-9.,-]/g, '');
+  s = s.includes('.') || /,\d{3}$/.test(s) ? s.replace(/,/g, '') : s.replace(',', '.');
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+};
 export const plural = (n, word, many = `${word}s`) => `${fmt(n)} ${n === 1 ? word : many}`;
 export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export const by = f => (a, b) => (f(a) < f(b) ? -1 : f(a) > f(b) ? 1 : 0);
