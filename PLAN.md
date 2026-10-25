@@ -19,7 +19,8 @@ _Last updated: Oct 25, 2026_
 | Brainstorm + detail questions answered | ✅ Done |
 | Mockup v3: Today (briefing, workout, weight, money), ✨ Ask, Money screens | ✅ Done |
 | v1 build (Today, Diet, Water, Sleep, Weight, Habits, Settings, backup, PWA) | ✅ Done — see README for install |
-| Host on GitHub Pages + install on iPhone | ⏳ Next |
+| Host on GitHub Pages | ✅ Live at https://kylev202.github.io/WebApp/ |
+| Install on iPhone (Share → Add to Home Screen) | ⏳ Next |
 | v2 Gym | ⏳ Not started |
 
 Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
