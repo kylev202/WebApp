@@ -179,11 +179,13 @@ Westpac has **no personal API**; Australian open banking (CDR) only lets accredi
 2. **Monthly CSV import:** export transactions from Westpac online banking → drop the file into the app → AI categorises every row and skips ones already logged by Apple Pay. Catches rent, transfers, direct debits, BPAY.
 3. *(Later, optional)* Accredited aggregator (e.g. Basiq) for fully automatic sync — needs a small server and may cost money.
 
-### 💸 Remitly (money transfers)
-- No public API for personal use, so no direct connection.
-- Each transfer already shows in Westpac (CSV import) as a debit → app tags it **"Remittance"** automatically.
-- **Decision: Apple Pay + Shortcuts** (no Gmail reading). If a transfer is paid with Apple Pay and the Shortcut catches it, it's tagged Remittance automatically; otherwise it's caught by the Westpac CSV import. Extra details can be added by telling the AI.
-- New budget category: **💸 Sending home / Remittances**, with monthly total and line chart.
+### 💳 Revolut (second account)
+- Revolut has **no public API for personal accounts** (its API is for Revolut Business only), so same approach as Westpac:
+- **Apple Pay + Shortcuts:** add the Revolut card to Apple Wallet → the same Shortcut logs every tap automatically.
+- **Statement import:** export a CSV statement from the Revolut app → drop into the app → AI categorises and skips duplicates.
+- **Foreign-currency spending** (e.g. travel, online purchases in USD) is converted to AUD for budgets.
+- **Top-ups / transfers between Westpac and Revolut** are recognised as internal transfers and *not* counted as spending.
+- Money tab shows both accounts together (with a per-account filter).
 
 ### 🎓 Canvas (uni LMS) — via Canvas API
 - Canvas → Account → Settings → **New Access Token** (personal token; some unis disable this, check first).
@@ -231,5 +233,5 @@ Tax-time helper, freelance invoicing/time tracking, payslip check, visa work-hou
 3. **v3 — AI:** Ask screen with Gemini function calling for all logging; AI routine builder.
 4. **v4 — School & Work:** courses, timetable, assignments, grades/GPA, exam plans; shifts & pay; freelance clients/projects/invoices.
 5. **v5 — Money:** expenses, income, budgets, subscriptions, savings goals, bills.
-6. **v6 — Connections:** Canvas API sync, roster-from-photo, Google Calendar sync, Apple Pay Shortcut, Westpac CSV import, Remitly tagging.
+6. **v6 — Connections:** Canvas API sync, roster-from-photo, Google Calendar sync, Apple Pay Shortcut, Westpac + Revolut CSV import, internal-transfer detection.
 7. **v7 — Coaching & Siri:** morning briefing, evening review, weekly report, badges, Shortcuts integration.
