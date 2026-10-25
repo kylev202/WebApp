@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Loop icon</title>
+<style>html,body{margin:0;background:#fff}canvas{display:block}</style>
+</head>
+<body>
+<!--
+  Loop app icon: an infinity "loop" ribbon whose colour flows through each life area
+  (gym pink, school peach, diet mint, money aqua, work sky, sleep lavender).
+  ?scale=0.78 renders the maskable variant (content inside Android's safe zone).
+-->
+<canvas id="c" width="1024" height="1024"></canvas>
+<script>
+const S = 1024;
+const scale = Number(new URLSearchParams(location.search).get('scale') || 0.94);
+const ctx = document.getElementById('c').getContext('2d');
+
+// Background: soft pastel glass with blurred colour washes.
+const bg = ctx.createLinearGradient(0, 0, S, S);
+bg.addColorStop(0, '#fdfcff');
+bg.addColorStop(0.55, '#f3f2fc');
+bg.addColorStop(1, '#fbf0f4');
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, S, S);
+function wash(cx, cy, r, color) {
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0, color);
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
+}
+wash(170, 150, 560, 'rgba(204,202,250,.85)');
+wash(900, 920, 560, 'rgba(200,238,214,.85)');
+wash(930, 120, 420, 'rgba(252,212,224,.7)');
+
+// Lemniscate ("∞") path, stretched vertically so the loops are rounder.
+const A = 372 * scale, STRETCH = 1.55, N = 1400;
+const point = t => {
+  const s = Math.sin(t), c = Math.cos(t), d = 1 + s * s;
+  return [S / 2 + (A * c) / d, S / 2 + 6 + (A * s * c * STRETCH) / d];
+};
+
+const stops = ['#f28ca3', '#f5ba74', '#72cc98', '#6ccac3', '#88baf0', '#9d98ef', '#f28ca3'];
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+function colorAt(u) {
+  const p = u * (stops.length - 1), i = Math.min(Math.floor(p), stops.length - 2), f = p - i;
+  const a = hex(stops[i]), b = hex(stops[i + 1]);
+  return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(',')})`;
+}
+
+const W = 128 * scale; // ribbon thickness
+const layer = () => { const c = document.createElement('canvas'); c.width = c.height = S; return c.getContext('2d'); };
+
+function stroke(ctx, t0, t1, style, width, dy = 0, filter = 'none', closed = false) {
+  ctx.save();
+  ctx.filter = filter;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = width;
+  const steps = Math.ceil(((t1 - t0) / (2 * Math.PI)) * N);
+  if (typeof style === 'string') {
+    // Solid colour: one path, so blur filters run once instead of per segment.
+    ctx.strokeStyle = style;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const [x, y] = point(t0 + ((t1 - t0) * i) / steps);
+      i ? ctx.lineTo(x, y + dy) : ctx.moveTo(x, y + dy);
+    }
+    if (closed) ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+  for (let i = 0; i < steps; i++) {
+    const ta = t0 + ((t1 - t0) * i) / steps, tb = t0 + ((t1 - t0) * (i + 1)) / steps;
+    const [x1, y1] = point(ta), [x2, y2] = point(tb);
+    ctx.strokeStyle = typeof style === 'function' ? style(ta / (2 * Math.PI)) : style;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1 + dy);
+    ctx.lineTo(x2, y2 + dy);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function ribbon(ctx, t0, t1, { shadow = false, closed = false } = {}) {
+  if (shadow) {
+    // Soft shadow where this strand passes over the other one.
+    stroke(ctx, t0, t1, 'rgba(70,60,140,.34)', W * 1.05, 14 * scale, `blur(${16 * scale}px)`);
+  }
+  stroke(ctx, t0, t1, colorAt, W);
+  stroke(ctx, t0, t1, 'rgba(60,50,120,.10)', W * 0.42, W * 0.25, `blur(${8 * scale}px)`, closed);   // underside shade
+  stroke(ctx, t0, t1, 'rgba(255,255,255,.55)', W * 0.2, -W * 0.24, `blur(${5 * scale}px)`, closed); // glossy highlight
+}
+
+// Ground shadow under the whole loop.
+stroke(ctx, 0, 2 * Math.PI, 'rgba(90,80,160,.18)', W, 34 * scale, `blur(${36 * scale}px)`, true);
+
+// 1. The whole loop as one continuous ribbon (no seams).
+ribbon(ctx, 0, 2 * Math.PI, { closed: true });
+
+// 2. Re-draw the upper strand at the crossing on its own layer, then keep only its
+//    middle (soft-edged mask) so it sits cleanly on top with a cast shadow.
+const cross = 1.5 * Math.PI;
+const upper = layer();
+ribbon(upper, cross - 0.6, cross + 0.6, { shadow: true });
+const mask = layer();
+stroke(mask, cross - 0.3, cross + 0.3, '#000', W * 1.9, 0, `blur(${14 * scale}px)`);
+upper.globalCompositeOperation = 'destination-in';
+upper.drawImage(mask.canvas, 0, 0);
+ctx.drawImage(upper.canvas, 0, 0);
+
+// Small sparkle for the AI assistant.
+function sparkle(cx, cy, r) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(157,152,239,.6)';
+  ctx.shadowBlur = r * 0.9;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI) / 4 - Math.PI / 2, rr = i % 2 ? r * 0.28 : r;
+    ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+sparkle(S / 2 + A * 0.98, S / 2 - A * 0.62, 46 * scale);
+sparkle(S / 2 + A * 1.2, S / 2 - A * 0.36, 20 * scale);
+</script>
+</body>
+</html>

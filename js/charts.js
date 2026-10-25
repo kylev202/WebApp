@@ -33,7 +33,7 @@ function segments(points) {
  * labels: string[] (same length as values; '' to hide)
  * goal: optional value drawn as a dashed line
  */
-export function lineChart({ series, labels, min = 0, max, goal, empty = 'No data yet' }) {
+export function lineChart({ series, labels, min = 0, max, goal, empty = 'No data yet', live = false }) {
   const n = labels.length;
   const all = series.flatMap(s => s.values).filter(v => v != null);
   if (!all.length) return `<div class="empty">${empty}</div>`;
@@ -50,10 +50,12 @@ export function lineChart({ series, labels, min = 0, max, goal, empty = 'No data
       if (seg.length > 1) svg += `<path class="ln" stroke="${s.color}" d="${smoothPath(seg)}"/>`;
     });
     // Dot on the latest value (and on any lone point so it's still visible).
+    // With `live`, today's point is hollow: the day isn't finished yet.
     pts.forEach((p, i) => {
       const lone = p && !pts[i - 1] && !pts[i + 1];
       const last = p && pts.slice(i + 1).every(q => !q);
-      if (lone || last) dots += `<i class="pt" style="left:${(p[0] / W) * 100}%;top:${(p[1] / H) * 100}%;background:${s.color}"></i>`;
+      const open = live && i === n - 1;
+      if (lone || last) dots += `<i class="pt${open ? ' live' : ''}" style="left:${(p[0] / W) * 100}%;top:${(p[1] / H) * 100}%;--c:${s.color}"></i>`;
     });
   });
 

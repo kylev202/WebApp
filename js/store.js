@@ -41,20 +41,34 @@ async function load() {
   state.kv = Object.fromEntries(keys.map((k, i) => [k, values[i]]));
 }
 
-export async function addEntry(type, fields, date) {
-  const entry = { id: crypto.randomUUID(), type, date, ts: Date.now(), ...fields };
+// Insert or replace a whole entry (also used to undo a delete).
+export async function putEntry(entry) {
   const tx = db.transaction('entries', 'readwrite');
   tx.objectStore('entries').put(entry);
   await txDone(tx);
-  state.entries.push(entry);
+  const i = state.entries.findIndex(e => e.id === entry.id);
+  if (i >= 0) state.entries[i] = entry;
+  else state.entries.push(entry);
   return entry;
 }
 
+export function addEntry(type, fields, date) {
+  return putEntry({ id: crypto.randomUUID(), type, date, ts: Date.now(), ...fields });
+}
+
+export function updateEntry(id, fields) {
+  const old = state.entries.find(e => e.id === id);
+  return putEntry({ ...old, ...fields, id });
+}
+
+// Returns the removed entry so callers can offer Undo.
 export async function removeEntry(id) {
+  const entry = state.entries.find(e => e.id === id);
   const tx = db.transaction('entries', 'readwrite');
   tx.objectStore('entries').delete(id);
   await txDone(tx);
   state.entries = state.entries.filter(e => e.id !== id);
+  return entry;
 }
 
 export async function setKV(key, value) {

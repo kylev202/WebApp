@@ -1,6 +1,6 @@
-// Offline support: serve the app shell from cache, refresh it in the background.
-// Bump CACHE when shipping a new version so old files are dropped.
-const CACHE = 'loop-v1.0.0';
+// Offline support. Network first (so updates show up straight away), falling back to the
+// cached copy when offline or the network is slow. Bump CACHE when releasing.
+const CACHE = 'loop-v1.1.0';
 const SHELL = [
   './', './index.html', './css/app.css', './js/app.js', './js/store.js', './js/charts.js',
   './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png',
@@ -18,16 +18,26 @@ self.addEventListener('activate', e => {
   );
 });
 
+function fromNetwork(url, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { cache: 'no-cache', signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
-  e.respondWith(
-    caches.open(CACHE).then(async cache => {
+  e.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    try {
+      const res = await fromNetwork(url.href, 3000);
+      if (res.ok) cache.put(e.request, res.clone());
+      return res;
+    } catch {
       const cached = await cache.match(e.request, { ignoreSearch: true });
-      const fresh = fetch(e.request)
-        .then(res => { if (res.ok) cache.put(e.request, res.clone()); return res; })
-        .catch(() => cached);
-      return cached || fresh;
-    }),
-  );
+      if (cached) return cached;
+      if (e.request.mode === 'navigate') return cache.match('./index.html');
+      return Response.error();
+    }
+  })());
 });

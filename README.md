@@ -4,15 +4,20 @@ My personal life manager for iPhone: diet, gym, sleep, uni, work and money in on
 
 The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups are in [`design/`](design/).
 
-## What's in v1
+## What's in v1.1
 
-- **Today:** greeting, weekly line chart (eat / sleep / water as % of goal), Diet, Sleep, Water and Weight cards, today's food, habits with 🔥 streaks
-- **Health:** Diet (calories chart, macros, meal history), Sleep (14-day chart, nights), Body (weight trend for bulking)
-- **Quick log (＋):** meal (with recent meals), glass of water, sleep, weigh-in
-- **Settings:** daily goals, edit habits, backup / restore, erase data
+- **Today:** greeting with a 🔥 logging streak, weekly line chart (eat / sleep / water as % of goal, today shown as a live hollow dot), Diet, Sleep, Water and Weight cards, habits with streaks, today's food with **Repeat yesterday**
+- **Health:** Diet (calories chart, protein / carbs / fat bars with bulking targets, meal history), Sleep (14-night chart), Body (weight trend + **bulk rate**: kg per week vs the lean-bulk range)
+- **Quick log (＋):** meal (recent meals, any day), glass of water, sleep (live duration preview), weigh-in
+- **Edit anything:** tap a meal, night or weigh-in to change it; delete with **Undo**
+- **Bulk calculator:** age, height, weight, activity and pace give your calorie and protein goals
+- **Feel:** iOS-style spring sheets you can swipe down, sliding tab indicator, compact title bar on scroll, cards that rise in, charts that draw, haptic taps, reduced-motion support
+- **Settings:** goals, habits, backup / restore, erase
 - Works **offline**, installs to the Home Screen, **no account**, all data stays on the phone
 
 Plan and Money tabs are placeholders until later versions.
+
+The app icon is drawn by [`design/icon.html`](design/icon.html): an infinity "loop" ribbon flowing through each life area's colour.
 
 ## Run it locally
 
@@ -47,4 +52,5 @@ python3 -m http.server 8000
 | `js/store.js` | IndexedDB storage, backup export/import |
 | `js/charts.js` | SVG line charts and sparklines |
 | `sw.js` | Offline cache (bump `CACHE` when releasing) |
-| `manifest.webmanifest`, `icons/` | Home Screen install |
+| `manifest.webmanifest`, `icons/` | Home Screen install and icons |
+| `design/icon.html` | Icon source (render with Playwright at any size) |
