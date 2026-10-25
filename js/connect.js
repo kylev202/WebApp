@@ -12,7 +12,8 @@ import { sendMessage } from './ask.js';
 import { setWater } from './health.js';
 import { waterOn } from './data.js';
 
-const APP_URL = location.origin + location.pathname;
+// Always the app folder (…/WebApp/), even if opened as …/index.html, so it matches Google's redirect URI exactly.
+const APP_URL = new URL('./', location.href).href;
 const relay = () => ({ url: '', token: '', ...state.kv.relay });
 const canvas = () => ({ domain: '', token: '', ...state.kv.canvas });
 const gcal = () => ({ clientId: '', token: '', expires: 0, ...state.kv.gcal });
@@ -138,7 +139,8 @@ const gcalValid = () => gcal().token && gcal().expires > Date.now() + 60000;
 function connectGcal() {
   const { clientId } = gcal();
   if (!clientId) { openSheet('guideGcal'); return; }
-  const q = new URLSearchParams({ client_id: clientId, redirect_uri: APP_URL, response_type: 'token', scope: GCAL_SCOPE, include_granted_scopes: 'true', state: 'gcal', prompt: gcal().token ? '' : 'consent' });
+  const q = new URLSearchParams({ client_id: clientId, redirect_uri: APP_URL, response_type: 'token', scope: GCAL_SCOPE, include_granted_scopes: 'true', state: 'gcal' });
+  if (!gcal().token) q.set('prompt', 'consent');
   location.href = `https://accounts.google.com/o/oauth2/v2/auth?${q}`;
 }
 
@@ -357,6 +359,7 @@ sheets.guideGcal = () => {
       <div class="field"><label>OAuth Client ID</label><input class="input-x" name="clientId" value="${esc(g.clientId)}" placeholder="…apps.googleusercontent.com" autocomplete="off"></div>
       <div class="btn-row"><button class="btn">Save and connect</button>${g.clientId ? '<button type="button" class="btn danger" data-act="gcalForget">Remove</button>' : ''}</div>
     </form>
+    <p class="note"><b>Google says “redirect_uri_mismatch”?</b> Open your OAuth client in Google Cloud and make the redirect URI exactly <code>${esc(APP_URL)}</code> (capitals and the slash at the end count). Save, wait 5 minutes, then Connect again.</p>
     <p class="note">Google sign-in lasts about an hour. When it runs out, Loop keeps the last synced events and shows Connect again.</p>`;
 };
 
