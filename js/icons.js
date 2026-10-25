@@ -99,8 +99,13 @@ const P = {
 
 export const ICON_NAMES = Object.keys(P);
 
+// Optical nudges so every glyph sits centred in its tile (measured from each shape's bounds).
+const NUDGE = { bell: [0, -1], chart: [0, -1.5], heart: [0, -0.8], bed: [0, -1.2], pill: [1.2, 1.2], coffee: [-0.5, 0.7], flag: [1, -0.7], piggy: [-0.7, -0.7], cart: [0.7, 0], dining: [1, 0], gift: [0, -0.9] };
+
 export function icon(name, cls = '') {
-  return `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name] ?? P.dots}</svg>`;
+  const n = NUDGE[name];
+  const body = P[name] ?? P.dots;
+  return `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${n ? `<g transform="translate(${n[0]} ${n[1]})">${body}</g>` : body}</svg>`;
 }
 
 // A pastel tile holding an icon, tinted by area: diet, move, sleep, school, work, money.

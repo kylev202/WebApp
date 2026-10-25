@@ -1,5 +1,5 @@
 // Shared app shell: registries that feature modules fill in, rendering, sheets, toasts, haptics.
-import { esc } from './util.js';
+import { esc, dayKey, addDays, shortDate } from './util.js';
 import { icon } from './icons.js';
 import { setKV, removeEntry, putEntry } from './store.js';
 
@@ -177,6 +177,37 @@ export async function removeWithUndo(id, label = 'Deleted') {
   toast(label, { icon: 'trash', action: { label: 'Undo', run: async () => { await putEntry(entry); render(); } } });
   return entry;
 }
+
+// ---------- friendly form pickers ----------
+// Tappable chips instead of tiny selects. options: [value, label, icon?, area?]
+export function chips(name, options, current, { cols = 0, cls = '' } = {}) {
+  return `<div class="pick ${cls}"${cols ? ` style="--cols:${cols}"` : ''}>${options.map(([v, label, ic, area]) => `<label class="pk"${area ? ` style="--pk:var(--${area}-ink);--pkb:var(--${area}-bg);--pkc:var(--${area})"` : ''}><input type="radio" name="${name}" value="${esc(v)}" ${String(current ?? '') === String(v) ? 'checked' : ''}><span>${ic ? icon(ic) : ''}<em>${esc(label)}</em></span></label>`).join('')}</div>`;
+}
+
+// Date as chips: Today / Tomorrow (or Yesterday for past things) / Pick date. past: dates can't be in the future.
+export function dateField(name, value, { none = false, past = false } = {}) {
+  const t = dayKey(), other = addDays(t, past ? -1 : 1);
+  const presets = [...(none ? [['', 'No date']] : []), [t, 'Today'], [other, past ? 'Yesterday' : 'Tomorrow']];
+  const v = value ?? (none ? '' : t);
+  const custom = !presets.some(([d]) => d === v);
+  return `<div class="pick date-pick">${presets.map(([d, label]) => `<label class="pk"><input type="radio" name="${name}" value="${d}" ${!custom && v === d ? 'checked' : ''}><span><em>${label}</em></span></label>`).join('')}
+    <label class="pk pk-date"><input type="radio" name="${name}" value="custom" ${custom ? 'checked' : ''}><span>${icon('calendar')}<em class="pk-date-text">${custom ? shortDate(v) : 'Pick date'}</em><input type="date" class="pk-date-in" name="${name}Custom" value="${custom ? esc(v) : ''}" ${past ? `max="${t}"` : ''} aria-label="Pick a date"></span></label></div>`;
+}
+export const readDate = (f, name) => (f.get(name) === 'custom' ? f.get(`${name}Custom`) || null : f.get(name) || null);
+
+// Picking a date in the hidden date input selects its chip and shows the date.
+document.addEventListener('change', e => {
+  if (!e.target.classList?.contains('pk-date-in')) return;
+  const label = e.target.closest('.pk-date');
+  label.querySelector('input[type=radio]').checked = true;
+  label.querySelector('.pk-date-text').textContent = e.target.value ? shortDate(e.target.value) : 'Pick date';
+});
+// Desktop browsers need an explicit nudge to open the picker of an invisible date input.
+document.addEventListener('click', e => {
+  if (e.target.classList?.contains('pk-date-in')) { try { e.target.showPicker?.(); } catch { /* iOS opens it natively */ } }
+});
+
+export const toggle = (name, label, on) => `<label class="toggle"><input type="checkbox" name="${name}" ${on ? 'checked' : ''}><span class="sw"></span>${esc(label)}</label>`;
 
 // ---------- shared bits of markup ----------
 export const closeBtn = `<button type="button" class="x-btn" data-act="close" aria-label="Close">${icon('close')}</button>`;

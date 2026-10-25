@@ -2,7 +2,7 @@
 import { state, addEntry, updateEntry, putEntry, removeEntry, setKV } from './store.js';
 import { esc, dayKey, lastDays, toDate, shortDate, dayLabel, fmt, fmtHours, timeOf, avgLogged, sum, num } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sheetForm } from './core.js';
+import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sheetForm, dateField, readDate } from './core.js';
 import { lineChart } from './charts.js';
 import { goals, of, byId, kcalOn, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, sleepHours, recentMeals } from './data.js';
 import { gymTab } from './gym.js';
@@ -111,7 +111,7 @@ sheets.meal = ({ id }) => {
   const v = k => (m && m[k] ? esc(m[k]) : '');
   return `<h2>${m ? 'Edit meal' : 'Add meal'} ${closeBtn}</h2>
   ${recent.length ? `<div class="label-sm">Recent · tap to fill</div><div class="chips-recent">${recent.map(r => `<button type="button" class="chip-btn" data-act="recent" data-id="${r.id}">${esc(r.name)}</button>`).join('')}</div>` : ''}
-  <form data-form="meal">
+  <form data-form="meal" class="nice-form">
     <input type="hidden" name="id" value="${m ? m.id : ''}">
     <div class="field"><label>What did you eat?</label><input class="input-x" name="name" required maxlength="60" placeholder="e.g. Chicken rice bowl" autocomplete="off" value="${v('name')}"></div>
     <div class="row2">
@@ -120,7 +120,7 @@ sheets.meal = ({ id }) => {
       <div class="field"><label>Carbs (g)</label><input class="input-x" name="carbs" inputmode="decimal" placeholder="optional" value="${v('carbs')}"></div>
       <div class="field"><label>Fat (g)</label><input class="input-x" name="fat" inputmode="decimal" placeholder="optional" value="${v('fat')}"></div>
     </div>
-    <div class="field"><label>Day</label><input class="input-x" type="date" name="date" value="${m ? m.date : dayKey()}" max="${dayKey()}" required></div>
+    <div class="field"><label>Day</label>${dateField('date', m ? m.date : dayKey(), { past: true })}</div>
     <div class="btn-row"><button class="btn">${m ? 'Save changes' : 'Save meal'}</button>${deleteBtn(m?.id)}</div>
   </form>`;
 };
@@ -128,13 +128,13 @@ sheets.meal = ({ id }) => {
 sheets.sleep = ({ id }) => {
   const s = id && byId(id);
   return `<h2>${s ? 'Edit sleep' : 'Log sleep'} ${closeBtn}</h2>
-  <form data-form="sleep">
+  <form data-form="sleep" class="nice-form">
     <input type="hidden" name="id" value="${s ? s.id : ''}">
     <div class="row2">
       <div class="field"><label>Went to bed</label><input class="input-x" type="time" name="bed" value="${s ? esc(s.bed) : '23:00'}" required></div>
       <div class="field"><label>Woke up</label><input class="input-x" type="time" name="wake" value="${s ? esc(s.wake) : '07:00'}" required></div>
     </div>
-    <div class="field"><label>Morning of</label><input class="input-x" type="date" name="date" value="${s ? s.date : dayKey()}" max="${dayKey()}" required></div>
+    <div class="field"><label>Woke up on</label>${dateField('date', s ? s.date : dayKey(), { past: true })}</div>
     <div class="sleep-preview" id="sleep-preview"></div>
     <div class="btn-row"><button class="btn">${s ? 'Save changes' : 'Save sleep'}</button>${deleteBtn(s?.id)}</div>
   </form>`;
@@ -143,10 +143,10 @@ sheets.sleep = ({ id }) => {
 sheets.weight = ({ id }) => {
   const w = id && byId(id);
   return `<h2>${w ? 'Edit weigh-in' : 'Weigh-in'} ${closeBtn}</h2>
-  <form data-form="weight">
+  <form data-form="weight" class="nice-form">
     <input type="hidden" name="id" value="${w ? w.id : ''}">
     <div class="field"><label>Weight (kg)</label><input class="input-x" name="kg" inputmode="decimal" required value="${w ? w.kg : weights().at(-1)?.kg ?? ''}" placeholder="72.4"></div>
-    <div class="field"><label>Date</label><input class="input-x" type="date" name="date" value="${w ? w.date : dayKey()}" max="${dayKey()}" required></div>
+    <div class="field"><label>Date</label>${dateField('date', w ? w.date : dayKey(), { past: true })}</div>
     <p class="note">Tip: weigh in the morning, after the bathroom, before eating.</p>
     <div class="btn-row"><button class="btn">${w ? 'Save changes' : 'Save weigh-in'}</button>${deleteBtn(w?.id)}</div>
   </form>`;
@@ -276,7 +276,7 @@ Object.assign(forms, {
       name: String(f.get('name')).trim(),
       kcal, protein: num(f.get('protein')), carbs: num(f.get('carbs')), fat: num(f.get('fat')),
     };
-    const date = String(f.get('date')) || dayKey();
+    const date = readDate(f, 'date') || dayKey();
     const id = f.get('id');
     if (id) await updateEntry(id, { ...fields, date });
     else await addEntry('meal', fields, date);
@@ -288,7 +288,7 @@ Object.assign(forms, {
   async sleep(f) {
     const bed = String(f.get('bed')), wake = String(f.get('wake'));
     const hours = sleepHours(bed, wake);
-    const date = String(f.get('date'));
+    const date = readDate(f, 'date') || dayKey();
     if (f.get('id')) await removeEntry(f.get('id'));
     // One main sleep per morning: replace an existing log for that date.
     for (const e of of('sleep', date)) await removeEntry(e.id);
@@ -301,7 +301,7 @@ Object.assign(forms, {
   async weight(f) {
     const kg = num(f.get('kg'));
     if (kg < 20 || kg > 300) return toast('Check the weight', { icon: 'info' });
-    const date = String(f.get('date'));
+    const date = readDate(f, 'date') || dayKey();
     if (f.get('id')) await removeEntry(f.get('id'));
     for (const e of of('weight', date)) await removeEntry(e.id);
     await addEntry('weight', { kg: Math.round(kg * 10) / 10 }, date);

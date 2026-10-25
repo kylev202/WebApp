@@ -2,7 +2,7 @@
 import { state, addEntry, updateEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, toDate, monthKey, monthDays, dayLabel, shortDate, money, moneyShort, num, plural, daysBetween } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, ui, render, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo } from './core.js';
+import { screens, sheets, actions, forms, previews, ui, render, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo, chips, dateField, readDate } from './core.js';
 import { lineChart } from './charts.js';
 import { of, byId } from './data.js';
 import { todaySections } from './today.js';
@@ -122,8 +122,10 @@ function moneyOverview(m) {
   <section class="card glass"><div class="budget">${cats.map(k => {
     const spent = spentIn(s.list, k), cap = Number(b[k]) || 0, c = CATEGORIES[k];
     const over = cap && spent > cap;
-    return `<div class="bud"><div class="top"><span>${tile(c.icon, c.area)}${c.label}</span><span class="${over ? 'late' : ''}">${money(spent, false)}${cap ? ` / ${money(cap, false)}` : ''}</span></div>
-      <div class="track"><div class="fill" style="width:${cap ? Math.min(100, (spent / cap) * 100) : 100}%;background:var(--${over ? 'move' : c.area})"></div></div></div>`;
+    return `<div class="bud">${tile(c.icon, c.area)}<div class="bud-main">
+      <div class="top"><span class="name">${c.label}</span><span class="nums ${over ? 'late' : ''}"><b>${money(spent, false)}</b>${cap ? ` / ${money(cap, false)}` : ''}</span></div>
+      <div class="track"><div class="fill" style="width:${cap ? Math.min(100, (spent / cap) * 100) : spent ? 100 : 0}%;background:var(--${over ? 'move' : c.area})"></div></div>
+      ${cap ? `<div class="left ${over ? 'late' : ''}">${over ? `${money(spent - cap, false)} over` : `${money(cap - spent, false)} left`}</div>` : ''}</div></div>`;
   }).join('') || '<div class="empty">Set budgets to track each category.</div>'}</div></section>
   ${upcoming.length ? `<div class="section-label">Bills due soon <a data-act="moneyTab" data-tab="bills">All</a></div><section class="card glass"><div class="list">${upcoming.map(billRow).join('')}</div></section>` : ''}
   ${s.list.length ? `<div class="section-label">Recent <a data-act="moneyTab" data-tab="activity">All</a></div><section class="card glass"><div class="list">${s.list.slice(0, 5).map(txnRow).join('')}</div></section>` : ''}`;
@@ -196,30 +198,30 @@ todaySections.push({
 });
 
 // ---------- sheets ----------
-const opts = (obj, cur) => Object.entries(obj).map(([k, v]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(v.label ?? v[0])}</option>`).join('');
+const catChips = (name, obj, cur, cols = 4) => chips(name, Object.entries(obj).map(([k, c]) => [k, c.label, c.icon, c.area]), cur, { cols });
+const acctChips = (name, cur, list = ['westpac', 'revolut', 'cash']) => chips(name, list.map(k => [k, ACCOUNTS[k].label, ACCOUNTS[k].icon, 'money']), cur, { cols: list.length });
 
 sheets.txn = ({ id, kind: k0 }) => {
   const t = id ? byId(id) : null;
   const kind = t?.kind ?? k0 ?? 'expense';
-  return `<h2>${t ? 'Edit transaction' : 'New transaction'} ${closeBtn}</h2><form data-form="txn"><input type="hidden" name="id" value="${t?.id ?? ''}">
+  return `<h2>${t ? 'Edit transaction' : 'New transaction'} ${closeBtn}</h2><form data-form="txn" class="nice-form"><input type="hidden" name="id" value="${t?.id ?? ''}">
     <div class="seg wide radio">${[['expense', 'Expense'], ['income', 'Income'], ['transfer', 'Transfer']].map(([v, l]) => `<label><input type="radio" name="kind" value="${v}" ${kind === v ? 'checked' : ''}>${l}</label>`).join('')}</div>
-    <div class="row2"><div class="field"><label>Amount (A$)</label><input class="input-x amount-in" name="amount" inputmode="decimal" required value="${t?.amount ?? ''}" placeholder="0.00"></div>
-      <div class="field"><label>Date</label><input class="input-x" type="date" name="date" value="${t?.date ?? dayKey()}" required></div></div>
-    <div class="field k-not-transfer"><label>Where / who</label><input class="input-x" name="merchant" maxlength="60" value="${esc(t?.merchant ?? '')}" placeholder="e.g. Woolworths"></div>
-    <div class="field k-expense"><label>Category</label><select class="input-x" name="category">${opts(CATEGORIES, t?.kind === 'expense' ? t.category : 'groceries')}</select></div>
-    <div class="field k-income"><label>Category</label><select class="input-x" name="incomeCategory">${opts(INCOME, t?.kind === 'income' ? t.category : 'wages')}</select></div>
-    <div class="row2"><div class="field"><label>Account</label><select class="input-x" name="account">${opts(ACCOUNTS, t?.account ?? 'westpac')}</select></div>
-      <div class="field k-transfer"><label>To</label><select class="input-x" name="toAccount">${opts(ACCOUNTS, t?.toAccount ?? 'revolut')}</select></div></div>
+    <div class="amount-box"><span>A$</span><input name="amount" inputmode="decimal" required value="${t?.amount ?? ''}" placeholder="0.00" aria-label="Amount" autocomplete="off"></div>
+    <div class="field k-not-transfer"><label>Where / who</label><input class="input-x" name="merchant" maxlength="60" value="${esc(t?.merchant ?? '')}" placeholder="e.g. Woolworths" autocomplete="off"></div>
+    <div class="field k-expense"><label>Category</label>${catChips('category', CATEGORIES, t?.kind === 'expense' ? t.category : 'groceries')}</div>
+    <div class="field k-income"><label>Category</label>${catChips('incomeCategory', INCOME, t?.kind === 'income' ? t.category : 'wages', 3)}</div>
+    <div class="field"><label class="k-not-transfer">Account</label><label class="k-transfer">From</label>${acctChips('account', t?.account ?? 'westpac')}</div>
+    <div class="field k-transfer"><label>To</label>${acctChips('toAccount', t?.toAccount ?? 'revolut', ['westpac', 'revolut', 'savings'])}</div>
+    <div class="field"><label>Date</label>${dateField('date', t?.date ?? dayKey(), { past: true })}</div>
     <details class="fx" ${t?.currency && t.currency !== 'AUD' ? 'open' : ''}><summary>Paid in another currency</summary>
       <div class="row2"><div class="field"><label>Currency</label><input class="input-x" name="currency" maxlength="3" value="${esc(t?.currency ?? '')}" placeholder="USD"></div>
       <div class="field"><label>Original amount</label><input class="input-x" name="origAmount" inputmode="decimal" value="${t?.origAmount ?? ''}"></div></div>
       <p class="note">Enter the A$ amount that left your account above (Revolut shows it).</p></details>
-    <div class="field"><label>Note</label><input class="input-x" name="note" maxlength="100" value="${esc(t?.note ?? '')}" placeholder="optional"></div>
+    <div class="field"><label>Note</label><input class="input-x" name="note" maxlength="100" value="${esc(t?.note ?? '')}" placeholder="Optional"></div>
     <div class="btn-row"><button class="btn">${t ? 'Save changes' : 'Save'}</button>${t ? `<button type="button" class="btn danger" data-act="delTxn" data-id="${t.id}">Delete</button>` : ''}</div></form>`;
 };
 previews.txn = form => {
-  const kind = form.elements.kind.value;
-  form.dataset.kind = kind;
+  form.dataset.kind = new FormData(form).get('kind');
 };
 
 sheets.budgets = () => {
@@ -235,13 +237,13 @@ previews.budgets = form => {
 
 sheets.bill = ({ id }) => {
   const x = id ? byId(id) : null;
-  return `<h2>${x ? 'Edit bill' : 'New bill or subscription'} ${closeBtn}</h2><form data-form="bill"><input type="hidden" name="id" value="${x?.id ?? ''}">
-    <div class="field"><label>Name</label><input class="input-x" name="name" required maxlength="40" value="${esc(x?.name ?? '')}" placeholder="e.g. Spotify"></div>
-    <div class="row2"><div class="field"><label>Amount (A$)</label><input class="input-x" name="amount" inputmode="decimal" required value="${x?.amount ?? ''}"></div>
-      <div class="field"><label>Repeats</label><select class="input-x" name="cycle">${Object.entries(CYCLES).map(([k, [l]]) => `<option value="${k}" ${k === (x?.cycle ?? 'monthly') ? 'selected' : ''}>${l}</option>`).join('')}</select></div></div>
-    <div class="row2"><div class="field"><label>Next due</label><input class="input-x" type="date" name="next" required value="${x?.next ?? dayKey()}"></div>
-      <div class="field"><label>Category</label><select class="input-x" name="category">${opts(CATEGORIES, x?.category ?? 'subscriptions')}</select></div></div>
-    <div class="field"><label>Paid from</label><select class="input-x" name="account">${opts(ACCOUNTS, x?.account ?? 'westpac')}</select></div>
+  return `<h2>${x ? 'Edit bill' : 'New bill or subscription'} ${closeBtn}</h2><form data-form="bill" class="nice-form"><input type="hidden" name="id" value="${x?.id ?? ''}">
+    <div class="field"><label>Name</label><input class="input-x" name="name" required maxlength="40" value="${esc(x?.name ?? '')}" placeholder="e.g. Spotify" autocomplete="off"></div>
+    <div class="amount-box small"><span>A$</span><input name="amount" inputmode="decimal" required value="${x?.amount ?? ''}" placeholder="0.00" aria-label="Amount"></div>
+    <div class="field"><label>Repeats</label>${chips('cycle', Object.entries(CYCLES).map(([k, [l]]) => [k, l]), x?.cycle ?? 'monthly')}</div>
+    <div class="field"><label>Next due</label>${dateField('next', x?.next ?? dayKey())}</div>
+    <div class="field"><label>Category</label>${catChips('category', CATEGORIES, x?.category ?? 'subscriptions')}</div>
+    <div class="field"><label>Paid from</label>${acctChips('account', x?.account ?? 'westpac')}</div>
     <div class="btn-row"><button class="btn">${x ? 'Save changes' : 'Add'}</button>${x ? `<button type="button" class="btn danger" data-act="delEntity" data-id="${x.id}">Delete</button>` : ''}</div></form>`;
 };
 
@@ -257,10 +259,10 @@ sheets.goal = ({ id }) => {
 
 sheets.goalAdd = ({ id }) => {
   const g = byId(id);
-  return `<h2>Add to ${esc(g?.name ?? 'goal')} ${closeBtn}</h2><form data-form="goalAdd"><input type="hidden" name="id" value="${id}">
-    <div class="row2"><div class="field"><label>Amount (A$)</label><input class="input-x amount-in" name="amount" inputmode="decimal" required placeholder="50"></div>
-    <div class="field"><label>From</label><select class="input-x" name="account">${opts({ westpac: ACCOUNTS.westpac, revolut: ACCOUNTS.revolut, cash: ACCOUNTS.cash }, 'westpac')}</select></div></div>
+  return `<h2>Add to ${esc(g?.name ?? 'goal')} ${closeBtn}</h2><form data-form="goalAdd" class="nice-form"><input type="hidden" name="id" value="${id}">
+    <div class="amount-box"><span>A$</span><input name="amount" inputmode="decimal" required placeholder="50" aria-label="Amount"></div>
     <div class="quick-amts">${[20, 50, 100, 200].map(a => `<button type="button" class="chip-btn soft" data-act="fillAmount" data-v="${a}">${moneyShort(a)}</button>`).join('')}</div>
+    <div class="field"><label>From</label>${acctChips('account', 'westpac')}</div>
     <button class="btn">Add money</button></form>`;
 };
 
@@ -294,8 +296,9 @@ Object.assign(forms, {
       currency: String(f.get('currency') ?? '').trim().toUpperCase() || null, origAmount: num(f.get('origAmount')) || null,
     };
     const id = f.get('id');
-    if (id) await updateEntry(id, { ...fields, date: f.get('date') });
-    else await addEntry('txn', { ...fields, source: 'manual' }, f.get('date'));
+    const date = readDate(f, 'date') || dayKey();
+    if (id) await updateEntry(id, { ...fields, date });
+    else await addEntry('txn', { ...fields, source: 'manual' }, date);
     haptic();
     closeSheet();
     toast(`${kind === 'income' ? '+' : kind === 'expense' ? '−' : ''}${money(amount)} saved`, { icon: catInfo(kind, fields.category).icon });
@@ -311,7 +314,7 @@ Object.assign(forms, {
     render();
   },
   async bill(f) {
-    const fields = { name: f.get('name').trim(), amount: num(f.get('amount')), cycle: f.get('cycle'), next: f.get('next'), category: f.get('category'), account: f.get('account') };
+    const fields = { name: f.get('name').trim(), amount: num(f.get('amount')), cycle: f.get('cycle') || 'monthly', next: readDate(f, 'next') || dayKey(), category: f.get('category') || 'subscriptions', account: f.get('account') || 'westpac' };
     const id = f.get('id');
     if (id) await updateEntry(id, fields);
     else await addEntry('bill', fields, dayKey());

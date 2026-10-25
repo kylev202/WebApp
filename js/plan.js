@@ -2,7 +2,7 @@
 import { state, addEntry, updateEntry, removeEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, toDate, weekStart, dayLabel, shortDate, time12, toMin, nowHHMM, fmt, fmt1, money, num, plural, daysBetween } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo } from './core.js';
+import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo, chips, dateField, readDate, toggle } from './core.js';
 import { of, byId } from './data.js';
 import { lineChart } from './charts.js';
 import { todaySections } from './today.js';
@@ -242,10 +242,10 @@ function planTasks() {
   const done = all.filter(x => x.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)).slice(0, 8);
   return `
   <form class="card glass quick-task" data-form="quickTask">
-    <input class="input-x" name="title" placeholder="Add a task…" required maxlength="80" autocomplete="off">
-    <div class="quick-task-row"><input class="input-x" type="date" name="due" aria-label="Due date">
-      <select class="input-x" name="area" aria-label="Area">${Object.entries(AREAS).map(([k, a]) => `<option value="${k}">${a.label}</option>`).join('')}</select>
-      <button class="pill-btn strong">${icon('plus')}</button></div>
+    <div class="qt-row"><input class="input-x" name="title" placeholder="Add a task…" required maxlength="80" autocomplete="off" aria-label="Task">
+      <button class="qt-add" aria-label="Add task">${icon('plus')}</button></div>
+    ${dateField('due', '', { none: true })}
+    ${chips('area', Object.entries(AREAS).map(([k, a]) => [k, a.label, a.icon, a.color]), 'life', { cls: 'scroll' })}
   </form>
   ${groups.length ? groups.map(([name, list]) => `<div class="section-label">${name} <span>${list.length}</span></div><section class="card glass"><div class="list">${list.map(taskRow).join('')}</div></section>`).join('')
     : `<section class="card glass soon">${tile('check', 'diet', 'xl')}<p>All clear. Add a task above.</p></section>`}
@@ -284,7 +284,10 @@ const field = (label, inner) => `<div class="field"><label>${label}</label>${inn
 const inp = (name, value = '', attrs = '') => `<input class="input-x" name="${name}" value="${esc(value ?? '')}" ${attrs}>`;
 const del = (id, label = 'Delete') => (id ? `<button type="button" class="btn danger" data-act="delEntity" data-id="${id}">${label}</button>` : '');
 const saveRow = (id, label) => `<div class="btn-row"><button class="btn">${id ? 'Save changes' : label}</button>${del(id)}</div>`;
-const areaSel = cur => sel('area', Object.entries(AREAS).map(([k, a]) => [k, a.label]), cur ?? 'life');
+const areaChips = cur => chips('area', Object.entries(AREAS).map(([k, a]) => [k, a.label, a.icon, a.color]), cur ?? 'life', { cols: 3 });
+const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+// New events start at the next whole hour, one hour long.
+const nextHour = (add = 0) => `${String((new Date().getHours() + 1 + add) % 24).padStart(2, '0')}:00`;
 const courseOpts = () => courses().map(c => [c.id, `${c.code} · ${c.name}`]);
 
 sheets.planAdd = () => `<h2>Add ${closeBtn}</h2><div class="quick-grid">
@@ -298,24 +301,29 @@ sheets.planAdd = () => `<h2>Add ${closeBtn}</h2><div class="quick-grid">
 
 sheets.event = ({ id, date }) => {
   const e = id ? byId(id) : null;
-  return `<h2>${e ? 'Edit event' : 'New event'} ${closeBtn}</h2><form data-form="event"><input type="hidden" name="id" value="${e?.id ?? ''}">
-    ${field('Title', inp('title', e?.title, 'required maxlength="80" placeholder="e.g. Study: Calculus ch. 7"'))}
-    <div class="row3">${field('Date', inp('date', e?.date ?? date ?? dayKey(), 'type="date" required'))}${field('Start', inp('start', e?.start ?? '', 'type="time"'))}${field('End', inp('end', e?.end ?? '', 'type="time"'))}</div>
-    ${field('Area', areaSel(e?.area))}${field('Note', inp('note', e?.note, 'maxlength="120" placeholder="optional"'))}
+  const allDay = e ? !e.start : false;
+  return `<h2>${e ? 'Edit event' : 'New event'} ${closeBtn}</h2><form data-form="event" class="nice-form"><input type="hidden" name="id" value="${e?.id ?? ''}">
+    ${field('What', inp('title', e?.title, 'required maxlength="80" placeholder="e.g. Study: Calculus ch. 7" autocomplete="off"'))}
+    ${field('When', dateField('date', e?.date ?? date ?? dayKey()))}
+    <div class="times-head"><label>Time</label>${toggle('allDay', 'All day', allDay)}</div>
+    <div class="row2 times">${field('Starts', inp('start', e?.start || nextHour(), 'type="time"'))}${field('Ends', inp('end', e?.end || nextHour(1), 'type="time"'))}</div>
+    ${field('Area', areaChips(e?.area))}
+    ${field('Note', inp('note', e?.note, 'maxlength="120" placeholder="Optional"'))}
     ${saveRow(e?.id, 'Add event')}</form>`;
 };
 
 sheets.task = ({ id, date }) => {
   const t = id ? byId(id) : null;
-  return `<h2>${t ? 'Edit task' : 'New task'} ${closeBtn}</h2><form data-form="task"><input type="hidden" name="id" value="${t?.id ?? ''}">
-    ${field('Task', inp('title', t?.title, 'required maxlength="80"'))}
-    <div class="row2">${field('Due', inp('due', t?.due ?? date ?? '', 'type="date"'))}${field('Area', areaSel(t?.area))}</div>
+  return `<h2>${t ? 'Edit task' : 'New task'} ${closeBtn}</h2><form data-form="task" class="nice-form"><input type="hidden" name="id" value="${t?.id ?? ''}">
+    ${field('Task', inp('title', t?.title, 'required maxlength="80" placeholder="e.g. Email tutor" autocomplete="off"'))}
+    ${field('Due', dateField('due', t ? t.due ?? '' : date ?? '', { none: true }))}
+    ${field('Area', areaChips(t?.area))}
     ${saveRow(t?.id, 'Add task')}</form>`;
 };
 
 sheets.course = ({ id }) => {
   const c = id ? byId(id) : null;
-  return `<h2>${c ? 'Edit course' : 'New course'} ${closeBtn}</h2><form data-form="course"><input type="hidden" name="id" value="${c?.id ?? ''}">
+  return `<h2>${c ? 'Edit course' : 'New course'} ${closeBtn}</h2><form data-form="course" class="nice-form"><input type="hidden" name="id" value="${c?.id ?? ''}">
     <div class="row2">${field('Code', inp('code', c?.code, 'required maxlength="12" placeholder="COMP2123"'))}${field('Credit points', inp('credits', c?.credits ?? 6, 'inputmode="numeric"'))}</div>
     ${field('Name', inp('name', c?.name, 'required maxlength="60" placeholder="Data Structures"'))}
     <div class="label-sm">Colour</div><div class="color-pick">${COLORS.map(col => `<label><input type="radio" name="color" value="${col}" ${(c?.color ?? 'school') === col ? 'checked' : ''}><span style="background:var(--${col})"></span></label>`).join('')}</div>
@@ -325,22 +333,26 @@ sheets.course = ({ id }) => {
 sheets.cls = ({ id }) => {
   const c = id ? byId(id) : null;
   if (!courses().length) return `<h2>New class ${closeBtn}</h2><div class="empty">Add a course first.</div><button class="btn" data-act="sheet" data-sheet="course">Add a course</button>`;
-  return `<h2>${c ? 'Edit class' : 'New class'} ${closeBtn}</h2><form data-form="cls"><input type="hidden" name="id" value="${c?.id ?? ''}">
-    ${field('Course', sel('courseId', courseOpts(), c?.courseId))}
-    <div class="row2">${field('Type', sel('kind', CLASS_KINDS.map(k => [k, k]), c?.kind ?? 'Lecture'))}${field('Day', sel('day', DAYS.map((d, i) => [i, d]), c?.day ?? 0))}</div>
-    <div class="row3">${field('Start', inp('start', c?.start ?? '10:00', 'type="time" required'))}${field('End', inp('end', c?.end ?? '12:00', 'type="time" required'))}${field('Room', inp('room', c?.room, 'maxlength="30"'))}</div>
+  return `<h2>${c ? 'Edit class' : 'New class'} ${closeBtn}</h2><form data-form="cls" class="nice-form"><input type="hidden" name="id" value="${c?.id ?? ''}">
+    ${field('Course', chips('courseId', courses().map(x => [x.id, x.code, 'book', x.color ?? 'school']), c?.courseId ?? courses()[0].id))}
+    ${field('Type', chips('kind', CLASS_KINDS.map(k => [k, k]), c?.kind ?? 'Lecture'))}
+    ${field('Day', chips('day', DAY_SHORT.map((d, i) => [i, d]), c?.day ?? (new Date().getDay() + 6) % 7, { cls: 'days7' }))}
+    <div class="row2">${field('Starts', inp('start', c?.start ?? '10:00', 'type="time" required'))}${field('Ends', inp('end', c?.end ?? '12:00', 'type="time" required'))}</div>
+    ${field('Room', inp('room', c?.room, 'maxlength="30" placeholder="Optional, e.g. Room 4.02"'))}
     ${saveRow(c?.id, 'Add class')}</form>`;
 };
 
 sheets.assessment = ({ id }) => {
   const a = id ? byId(id) : null;
   if (!courses().length) return `<h2>New assessment ${closeBtn}</h2><div class="empty">Add a course first.</div><button class="btn" data-act="sheet" data-sheet="course">Add a course</button>`;
-  return `<h2>${a ? 'Assessment' : 'New assessment'} ${closeBtn}</h2><form data-form="assessment"><input type="hidden" name="id" value="${a?.id ?? ''}">
-    ${field('Course', sel('courseId', courseOpts(), a?.courseId))}
-    ${field('Title', inp('title', a?.title, 'required maxlength="60" placeholder="Assignment 2"'))}
-    <div class="row2">${field('Type', sel('kind', Object.entries(ASSESS_KINDS), a?.kind ?? 'assignment'))}${field('Weight (%)', inp('weight', a?.weight, 'inputmode="decimal" placeholder="20"'))}</div>
-    <div class="row2">${field('Due', inp('due', a?.due ?? dayKey(), 'type="date" required'))}${field('Time', inp('dueTime', a?.dueTime, 'type="time"'))}</div>
-    <div class="row2">${field('Mark (%)', inp('score', a?.score, 'inputmode="decimal" placeholder="after marking"'))}<div class="field"><label>Submitted</label><label class="switch-row"><input type="checkbox" name="done" ${a?.done ? 'checked' : ''}><span>Done</span></label></div></div>
+  const icons = { assignment: 'pen', exam: 'exam', quiz: 'list', presentation: 'users', report: 'book' };
+  return `<h2>${a ? 'Assessment' : 'New assessment'} ${closeBtn}</h2><form data-form="assessment" class="nice-form"><input type="hidden" name="id" value="${a?.id ?? ''}">
+    ${field('Course', chips('courseId', courses().map(x => [x.id, x.code, 'book', x.color ?? 'school']), a?.courseId ?? courses()[0].id))}
+    ${field('Title', inp('title', a?.title, 'required maxlength="60" placeholder="e.g. Assignment 2" autocomplete="off"'))}
+    ${field('Type', chips('kind', Object.entries(ASSESS_KINDS).map(([k, l]) => [k, l, icons[k], 'school']), a?.kind ?? 'assignment', { cols: 3 }))}
+    ${field('Due', dateField('due', a?.due ?? dayKey()))}
+    <div class="row2">${field('Due time', inp('dueTime', a?.dueTime, 'type="time"'))}${field('Weight', `<div class="suffix">${inp('weight', a?.weight, 'inputmode="decimal" placeholder="20"')}<span>%</span></div>`)}</div>
+    <div class="row2">${field('Mark', `<div class="suffix">${inp('score', a?.score, 'inputmode="decimal" placeholder="After marking"')}<span>%</span></div>`)}<div class="field"><label>Status</label>${toggle('done', 'Submitted', a?.done)}</div></div>
     ${saveRow(a?.id, 'Add assessment')}</form>`;
 };
 
@@ -361,17 +373,20 @@ sheets.courseDetail = ({ id }) => {
 
 sheets.shift = ({ id }) => {
   const s = id ? byId(id) : null;
-  return `<h2>${s ? 'Edit shift' : 'New shift'} ${closeBtn}</h2><form data-form="shift"><input type="hidden" name="id" value="${s?.id ?? ''}">
-    ${field('Date', inp('date', s?.date ?? dayKey(), 'type="date" required'))}
-    <div class="row3">${field('Start', inp('start', s?.start ?? '17:00', 'type="time" required'))}${field('End', inp('end', s?.end ?? '21:00', 'type="time" required'))}${field('Break (min)', inp('breakMin', s?.breakMin ?? 0, 'inputmode="numeric"'))}</div>
-    ${field('Hourly rate (optional)', inp('rate', s?.rate, `inputmode="decimal" placeholder="uses ${esc(job().name)} rates"`))}
-    <div class="sleep-preview" id="shift-preview"></div>
+  return `<h2>${s ? 'Edit shift' : 'New shift'} ${closeBtn}</h2><form data-form="shift" class="nice-form"><input type="hidden" name="id" value="${s?.id ?? ''}">
+    ${field('Day', dateField('date', s?.date ?? dayKey()))}
+    <div class="row2">${field('Starts', inp('start', s?.start ?? '17:00', 'type="time" required'))}${field('Ends', inp('end', s?.end ?? '21:00', 'type="time" required'))}</div>
+    ${field('Unpaid break', chips('breakMin', [[0, 'None'], [15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 h']], s?.breakMin ?? 0, { cols: 5 }))}
+    <details class="fx" ${s?.rate ? 'open' : ''}><summary>Different pay rate for this shift</summary>
+      ${field('Hourly rate', `<div class="suffix prefix"><span>A$</span>${inp('rate', s?.rate, `inputmode="decimal" placeholder="${esc(String(job().rate))}"`)}<span>/h</span></div>`)}</details>
+    <div class="preview-pill" id="shift-preview"></div>
     ${saveRow(s?.id, 'Add shift')}</form>`;
 };
 previews.shift = form => {
-  const s = { date: form.elements.date.value || dayKey(), start: form.elements.start.value, end: form.elements.end.value, breakMin: num(form.elements.breakMin.value), rate: num(form.elements.rate.value) };
+  const f = new FormData(form);
+  const s = { date: readDate(f, 'date') || dayKey(), start: f.get('start'), end: f.get('end'), breakMin: num(f.get('breakMin')), rate: num(f.get('rate')) };
   const el = document.getElementById('shift-preview');
-  if (el && s.start && s.end) el.innerHTML = `${icon('coffee')} ${fmt1(shiftHours(s))} h · ≈ ${money(shiftPay(s))}`;
+  if (el && s.start && s.end) el.innerHTML = `${icon('coffee')} ${fmt1(shiftHours(s))} hours · about <b>${money(shiftPay(s))}</b>`;
 };
 
 sheets.job = () => {
@@ -398,7 +413,7 @@ sheets.project = ({ id }) => {
     ${field('Project', inp('title', p?.title, 'required maxlength="60" placeholder="Homepage redesign"'))}
     ${field('Client', `<input class="input-x" name="client" list="client-list" value="${esc(p ? clientName(p.clientId) : '')}" placeholder="Client name" maxlength="50"><datalist id="client-list">${clients().map(c => `<option value="${esc(c.name)}">`).join('')}</datalist>`)}
     <div class="row2">${field('Fee (A$)', inp('fee', p?.fee, 'inputmode="decimal"'))}${field('Deadline', inp('deadline', p?.deadline, 'type="date"'))}</div>
-    ${field('Status', sel('status', [['lead', 'Lead'], ['active', 'Active'], ['done', 'Done']], p?.status ?? 'active'))}
+    ${field('Status', chips('status', [['lead', 'Lead', 'flag', 'school'], ['active', 'Active', 'code', 'work'], ['done', 'Done', 'check', 'diet']], p?.status ?? 'active', { cols: 3 }))}
     ${saveRow(p?.id, 'Add project')}</form>
     ${p ? `<button class="btn soft" style="margin-top:10px" data-act="sheet" data-sheet="invoice" data-project="${p.id}">${icon('receipt')} Create invoice</button>` : ''}`;
 };
@@ -413,7 +428,7 @@ sheets.invoice = ({ id, project }) => {
     ${field('Project', sel('projectId', ps.map(p => [p.id, `${p.title}${p.clientId ? ` · ${clientName(p.clientId)}` : ''}`]), pid))}
     <div class="row2">${field('Number', inp('number', i?.number ?? `INV-${String(n).padStart(3, '0')}`, 'maxlength="20"'))}${field('Amount (A$)', inp('amount', i?.amount ?? byId(pid)?.fee ?? '', 'inputmode="decimal" required'))}</div>
     <div class="row2">${field('Issued', inp('issued', i?.issued ?? dayKey(), 'type="date"'))}${field('Due', inp('due', i?.due ?? addDays(dayKey(), 14), 'type="date" required'))}</div>
-    ${field('Status', sel('status', [['draft', 'Draft'], ['sent', 'Sent'], ['paid', 'Paid']], i?.status ?? 'sent'))}
+    ${field('Status', chips('status', [['draft', 'Draft', 'edit', 'sleep'], ['sent', 'Sent', 'send', 'work'], ['paid', 'Paid', 'check', 'diet']], i?.status ?? 'sent', { cols: 3 }))}
     ${saveRow(i?.id, 'Save invoice')}</form>`;
 };
 
@@ -471,15 +486,16 @@ async function clientIdFor(name) {
 
 Object.assign(forms, {
   async event(f) {
-    await save('event', f, { title: f.get('title').trim(), start: f.get('start'), end: f.get('end'), area: f.get('area'), note: f.get('note').trim() }, f.get('date'));
+    const allDay = f.get('allDay') === 'on';
+    await save('event', f, { title: f.get('title').trim(), start: allDay ? '' : f.get('start'), end: allDay ? '' : f.get('end'), area: f.get('area') || 'life', note: f.get('note').trim() }, readDate(f, 'date') || dayKey());
     toast('Event saved', { icon: 'calendar' });
   },
   async task(f) {
-    await save('task', f, { title: f.get('title').trim(), due: f.get('due') || null, area: f.get('area') });
+    await save('task', f, { title: f.get('title').trim(), due: readDate(f, 'due'), area: f.get('area') || 'life' });
     toast('Task saved', { icon: 'list' });
   },
   async quickTask(f, form) {
-    await addEntry('task', { title: f.get('title').trim(), due: f.get('due') || null, area: f.get('area'), done: false }, dayKey());
+    await addEntry('task', { title: f.get('title').trim(), due: readDate(f, 'due'), area: f.get('area') || 'life', done: false }, dayKey());
     haptic();
     form.reset();
     render();
@@ -495,11 +511,11 @@ Object.assign(forms, {
   },
   async assessment(f) {
     const score = String(f.get('score')).trim();
-    await save('assessment', f, { courseId: f.get('courseId'), title: f.get('title').trim(), kind: f.get('kind'), weight: num(f.get('weight')), due: f.get('due'), dueTime: f.get('dueTime'), score: score === '' ? null : num(score), done: f.get('done') === 'on' || score !== '' });
+    await save('assessment', f, { courseId: f.get('courseId'), title: f.get('title').trim(), kind: f.get('kind'), weight: num(f.get('weight')), due: readDate(f, 'due') || dayKey(), dueTime: f.get('dueTime'), score: score === '' ? null : num(score), done: f.get('done') === 'on' || score !== '' });
     toast('Assessment saved', { icon: 'pen' });
   },
   async shift(f) {
-    await save('shift', f, { start: f.get('start'), end: f.get('end'), breakMin: num(f.get('breakMin')), rate: num(f.get('rate')) || null }, f.get('date'));
+    await save('shift', f, { start: f.get('start'), end: f.get('end'), breakMin: num(f.get('breakMin')), rate: num(f.get('rate')) || null }, readDate(f, 'date') || dayKey());
     toast('Shift saved', { icon: 'coffee' });
   },
   async job(f) {
