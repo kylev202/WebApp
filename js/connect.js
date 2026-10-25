@@ -229,9 +229,10 @@ async function checkRelay(url, token) {
     status = await res.json().catch(() => null);
     if (res.status === 401 && status?.error === 'unauthorized') status = { loop: 'relay', version: 1 }; // older Loop code had no status page
   } catch {
-    return { ok: false, why: 'unreachable' };
+    // Can't read it. If Loop's own icon loads from that address (see servesLoopSite), it's the Loop website.
+    return { ok: false, why: (await servesLoopSite(url)) ? 'site' : 'unreachable' };
   }
-  if (!status?.loop) return { ok: false, why: 'not-loop' };
+  if (!status?.loop) return { ok: false, why: (await servesLoopSite(url)) ? 'site' : 'not-loop' };
   if (status.version >= 2) {
     if (!status.token_set) return { ok: false, why: 'no-token' };
     if (!status.kv_bound) return { ok: false, why: 'no-kv' };
@@ -247,7 +248,18 @@ async function checkRelay(url, token) {
   return { ok: true, version: status.version };
 }
 
+// A Cloudflare project made with "Import a repository" publishes the Loop website instead of the relay.
+const servesLoopSite = url => new Promise(resolve => {
+  const img = new Image();
+  const done = v => { clearTimeout(t); resolve(v); };
+  const t = setTimeout(() => done(false), 6000);
+  img.onload = () => done(img.naturalWidth > 0);
+  img.onerror = () => done(false);
+  img.src = `${url}/icons/icon-192.png?probe=${Date.now()}`;
+});
+
 const FIXES = {
+  site: url => `<b>${esc(url)}</b> is showing the Loop app itself, not the relay. That happens when the Cloudflare project is made with <b>Import a repository</b>.<br>Fix: in Cloudflare go to <b>Workers &amp; Pages → Create → Start with Hello World!</b>, name it e.g. <b>loop-api</b>, <b>Deploy</b>, then <b>Edit code</b> → paste the relay code → <b>Deploy</b>. Add the <b>INBOX</b> binding and the two variables to this new worker, and paste its address here. You can delete the old project.`,
   url: () => 'That doesn’t look like a web address. Copy it from Cloudflare: <b>Workers &amp; Pages</b> → your worker → the <b>…workers.dev</b> link.',
   unreachable: url => `Loop can’t read <b>${esc(url)}</b>. Tap <b>Open in Safari</b> below:<br>• If it shows <b>Hello World!</b>, the Loop code isn’t deployed yet: <b>Edit code</b> → paste <b>relay/worker.js</b> → <b>Deploy</b>.<br>• If the page doesn’t open, the address is wrong. Copy the exact <b>…workers.dev</b> link from your worker’s page (the worker name may be <b>loop-relay</b>, with a dash).<br>• If it shows text starting with <b>{"loop":"relay"</b>, tap Save and test again.`,
   'not-loop': () => 'That address works but isn’t running Loop’s code. In Cloudflare: <b>Edit code</b> → delete everything → paste <b>relay/worker.js</b> → <b>Deploy</b>.',
@@ -271,7 +283,7 @@ sheets.guideRelay = () => {
   return `<h2>Your relay ${closeBtn}</h2>
     <p class="note">A tiny free server you own on Cloudflare. It holds Apple Pay taps and Siri notes until Loop picks them up, and passes Canvas requests through (Canvas blocks apps calling it directly). It never stores your Canvas token.</p>
     <ol class="steps">
-      <li>Sign up free at <b>dash.cloudflare.com</b> → <b>Workers &amp; Pages</b> → <b>Create</b> → <b>Hello World</b> worker, name it <b>loop-relay</b>.</li>
+      <li>Sign up free at <b>dash.cloudflare.com</b> → <b>Workers &amp; Pages</b> → <b>Create</b> → <b>Start with Hello World!</b> (not “Import a repository”), name it <b>loop-relay</b> → <b>Deploy</b>.</li>
       <li><b>Edit code</b>: delete everything, paste Loop's relay code, then <b>Deploy</b>. <a class="chip-btn soft" href="https://raw.githubusercontent.com/kylev202/WebApp/main/relay/worker.js" target="_blank" rel="noopener">${icon('code')} Open the code</a> (tap and hold → Select All → Copy)</li>
       <li><b>Storage &amp; Databases → KV</b> → create a namespace <b>loop-inbox</b>. In the worker's <b>Settings → Bindings</b>, add KV namespace binding named <b>INBOX</b>.</li>
       <li><b>Settings → Variables and Secrets</b>: add secret <b>RELAY_TOKEN</b> (any long random password) and variable <b>ALLOWED_ORIGIN</b> = <b>${esc(location.origin)}</b>.</li>

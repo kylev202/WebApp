@@ -9,7 +9,7 @@ Nothing else is stored. Inbox items expire after 30 days.
 
 ## Set up (dashboard, about 5 minutes)
 
-1. Sign up free at [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Hello World** → name it `loop-relay` → **Deploy**.
+1. Sign up free at [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Start with Hello World!** (not *Import a repository*, which publishes a copy of the Loop website instead) → name it `loop-relay` → **Deploy**.
 2. **Edit code** → replace everything with [`worker.js`](worker.js) → **Deploy**.
 3. **Storage & Databases → KV** → **Create** namespace `loop-inbox`.
 4. In the worker: **Settings → Bindings → Add → KV namespace**: variable name `INBOX`, namespace `loop-inbox`.
@@ -31,6 +31,7 @@ Open your worker's address in Safari (e.g. `https://loop-relay.you.workers.dev`)
 | You see | Fix |
 |---|---|
 | `Hello World!` | The Loop code isn't deployed: **Edit code** → paste [`worker.js`](worker.js) → **Deploy** |
+| The Loop app itself | The project was made with *Import a repository*. Create a new worker with **Start with Hello World!** and paste the relay code |
 | Page doesn't load | Wrong address: copy the exact `…workers.dev` link from the worker's page |
 | `"token_set":false` | Add the secret `RELAY_TOKEN` (Settings → Variables and Secrets) |
 | `"kv_bound":false` | Add the KV binding `INBOX` (Settings → Bindings) |
