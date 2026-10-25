@@ -15,10 +15,10 @@ _Last updated: Oct 25, 2026_
 | Remove account/profile UI, use line charts instead of rings | ✅ Done |
 | AI assistant (Gemini) — concept agreed | ✅ Planned |
 | Brainstorm + detail questions answered | ✅ Done |
-| Mockup of the AI "Ask" screen | ⏳ Optional, not started |
+| Mockup v3: Today (briefing, workout, weight, money), ✨ Ask, Money screens | ✅ Done |
 | Build the real app | ⏳ Not started |
 
-Current mockup: `design/mockup.html` (screenshots: `design/mockup-iphone.png`, `design/mockup-iphone-full.png`).
+Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
 
 ---
 
@@ -34,6 +34,8 @@ Current mockup: `design/mockup.html` (screenshots: `design/mockup-iphone.png`, `
 | AI coach check-ins | **Morning briefing**, **evening review**, **Sunday weekly report** |
 | AI provider | **Google Gemini, free tier** (can switch to paid later by swapping the key) |
 | Theme | **Light only** (soft pastel) |
+| Currency | **AUD (A$)** |
+| Diet goal | **Bulking** — calorie surplus (≈3,000 kcal/day placeholder), high protein (≈160 g); AI can suggest exact targets from body weight |
 
 ---
 
@@ -173,9 +175,9 @@ Gemini API key, goals (calories, protein, sleep, budget), class timetable, hourl
 
 ## 9. Open Questions
 
-- Mockup the ✨ Ask screen (and updated Today with Money + workout) first, or go straight to building?
-- Currency for Finance?
-- Diet goal details (bulk / cut / maintain, calorie target)?
+- Feedback on mockup v3 (Today / Ask / Money) — approve or adjust?
+- Mockup Health and Plan screens too, or start building v1?
+- Exact daily calorie & protein targets (or let the AI calculate them)?
 
 ---
 
