@@ -18,7 +18,9 @@ _Last updated: Oct 25, 2026_
 | AI assistant (Gemini) — concept agreed | ✅ Planned |
 | Brainstorm + detail questions answered | ✅ Done |
 | Mockup v3: Today (briefing, workout, weight, money), ✨ Ask, Money screens | ✅ Done |
-| Build the real app | ⏳ Not started |
+| v1 build (Today, Diet, Water, Sleep, Weight, Habits, Settings, backup, PWA) | ✅ Done — see README for install |
+| Host on GitHub Pages + install on iPhone | ⏳ Next |
+| v2 Gym | ⏳ Not started |
 
 Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
 
@@ -37,6 +39,9 @@ Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Scr
 | AI provider | **Google Gemini, free tier** (can switch to paid later by swapping the key) |
 | Theme | **Light only** (soft pastel) |
 | App name | **Loop** |
+| Face ID lock | **No** |
+| iPhone | **iOS 27.2** (Apple Pay transaction Shortcuts + Home Screen web apps supported) |
+| Canvas address | To add later in Settings |
 | Currency | **AUD (A$)** |
 | Diet goal | **Bulking** — calorie surplus (≈3,000 kcal/day placeholder), high protein (≈160 g); AI can suggest exact targets from body weight |
 
@@ -217,7 +222,7 @@ Westpac has **no personal API**; Australian open banking (CDR) only lets accredi
   - **Automatic weekly backup** to iCloud Drive (JSON file) + reminder; one-tap restore. Manual export/import too.
 - **No backend, no login.**
 - **Hosting:** free static hosting (e.g. GitHub Pages).
-- **Stack:** to be decided at build start (lightweight, e.g. vanilla JS or a small framework + Vite).
+- **Stack:** plain HTML/CSS/JavaScript modules, no build step, no dependencies.
 
 ---
 
