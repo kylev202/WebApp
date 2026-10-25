@@ -163,6 +163,30 @@ Gemini API key, goals (calories, protein, sleep, budget), class timetable, hourl
 
 ---
 
+## 7b. Connections (Google Calendar & money)
+
+### 📅 Google Calendar
+- "Connect Google Calendar" → Google sign-in (OAuth, in-app, no server). Events feed **Up Next**, **Plan** and the AI briefing.
+- AI can also **add** study plans / gym sessions / shifts to Google Calendar *(read-only vs read+write: to confirm)*.
+- One-time setup: free Google Cloud project → enable Calendar API → OAuth client ID → add myself as the only test user (no Google review needed).
+- Sign-in token lasts ~1 hour; app silently reconnects on open (occasionally one tap).
+
+### 🏦 Westpac (my bank)
+Westpac has **no personal API**; Australian open banking (CDR) only lets accredited companies pull data. So:
+1. **Apple Pay + Shortcuts (main, automatic, free):** iPhone "Transaction" automation runs every time I tap my Westpac card in Apple Wallet → sends amount + merchant to the app → AI picks the category. Covers everyday tap-to-pay spending.
+2. **Monthly CSV import:** export transactions from Westpac online banking → drop the file into the app → AI categorises every row and skips ones already logged by Apple Pay. Catches rent, transfers, direct debits, BPAY.
+3. *(Later, optional)* Accredited aggregator (e.g. Basiq) for fully automatic sync — needs a small server and may cost money.
+
+### 💸 Remitly (money transfers)
+- No public API for personal use, so no direct connection.
+- Each transfer already shows in Westpac (CSV import) as a debit → app tags it **"Remittance"** automatically.
+- For details (recipient, exchange rate, fee), either tell the AI ("sent A$500 to mum via Remitly") or *(optional)* let the app read Remitly receipt emails from Gmail using the same Google sign-in.
+- New budget category: **💸 Sending home / Remittances**, with monthly total and line chart.
+
+### Security
+- Google sign-in and any keys stay **only on my phone**, never in the repo.
+- Bank data never leaves the phone except to Gemini for categorising (only merchant + amount, not account numbers).
+
 ## 8. Tech Plan (proposed)
 
 - **Type:** installable web app (PWA) — "Add to Home Screen" on iPhone, works offline.
@@ -178,6 +202,8 @@ Gemini API key, goals (calories, protein, sleep, budget), class timetable, hourl
 - Feedback on mockup v3 (Today / Ask / Money) — approve or adjust?
 - Mockup Health and Plan screens too, or start building v1?
 - Exact daily calorie & protein targets (or let the AI calculate them)?
+- Google Calendar: read-only, or let the AI add events too?
+- Remitly: read receipt emails from Gmail, or just log transfers by telling the AI?
 
 ---
 
@@ -188,4 +214,5 @@ Gemini API key, goals (calories, protein, sleep, budget), class timetable, hourl
 3. **v3 — AI:** Ask screen with Gemini function calling for all logging; AI routine builder.
 4. **v4 — School & Work:** courses, timetable, assignments, grades/GPA, exam plans; shifts & pay; freelance clients/projects/invoices.
 5. **v5 — Money:** expenses, income, budgets, subscriptions, savings goals, bills.
-6. **v6 — Coaching & Siri:** morning briefing, evening review, weekly report, badges, Shortcuts integration.
+6. **v6 — Connections:** Google Calendar sync, Apple Pay Shortcut, Westpac CSV import, Remitly tagging.
+7. **v7 — Coaching & Siri:** morning briefing, evening review, weekly report, badges, Shortcuts integration.
