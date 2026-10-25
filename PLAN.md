@@ -167,8 +167,10 @@ Gemini API key, goals (calories, protein, sleep, budget), class timetable, hourl
 
 ### 📅 Google Calendar
 - "Connect Google Calendar" → Google sign-in (OAuth, in-app, no server). Events feed **Up Next**, **Plan** and the AI briefing.
-- AI can also **add** study plans / gym sessions / shifts to Google Calendar *(read-only vs read+write: to confirm)*.
+- **Read-only:** the app only reads Google Calendar, never changes it.
+- Events the AI creates (study plans, gym sessions, shifts) go into the **app's own calendar** (Plan tab), shown together with Google events.
 - One-time setup: free Google Cloud project → enable Calendar API → OAuth client ID → add myself as the only test user (no Google review needed).
+- Read-only scope (`calendar.readonly`).
 - Sign-in token lasts ~1 hour; app silently reconnects on open (occasionally one tap).
 
 ### 🏦 Westpac (my bank)
@@ -180,7 +182,7 @@ Westpac has **no personal API**; Australian open banking (CDR) only lets accredi
 ### 💸 Remitly (money transfers)
 - No public API for personal use, so no direct connection.
 - Each transfer already shows in Westpac (CSV import) as a debit → app tags it **"Remittance"** automatically.
-- For details (recipient, exchange rate, fee), either tell the AI ("sent A$500 to mum via Remitly") or *(optional)* let the app read Remitly receipt emails from Gmail using the same Google sign-in.
+- **Decision: Apple Pay + Shortcuts** (no Gmail reading). If a transfer is paid with Apple Pay and the Shortcut catches it, it's tagged Remittance automatically; otherwise it's caught by the Westpac CSV import. Extra details can be added by telling the AI.
 - New budget category: **💸 Sending home / Remittances**, with monthly total and line chart.
 
 ### Security
@@ -202,8 +204,6 @@ Westpac has **no personal API**; Australian open banking (CDR) only lets accredi
 - Feedback on mockup v3 (Today / Ask / Money) — approve or adjust?
 - Mockup Health and Plan screens too, or start building v1?
 - Exact daily calorie & protein targets (or let the AI calculate them)?
-- Google Calendar: read-only, or let the AI add events too?
-- Remitly: read receipt emails from Gmail, or just log transfers by telling the AI?
 
 ---
 
