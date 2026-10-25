@@ -1,6 +1,6 @@
 # Life — Personal Life Manager (Plan)
 
-A personal app to manage every part of my life — diet, exercise, sleep, school, work, habits — in one place. Built for **one user (me)**, used mainly on **iPhone**.
+A personal app to manage every part of my life — diet, gym, sleep, university, work, money, habits — in one place, with an AI assistant that does the logging and coaching. Built for **one user (me)**, used mainly on **iPhone**.
 
 _Last updated: Oct 25, 2026_
 
@@ -14,6 +14,7 @@ _Last updated: Oct 25, 2026_
 | iPhone-first redesign, soft pastel colors, compact layout | ✅ Done |
 | Remove account/profile UI, use line charts instead of rings | ✅ Done |
 | AI assistant (Gemini) — concept agreed | ✅ Planned |
+| Brainstorm + detail questions answered | ✅ Done |
 | Mockup of the AI "Ask" screen | ⏳ Optional, not started |
 | Build the real app | ⏳ Not started |
 
@@ -21,57 +22,124 @@ Current mockup: `design/mockup.html` (screenshots: `design/mockup-iphone.png`, `
 
 ---
 
-## 2. Design Decisions (confirmed)
+## 2. My Answers (decisions)
+
+| Topic | Decision |
+|---|---|
+| Areas | Health (diet, gym, sleep), **School** (university), **Work** (part-time + freelance web building), **Finance** (full tracker), Habits |
+| Not included | Mind/mood journal, account/login/profile |
+| Main way to log | **Type/talk to the AI** and **Siri / Apple Shortcuts** (not photo logging, not mainly tap buttons) |
+| Fitness focus | **Gym / strength** |
+| Motivation | Streaks & badges, AI coaching, reminders, charts & trends — all of them |
+| AI coach check-ins | **Morning briefing**, **evening review**, **Sunday weekly report** |
+| AI provider | **Google Gemini, free tier** (can switch to paid later by swapping the key) |
+| Theme | **Light only** (soft pastel) |
+
+---
+
+## 3. Design Decisions (confirmed)
 
 - **Style:** Apple's recent iOS "Liquid Glass" look — translucent frosted cards, soft blurred background, rounded corners, bold large headings, floating glass tab bar.
-- **Colors:** light and soft pastels, *not* strong/saturated colors. Near-white background with faint color washes.
-  - Diet = mint `#8fd3a8` · Exercise = blush `#f4a7b5` · Sleep = lavender `#b4b2ef`
-  - School = peach `#f7cd96` · Work = sky `#a9cdf2` · Mind = lilac `#d6b8ee`
+- **Colors:** light and soft pastels, *not* strong/saturated colors. Near-white background with faint color washes. Light theme only.
+  - Diet = mint `#8fd3a8` · Gym = blush `#f4a7b5` · Sleep = lavender `#b4b2ef`
+  - School = peach `#f7cd96` · Work = sky `#a9cdf2` · Finance = aqua (TBD, soft)
 - **Layout:** compact and small — iPhone-first (390 px wide). No desktop sidebar.
 - **Charts:** **line charts** preferred over ring/pie charts. Smooth curves, thin strokes.
-- **No account / profile / login.** Personal use only — no avatar, no "Me" tab.
+- **No account / profile / login.** Personal use only.
 - **Font:** system font (SF Pro on iPhone; Inter as fallback).
 
 ---
 
-## 3. Screens
+## 4. Features by Area
 
-### Tab bar (floating glass)
-`Today` · `Health` · `✨ Ask` (AI, center) · `Plan` · `Trends`
+### 🏋️ Gym
+- Log **sets / reps / weight** per exercise (by talking to the AI: "bench 3×8 at 60 kg").
+- **Strength line chart** per exercise over time (estimated 1-rep max).
+- **AI-made routine:** AI builds a weekly split (e.g. push/pull/legs) for my goals; today's workout shows on the Today screen.
+- **Body weight trend:** weigh-ins + line chart (bulk/cut).
 
-### Today (home) — mocked up
-1. Date + greeting ("Good evening")
-2. **This Week** card — today's Move / Eat / Sleep vs goal + 7-day line chart (each line as % of goal)
-3. 2×2 widgets: **Diet** (kcal left, protein bar), **Sleep** (duration, quality, sparkline), **Exercise** (distance, weekly workouts), **Water** (glasses of 8)
-4. **Up Next** — today's timeline, color-tagged by area (School / Work / Sleep…)
-5. **To-Do** — school assignments + work tasks with due badges
-6. **Habits** — daily habit toggles (Read, Vitamins, Meditate, 10k steps, No phone)
-7. Floating ＋ button for quick logging
+### 🥗 Diet
+- Log meals by text/voice → AI estimates calories & protein/carbs/fat.
+- Daily calorie & protein targets tied to gym goal (bulk/cut).
+- Water tracking (Siri: "log water").
 
-### Health
-Detail views for Diet (meals, macros, water), Exercise (workouts), Sleep (nights, bedtime).
+### 🌙 Sleep
+- Log bedtime/wake time (Siri Shortcut or AI), or auto-import from iPhone Health via a Shortcut.
+- Sleep duration line chart; bedtime reminder.
 
-### Plan
-Calendar/schedule, school classes & assignments, work tasks.
+### 🎓 School (University)
+- Courses per semester with credits.
+- Weekly **class timetable** → shows in Up Next automatically.
+- Assignments & exams with due dates.
+- **Grades & GPA** tracker, plus "what score do I need on the final?"
+- **Exam countdown** with AI-generated study plan working back from the date.
 
-### Trends
-Longer-term line charts (weeks/months) for each area.
+### 💼 Work
+- **Part-time job:** log shifts, hours worked, hourly rate → estimated pay per week/month.
+- **Freelance web building:** clients, projects, deadlines, project tasks, invoices/payments (paid / unpaid / overdue).
+- Work income flows into Finance automatically.
 
-### ✨ Ask (AI)
-Chat screen with quick-prompt chips: "Log meal", "Plan tomorrow", "Weekly review".
+### 💳 Finance (full money tracker)
+- Expenses by category (log by text: "spent $12 on lunch").
+- Income: part-time pay + freelance payments.
+- Monthly **budget per category** with progress.
+- **Subscriptions** tracker (renewal dates, monthly total).
+- **Savings goals** with progress line.
+- **Bills due** reminders.
+
+### ✅ Habits & Motivation
+- Daily habits with **streaks** and **badges** (e.g. 7-day gym streak, budget kept for a month).
+- **Reminders** (water, bedtime, deadlines, bills, workout).
+- **Trends** tab: long-term line charts for every area.
 
 ---
 
-## 4. AI Assistant (Google Gemini, free tier)
+## 5. Screens
+
+### Tab bar (floating glass)
+`Today` · `Health` · `✨ Ask` (AI, center) · `Plan` · `Money`
+
+> Trends (long-term charts) live inside each area's detail screen and in the weekly report, since Finance needs its own tab.
+
+### Today (home) — mocked up, will be updated
+1. Date + greeting + **AI morning briefing** (2–3 lines)
+2. **This Week** line chart (Move / Eat / Sleep vs goal)
+3. Widgets: Diet, Sleep, **Today's workout**, Water, **Money left this month**
+4. **Up Next** — classes, shifts, client deadlines, workout, bedtime
+5. **To-Do** — assignments, freelance tasks, bills due
+6. **Habits** with streak counts
+7. Floating ＋ button (opens AI quick log)
+
+### Health
+Diet · Gym (routine, exercise history, strength charts, body weight) · Sleep
+
+### ✨ Ask (AI)
+Chat with quick-prompt chips: "Log meal", "Log workout", "Spent…", "Plan tomorrow", "Weekly review".
+
+### Plan
+Calendar (classes + shifts + deadlines), University (courses, grades, GPA, exams), Work (shifts & pay, freelance clients/projects/invoices).
+
+### Money
+Monthly overview, budget by category, spending line chart, income, subscriptions, savings goals, bills.
+
+### Settings
+Gemini API key, goals (calories, protein, sleep, budget), class timetable, hourly rate, data backup export/import.
+
+---
+
+## 6. AI Assistant (Google Gemini, free tier)
 
 **What it does**
-- **Natural-language logging:** "Had 2 eggs and toast" → diet entry with estimated calories/protein. "Ran 5 km in 30 min", "slept 11:30 to 7" → logged.
-- **Planning:** "Calc exam Friday, work Mon–Wed — make a study plan" → creates study blocks + to-dos.
-- **Coaching:** daily/weekly insights from my data (e.g. sleep vs late study sessions).
-- **Q&A over my data:** "Average protein this week?"
+- **Natural-language logging** for everything: meals, workouts, sleep, water, expenses, shifts, tasks.
+- **Planning:** study plans before exams, weekly gym routine, daily schedule.
+- **Coaching:**
+  - **Morning briefing** — today's classes, shifts, deadlines, workout, bills due.
+  - **Evening review** — how the day went, set tomorrow's top 3.
+  - **Sunday weekly report** — trends in gym, diet, sleep, money, school.
+- **Q&A over my data:** "How much did I spend on food this month?", "Is my bench going up?"
 
 **How it works**
-- Gemini **function calling**: the app gives the AI a fixed set of tools (`add_meal`, `log_workout`, `log_sleep`, `add_task`, `add_event`, `toggle_habit`, …). The app validates each call before saving, so the AI can only do what those tools allow.
+- Gemini **function calling**: the app gives the AI a fixed set of tools (`add_meal`, `log_set`, `log_sleep`, `add_expense`, `log_shift`, `add_task`, `add_event`, `toggle_habit`, …). The app validates each call before saving, so the AI can only do what those tools allow.
 - Called directly from the phone — no server needed.
 
 **Setup**
@@ -79,13 +147,21 @@ Chat screen with quick-prompt chips: "Log meal", "Plan tomorrow", "Weekly review
 2. Paste it into the app's **Settings** once — stored only on the phone.
 
 **Cautions**
-- **Privacy:** on the free tier, Google may use submitted data to improve its products. The paid tier doesn't, and costs very little for one user.
+- **Privacy:** on the free tier, Google may use submitted data to improve its products. Can switch to the paid tier later just by swapping the key.
 - **Rate limits:** free tier has per-minute/per-day caps (check AI Studio for current numbers) — fine for one person.
 - **Never commit the API key** to the repo. Key lives only in on-device Settings.
 
 ---
 
-## 5. Tech Plan (proposed)
+## 7. Siri & Apple Shortcuts
+
+- "Hey Siri, log water" / "log my weight 72 kg" / "I spent 50k on lunch" → Shortcut opens the app with the entry pre-filled via URL (e.g. `…/log?text=...`), the AI parses and saves it.
+- **Auto-import from iPhone Health** (steps, sleep, weight) with a daily Shortcut automation.
+- **Scheduled check-ins & reminders:** a web app with no server can't send notifications on a timer by itself. Plan: use **Shortcuts personal automations** (e.g. 7:00 AM → open morning briefing, 10:30 PM → bedtime/evening review). Optional later: a small free push service if Shortcuts isn't enough.
+
+---
+
+## 8. Tech Plan (proposed)
 
 - **Type:** installable web app (PWA) — "Add to Home Screen" on iPhone, works offline.
 - **Data:** stored only on the device (IndexedDB). Export/import backup as JSON file.
@@ -95,19 +171,19 @@ Chat screen with quick-prompt chips: "Log meal", "Plan tomorrow", "Weekly review
 
 ---
 
-## 6. Open Questions
+## 9. Open Questions
 
-- Mockup the ✨ Ask screen first, or go straight to building?
-- Areas: add/remove any (Finance, Mind, Social, Goals)?
-- Free Gemini tier OK given the privacy note, or use the low-cost paid tier?
-- Light theme only, or also dark mode (follow iPhone setting)?
+- Mockup the ✨ Ask screen (and updated Today with Money + workout) first, or go straight to building?
+- Currency for Finance?
+- Diet goal details (bulk / cut / maintain, calorie target)?
 
 ---
 
-## 7. Next Steps
+## 10. Build Roadmap
 
-1. Answer open questions above.
-2. (Optional) Mockup the Ask screen.
-3. Build v1: Today screen + logging for Diet/Exercise/Sleep/Water + To-Do + Habits, local storage, PWA install.
-4. Add Plan & Trends screens.
-5. Add Gemini AI assistant with function calling.
+1. **v1 — Core:** Today screen, local data storage, PWA install, Settings. Logging for Diet, Water, Sleep, Habits (+ streaks).
+2. **v2 — Gym:** exercises, sets/reps/weight, strength charts, body weight trend.
+3. **v3 — AI:** Ask screen with Gemini function calling for all logging; AI routine builder.
+4. **v4 — School & Work:** courses, timetable, assignments, grades/GPA, exam plans; shifts & pay; freelance clients/projects/invoices.
+5. **v5 — Money:** expenses, income, budgets, subscriptions, savings goals, bills.
+6. **v6 — Coaching & Siri:** morning briefing, evening review, weekly report, badges, Shortcuts integration.
