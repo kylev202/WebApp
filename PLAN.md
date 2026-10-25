@@ -22,7 +22,7 @@ _Last updated: Oct 25, 2026_
 | Host on GitHub Pages | ✅ Live at https://kylev202.github.io/WebApp/ |
 | Install on iPhone (Share → Add to Home Screen) | ⏳ Next |
 | v1.1 polish: new loop icon, edit/undo, bulk calculator, bulk rate, animations, haptics | ✅ Done |
-| v2 Gym | ⏳ Not started |
+| v2 Gym + custom icon set | ✅ Done |
 
 Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
 

@@ -4,16 +4,18 @@ My personal life manager for iPhone: diet, gym, sleep, uni, work and money in on
 
 The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups are in [`design/`](design/).
 
-## What's in v1.1
+## What's in v2
 
-- **Today:** greeting with a 🔥 logging streak, weekly line chart (eat / sleep / water as % of goal, today shown as a live hollow dot), Diet, Sleep, Water and Weight cards, habits with streaks, today's food with **Repeat yesterday**
-- **Health:** Diet (calories chart, protein / carbs / fat bars with bulking targets, meal history), Sleep (14-night chart), Body (weight trend + **bulk rate**: kg per week vs the lean-bulk range)
-- **Quick log (＋):** meal (recent meals, any day), glass of water, sleep (live duration preview), weigh-in
-- **Edit anything:** tap a meal, night or weigh-in to change it; delete with **Undo**
-- **Bulk calculator:** age, height, weight, activity and pace give your calorie and protein goals
-- **Feel:** iOS-style spring sheets you can swipe down, sliding tab indicator, compact title bar on scroll, cards that rise in, charts that draw, haptic taps, reduced-motion support
-- **Settings:** goals, habits, backup / restore, erase
-- Works **offline**, installs to the Home Screen, **no account**, all data stays on the phone
+- **Gym (new):** pick a routine (Push/Pull/Legs, Upper/Lower or Full body) and edit every day, exercise, set and rep range. Start the next day from Today, log each set (kg × reps) with last session shown beside it, and tick sets off.
+  - **Smart weights:** double progression. Beat last time by a rep; when every set hits the top of the range, Loop tells you to add weight.
+  - **PRs:** heavier weight or higher estimated 1-rep max triggers a trophy and confetti.
+  - **Rest timer** starts on each ticked set and chimes when it's time to go again.
+  - **Plate calculator**, exercise history with strength line charts, weekly sets chart, custom exercises. Finishing a workout ticks the Gym habit.
+- **Custom icon set:** every emoji is replaced with Loop's own pastel duotone icons, including a habit icon picker.
+- **Today:** workout card, weekly line chart, Diet, Sleep, Water and Weight cards, habits with streaks, today's food with Repeat yesterday.
+- **Health:** Gym, Diet (macros with bulking targets), Sleep, Body (weight trend + bulk rate).
+- **Logging:** meals (recent meals, any day), water (tap the drops), sleep, weigh-ins; tap any entry to edit, delete with Undo.
+- **Bulk calculator**, iOS-style sheets you can swipe down, haptics, animations, offline, no account, data stays on the phone.
 
 Plan and Money tabs are placeholders until later versions.
 
@@ -48,7 +50,12 @@ python3 -m http.server 8000
 |---|---|
 | `index.html` | App shell and tab bar |
 | `css/app.css` | Styles (pastel glass theme) |
-| `js/app.js` | Screens, logging sheets, actions, routing |
+| `js/app.js` | Entry point: event delegation, routing, boot |
+| `js/core.js` | Shared shell: registries, render, sheets, toasts, haptics, confetti |
+| `js/icons.js` | Loop's duotone icon set |
+| `js/util.js`, `js/data.js` | Helpers and data selectors |
+| `js/today.js`, `js/health.js`, `js/gym.js`, `js/settings.js` | Screens and their sheets/actions |
+| `js/gym-data.js` | Exercise library and routine templates |
 | `js/store.js` | IndexedDB storage, backup export/import |
 | `js/charts.js` | SVG line charts and sparklines |
 | `sw.js` | Offline cache (bump `CACHE` when releasing) |
