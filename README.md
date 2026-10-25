@@ -21,6 +21,11 @@ The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups a
 - **Money (new):** monthly overview with spending vs budget-pace line, income/spent/saved, budgets per category, Westpac/Revolut/cash accounts, transfers (not counted as spending), foreign-currency notes, bills & subscriptions (tap Paid to log and roll the date), savings goals with an estimated finish date.
 - **Today** now also shows Up Next, To-Do and a Money card.
 - **Ask (new, centre ✦ tab):** chat with Google Gemini. Type or speak ("3 eggs and toast", "bench 3x8 at 60", "spent $18 at uni", "plan study for my exam") and it logs meals, water, sleep, weight, habits, workouts, routines, tasks, events, shifts, assessments, expenses, income and goals. Every logged item appears as a card with **Undo**. Attach a photo (roster, meal, receipt). It answers questions from your Loop data. Setup: paste a free key from aistudio.google.com/apikey; Loop picks the newest Flash model automatically.
+- **Connections (new, Settings → Connections):**
+  - **Bank CSV import** for Westpac and Revolut (and most bank CSVs): cleans merchant names, auto-categorises Australian merchants, skips duplicates and reverted payments, and spots Westpac → Revolut top-ups as transfers. Optional "sort with AI" for unknown merchants.
+  - **Your relay** ([`relay/`](relay/)): a free Cloudflare Worker you own. It powers **Apple Pay logging** (Shortcuts Transaction automation → each tap lands in Money) and **Siri "Log to Loop"**, and passes **Canvas** requests through.
+  - **Canvas sync:** units, assignments, due dates, weights (from assignment groups) and marks.
+  - **Google Calendar (read-only):** events appear in the agenda and Up Next. Needs your own OAuth Client ID (guide in the app).
 
 The app icon is drawn by [`design/icon.html`](design/icon.html): an infinity "loop" ribbon flowing through each life area's colour.
 

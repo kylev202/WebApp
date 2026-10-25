@@ -112,7 +112,7 @@ const projectClient = id => byId(id)?.clientId;
 // ---------- markup ----------
 function agendaRow(it) {
   return `<div class="row tap" data-act="sheet" data-sheet="${it.sheet}" data-id="${it.id ?? ''}" role="button">
-    <div class="time">${it.time ? time12(it.time) : 'Due'}</div><div class="bar" style="background:var(--${it.area})"></div>
+    <div class="time">${it.time ? time12(it.time) : it.allDay ? 'All day' : 'Due'}</div><div class="bar" style="background:var(--${it.area})"></div>
     <div class="grow"><div class="t">${esc(it.title)}</div>${it.sub ? `<div class="d">${esc(it.sub)}${it.end && it.time ? ` · until ${time12(it.end)}` : ''}</div>` : ''}</div>
     <span class="tag" style="background:var(--${it.area}-bg);color:var(--${it.area}-ink)">${esc(it.tag)}</span></div>`;
 }
@@ -164,6 +164,7 @@ function planUni() {
     <div class="head"><div class="title">${tile('school', 'school')}Results</div><button class="sub-note" data-act="toggleScale">${gpaScale()}-point GPA ${icon('repeat')}</button></div>
     ${sum ? `<div class="calc-result"><div><span>GPA</span><b>${sum.gpa.toFixed(2)}</b></div><div><span>WAM</span><b>${fmt1(sum.wam)}</b></div><div><span>Graded</span><b>${plural(sum.count, 'course')}</b></div></div>`
       : '<p class="note" style="margin:0">Add courses and enter assessment marks to see your GPA and WAM.</p>'}
+    <button class="btn soft" style="margin-top:12px" data-act="${state.kv.canvas?.token ? 'canvasSync' : 'sheet'}" data-sheet="guideCanvas">${icon('repeat')} ${state.kv.canvas?.token ? 'Sync from Canvas' : 'Connect Canvas'}</button>
   </section>
   <div class="section-label">Upcoming assessments <a data-act="sheet" data-sheet="assessment">Add</a></div>
   <section class="card glass">${upcoming.length ? `<div class="list">${upcoming.map(a => {

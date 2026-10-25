@@ -1,0 +1,13 @@
+# Optional: deploy with `npx wrangler deploy` instead of pasting into the dashboard.
+name = "loop-relay"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://kylev202.github.io"
+
+[[kv_namespaces]]
+binding = "INBOX"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+# Then: npx wrangler secret put RELAY_TOKEN

@@ -10,6 +10,8 @@ import './settings.js';
 import './plan.js';
 import './money.js';
 import './ask.js';
+import './csv.js';
+import { handleOAuthRedirect, startConnections } from './connect.js';
 
 const soon = (title, ic, area, text) => () => `${header(title, 'Coming soon')}
   <section class="card glass soon">${tile(ic, area, 'xl')}<p>${text}</p></section>`;
@@ -62,7 +64,9 @@ document.addEventListener('visibilitychange', () => {
 document.querySelectorAll('[data-icon]').forEach(el => { el.outerHTML = icon(el.dataset.icon); });
 
 await openStore();
+await handleOAuthRedirect();
 route();
+startConnections();
 if (!state.kv.onboarded && !state.entries.length) openSheet('welcome');
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
