@@ -26,6 +26,8 @@ _Last updated: Oct 25, 2026_
 | v4 Plan (uni, work, tasks, agenda) + v5 Money | ✅ Done (built before AI so the AI can cover every area) |
 | v3 AI assistant (Gemini function calling, voice, photo, undo) | ✅ Done |
 | v6 Connections (CSV import, relay worker, Apple Pay + Siri inbox, Canvas, Google Calendar) | ✅ Done |
+| v7 Coaching (briefing, evening review, weekly report, badges, reminders guide) | ✅ Done |
+| Next: set up relay, Gemini key, Canvas token, Google Client ID on the phone | ⏳ Your setup |
 
 Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
 

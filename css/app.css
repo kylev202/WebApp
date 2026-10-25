@@ -623,3 +623,32 @@ form[data-form="txn"][data-kind="income"] .k-expense, form[data-form="txn"][data
 .csv-list { max-height: 46dvh; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
 .csv-list .row.off { opacity: .45; }
 .cat-sel { font: inherit; font-size: 11px; font-weight: 600; border: none; background: rgba(0,0,0,.05); border-radius: 7px; padding: 2px 4px; color: var(--text-2); max-width: 150px; }
+
+/* ---------- v7: Coaching ---------- */
+.brief { display: flex; gap: 10px; padding: 13px 14px; background: linear-gradient(135deg, rgba(253,244,232,.85), rgba(253,238,241,.75) 55%, rgba(239,238,252,.8)); }
+.brief .tile { margin-top: 2px; }
+.brief p { font-size: 12.5px; line-height: 1.5; }
+.brief b { font-weight: 650; }
+.meta { font-size: 10.5px; color: var(--text-3); font-weight: 600; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 4px; }
+.meta .i { width: 11px; height: 11px; color: var(--sleep-ink); }
+button.streak { font: inherit; color: var(--move-ink); letter-spacing: inherit; text-transform: inherit; }
+.rv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.rv { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 5px 9px; border-radius: 999px; background: rgba(0,0,0,.04); color: var(--text-2); }
+.rv .i { width: 12px; height: 12px; }
+.rv.ok { background: var(--diet-bg); color: var(--diet-ink); }
+.ai-note { display: flex; gap: 10px; font-size: 13px; line-height: 1.5; margin: 12px 0 4px; padding: 10px 12px; border-radius: 14px; background: var(--sleep-bg); }
+.ai-note .tile { background: #fff !important; }
+.btn.small { height: 38px; font-size: 13px; margin-top: 8px; }
+.top3 { display: flex; flex-direction: column; gap: 7px; }
+.top3 .input-x { padding: 9px 12px; }
+.week-nav { display: flex; align-items: center; justify-content: space-between; margin: -4px 0 12px; }
+.week-nav b { font-size: 14px; }
+.week-nav .x-btn:disabled { opacity: .3; }
+.legend-inline { flex-wrap: wrap; }
+.badges { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.badge { text-align: center; padding: 12px 6px; border-radius: 18px; background: rgba(255,255,255,.6); opacity: .55; filter: grayscale(.6); }
+.badge.on { opacity: 1; filter: none; background: rgba(255,255,255,.9); box-shadow: inset 0 0 0 1px rgba(0,0,0,.04); }
+.badge .tile { margin: 0 auto 8px; }
+.badge .t { font-size: 12px; font-weight: 650; }
+.badge .d { font-size: 10.5px; color: var(--text-2); margin-top: 2px; }
+.ex-chips span .i { width: 12px; height: 12px; color: var(--school-ink); }

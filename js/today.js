@@ -50,7 +50,7 @@ function renderToday() {
   const kcalLeft = g.kcal - kcal;
   const yesterdayMeals = of('meal', addDays(t, -1));
   const dateLine = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })
-    + (logStreak >= 2 ? ` · <span class="streak">${icon('flame')}${logStreak} days</span>` : '');
+    + (logStreak >= 2 ? ` · <button class="streak" data-act="sheet" data-sheet="badges">${icon('flame')}${logStreak} days</button>` : '');
   const eatAvg = avgLogged(days.map(kcalOn)), sleepAvg = avgLogged(days.map(sleepOn)), waterAvg = avgLogged(days.map(waterOn));
 
   return `

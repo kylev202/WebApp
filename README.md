@@ -4,7 +4,7 @@ My personal life manager for iPhone: diet, gym, sleep, uni, work and money in on
 
 The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups are in [`design/`](design/).
 
-## What's in v2
+## What's in v4
 
 - **Gym (new):** pick a routine (Push/Pull/Legs, Upper/Lower or Full body) and edit every day, exercise, set and rep range. Start the next day from Today, log each set (kg × reps) with last session shown beside it, and tick sets off.
   - **Smart weights:** double progression. Beat last time by a rep; when every set hits the top of the range, Loop tells you to add weight.
@@ -26,6 +26,7 @@ The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups a
   - **Your relay** ([`relay/`](relay/)): a free Cloudflare Worker you own. It powers **Apple Pay logging** (Shortcuts Transaction automation → each tap lands in Money) and **Siri "Log to Loop"**, and passes **Canvas** requests through.
   - **Canvas sync:** units, assignments, due dates, weights (from assignment groups) and marks.
   - **Google Calendar (read-only):** events appear in the agenda and Up Next. Needs your own OAuth Client ID (guide in the app).
+- **Coaching (new):** a **morning briefing** on Today (sleep, classes, shifts, deadlines, today's lift target, bulk targets, bills), an **evening review** (today's wins plus your top 3 for tomorrow, saved as tasks), and a **week in review** report every Sunday. With the AI connected, the briefing and reviews are written by Gemini (once per day/week, to save the free tier). **17 badges** for training, nutrition, sleep, money and uni. A **reminders guide** for iPhone Shortcuts notifications.
 
 The app icon is drawn by [`design/icon.html`](design/icon.html): an infinity "loop" ribbon flowing through each life area's colour.
 
