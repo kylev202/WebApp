@@ -351,7 +351,7 @@ sheets.guideGcal = () => {
     <ol class="steps">
       <li>Go to <b>console.cloud.google.com</b> → create a project <b>Loop</b>.</li>
       <li><b>APIs &amp; Services → Library</b> → enable <b>Google Calendar API</b>.</li>
-      <li><b>OAuth consent screen</b>: External, app name Loop, add your Gmail under <b>Test users</b>.</li>
+      <li><b>OAuth consent screen</b> (now called <b>Google Auth Platform</b>): External, app name Loop. Then <b>Audience → Test users → Add users</b> and add your Gmail, or Google blocks you with “access_denied”.</li>
       <li><b>Credentials → Create credentials → OAuth client ID → Web application</b>.<br>Authorised JavaScript origin: <code>${esc(location.origin)}</code> ${copyBtn(location.origin)}<br>Authorised redirect URI: <code>${esc(APP_URL)}</code> ${copyBtn(APP_URL)}</li>
       <li>Copy the <b>Client ID</b> and paste it below.</li>
     </ol>
@@ -359,6 +359,7 @@ sheets.guideGcal = () => {
       <div class="field"><label>OAuth Client ID</label><input class="input-x" name="clientId" value="${esc(g.clientId)}" placeholder="…apps.googleusercontent.com" autocomplete="off"></div>
       <div class="btn-row"><button class="btn">Save and connect</button>${g.clientId ? '<button type="button" class="btn danger" data-act="gcalForget">Remove</button>' : ''}</div>
     </form>
+    <p class="note"><b>Google says “access_denied” or “hasn’t completed verification”?</b> Add your Gmail under <b>Audience → Test users</b>. On the “Google hasn’t verified this app” screen, tap <b>Continue</b>.</p>
     <p class="note"><b>Google says “redirect_uri_mismatch”?</b> Open your OAuth client in Google Cloud and make the redirect URI exactly <code>${esc(APP_URL)}</code> (capitals and the slash at the end count). Save, wait 5 minutes, then Connect again.</p>
     <p class="note">Google sign-in lasts about an hour. When it runs out, Loop keeps the last synced events and shows Connect again.</p>`;
 };

@@ -5,7 +5,7 @@ import { icon, tile, HABIT_ICONS } from './icons.js';
 import { screens, actions, forms, afterRender, render, toast, haptic, header, go } from './core.js';
 import { goals, habits, DEFAULT_GOALS } from './data.js';
 
-export const VERSION = '4.1.4';
+export const VERSION = '4.1.5';
 // Later versions add their own settings cards (AI key, connections...).
 export const settingsSections = [];
 
