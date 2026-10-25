@@ -7,6 +7,8 @@ import './health.js';
 import './gym.js';
 import './today.js';
 import './settings.js';
+import './plan.js';
+import './money.js';
 
 const soon = (title, ic, area, text) => () => `${header(title, 'Coming soon')}
   <section class="card glass soon">${tile(ic, area, 'xl')}<p>${text}</p></section>`;

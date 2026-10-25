@@ -22,7 +22,8 @@ export const waterOn = d => sum(of('water', d), 'amount');
 export const sleepOn = d => sum(of('sleep', d), 'hours');
 export const weights = () => of('weight').sort((a, b) => a.date.localeCompare(b.date) || a.ts - b.ts);
 export const habitDone = (id, d) => state.entries.some(e => e.type === 'habit' && e.habitId === id && e.date === d);
-export const anyLogOn = d => state.entries.some(e => e.date === d && e.type !== 'txn');
+const LOG_TYPES = new Set(['meal', 'water', 'sleep', 'weight', 'habit', 'workout']);
+export const anyLogOn = d => state.entries.some(e => e.date === d && LOG_TYPES.has(e.type));
 
 // Consecutive days ending today (or yesterday, if today isn't done yet).
 export function streak(test) {

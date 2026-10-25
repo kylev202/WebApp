@@ -1,7 +1,7 @@
 // Shared app shell: registries that feature modules fill in, rendering, sheets, toasts, haptics.
 import { esc } from './util.js';
 import { icon } from './icons.js';
-import { setKV } from './store.js';
+import { setKV, removeEntry, putEntry } from './store.js';
 
 export const screens = {};  // route -> () => html
 export const sheets = {};   // name -> (params) => html
@@ -166,6 +166,16 @@ export function chime() {
     o.start(t + i * 0.18);
     o.stop(t + i * 0.18 + 0.55);
   });
+}
+
+// Delete an entry, offering Undo in the toast.
+export async function removeWithUndo(id, label = 'Deleted') {
+  const entry = await removeEntry(id);
+  if (!entry) return;
+  haptic();
+  render();
+  toast(label, { icon: 'trash', action: { label: 'Undo', run: async () => { await putEntry(entry); render(); } } });
+  return entry;
 }
 
 // ---------- shared bits of markup ----------
