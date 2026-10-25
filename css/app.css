@@ -758,3 +758,11 @@ form:has(input[name="allDay"]:checked) .times { display: none; }
 .date-pick .pk > span { padding: 8px 10px; font-size: 13px; }
 .tag { text-transform: none; }
 .tag[class*="st-"] { text-transform: capitalize; }
+.check-box { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border-radius: 16px; background: var(--sleep-bg); color: var(--text); font-size: 13px; line-height: 1.55; }
+.check-box > .i { width: 18px; height: 18px; flex: none; margin-top: 1px; color: var(--sleep-ink); }
+.check-box.ok { background: var(--diet-bg); }
+.check-box.ok > .i { color: var(--diet-ink); }
+.check-box.bad { background: var(--move-bg); }
+.check-box.bad > .i { color: var(--move-ink); }
+.check-box a { color: var(--sleep-ink); font-weight: 600; cursor: pointer; }
+a.btn { text-decoration: none; }

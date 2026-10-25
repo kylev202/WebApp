@@ -20,12 +20,31 @@ Nothing else is stored. Inbox items expire after 30 days.
 
 Then follow the in-app guides for **Apple Pay logging**, **Siri: "Log to Loop"** and **Canvas**.
 
+## Troubleshooting
+
+Open your worker's address in Safari (e.g. `https://loop-relay.you.workers.dev`). With the current code you see a line like:
+
+```json
+{"loop":"relay","version":2,"token_set":true,"kv_bound":true,"allowed_origin":"https://kylev202.github.io"}
+```
+
+| You see | Fix |
+|---|---|
+| `Hello World!` | The Loop code isn't deployed: **Edit code** → paste [`worker.js`](worker.js) → **Deploy** |
+| Page doesn't load | Wrong address: copy the exact `…workers.dev` link from the worker's page |
+| `"token_set":false` | Add the secret `RELAY_TOKEN` (Settings → Variables and Secrets) |
+| `"kv_bound":false` | Add the KV binding `INBOX` (Settings → Bindings) |
+| `allowed_origin` isn't `https://kylev202.github.io` | Fix `ALLOWED_ORIGIN` (no `/WebApp`, no trailing slash) |
+
+Loop's **Save and test** runs the same checks and tells you which one failed.
+
 ## API
 
 All requests need `Authorization: Bearer <RELAY_TOKEN>`.
 
 | Method | Path | Body / headers | |
 |---|---|---|---|
+| GET | `/` | (no token) | public status, no secrets |
 | GET | `/ping` | | health check |
 | POST | `/inbox` | JSON `{ amount, merchant, card }` or `{ text }` | add an item |
 | GET | `/inbox` | | list items |

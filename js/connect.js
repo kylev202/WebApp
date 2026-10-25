@@ -2,7 +2,7 @@
 import { state, addEntry, updateEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, pad, num, plural, timeOf } from './util.js';
 import { icon, tile } from './icons.js';
-import { sheets, actions, forms, render, openSheet, closeSheet, toast, haptic, closeBtn } from './core.js';
+import { sheets, actions, forms, render, openSheet, closeSheet, refreshSheet, toast, haptic, closeBtn } from './core.js';
 import { settingsSections } from './settings.js';
 import { agendaSources, courses, assessments } from './plan.js';
 import { guessCategory, cleanMerchant } from './csv.js';
@@ -18,12 +18,24 @@ const canvas = () => ({ domain: '', token: '', ...state.kv.canvas });
 const gcal = () => ({ clientId: '', token: '', expires: 0, ...state.kv.gcal });
 const ago = ts => (ts ? `${timeOf(ts)} ${dayKey(new Date(ts)) === dayKey() ? 'today' : new Date(ts).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : 'never');
 
+// "looprelay.you.workers.dev/inbox " → "https://looprelay.you.workers.dev"
+export function cleanRelayUrl(s) {
+  let u = String(s ?? '').trim().replace(/\s+/g, '');
+  if (u && !/^https?:\/\//i.test(u)) u = `https://${u}`;
+  return u.replace(/^(https?:\/\/[^/]+).*$/i, '$1').toLowerCase();
+}
+
 async function relayFetch(path, { method = 'GET', body, headers = {} } = {}) {
   const r = relay();
   if (!r.url || !r.token) throw new Error('Set up your relay in Settings first');
-  const res = await fetch(`${r.url.replace(/\/$/, '')}${path}`, {
-    method, headers: { Authorization: `Bearer ${r.token}`, ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${cleanRelayUrl(r.url)}${path}`, {
+      method, headers: { Authorization: `Bearer ${r.token}`, ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new Error('Can’t reach your relay. Open Settings → Connections → Your relay and tap Save and test.');
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? `Relay error ${res.status}`);
   return data;
@@ -202,10 +214,57 @@ settingsSections.push(() => {
     <div class="row">${tile('contactless', 'money')}<div class="grow"><div class="t">Apple Pay logging</div><div class="d">${r.url ? 'Shortcut sends each tap to your relay' : 'Needs your relay'}</div></div><button class="pill-btn" data-act="sheet" data-sheet="guideApplePay">Guide</button></div>
     <div class="row">${tile('mic', 'sleep')}<div class="grow"><div class="t">Siri: “Log to Loop”</div><div class="d">Say it, Loop logs it next time you open the app</div></div><button class="pill-btn" data-act="sheet" data-sheet="guideSiri">Guide</button></div>
     <div class="row">${tile('upload', 'work')}<div class="grow"><div class="t">Import bank CSV</div><div class="d">Westpac or Revolut statement</div></div><button class="pill-btn" data-act="importCsv">Import</button></div>
-    <div class="row">${tile('link', 'diet')}<div class="grow"><div class="t">Your relay</div><div class="d">${r.url ? esc(r.url.replace(/^https?:\/\//, '')) : 'Free Cloudflare Worker you own'}</div></div><button class="pill-btn" data-act="sheet" data-sheet="guideRelay">${r.url ? 'Edit' : 'Set up'}</button></div>
+    <div class="row">${tile('link', 'diet')}<div class="grow"><div class="t">Your relay</div><div class="d">${r.url ? esc(r.url.replace(/^https?:\/\//, '')) : 'Free Cloudflare Worker you own'}</div></div><button class="pill-btn" data-act="openRelay">${r.url ? 'Edit' : 'Set up'}</button></div>
     ${r.url ? `<button class="btn soft" data-act="inboxPull" style="margin-top:10px">${icon('repeat')} Check inbox now</button>` : ''}
   </section>`;
 });
+
+// Step-by-step relay check so each kind of mistake gets a plain-English fix.
+let relayCheck = null;
+async function checkRelay(url, token) {
+  if (!/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}$/.test(url)) return { ok: false, why: 'url' };
+  let status;
+  try {
+    const res = await fetch(`${url}/`);
+    status = await res.json().catch(() => null);
+    if (res.status === 401 && status?.error === 'unauthorized') status = { loop: 'relay', version: 1 }; // older Loop code had no status page
+  } catch {
+    return { ok: false, why: 'unreachable' };
+  }
+  if (!status?.loop) return { ok: false, why: 'not-loop' };
+  if (status.version >= 2) {
+    if (!status.token_set) return { ok: false, why: 'no-token' };
+    if (!status.kv_bound) return { ok: false, why: 'no-kv' };
+    if (status.allowed_origin && status.allowed_origin !== '*' && status.allowed_origin !== location.origin.toLowerCase()) return { ok: false, why: 'origin', got: status.allowed_origin };
+  }
+  try {
+    const res = await fetch(`${url}/ping`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 401) return { ok: false, why: 'token' };
+    if (!res.ok) return { ok: false, why: 'error', msg: (await res.json().catch(() => ({}))).error ?? `status ${res.status}` };
+  } catch {
+    return { ok: false, why: 'origin', got: status.allowed_origin ?? '(not readable)' };
+  }
+  return { ok: true, version: status.version };
+}
+
+const FIXES = {
+  url: () => 'That doesn’t look like a web address. Copy it from Cloudflare: <b>Workers &amp; Pages</b> → your worker → the <b>…workers.dev</b> link.',
+  unreachable: url => `Loop can’t read <b>${esc(url)}</b>. Tap <b>Open in Safari</b> below:<br>• If it shows <b>Hello World!</b>, the Loop code isn’t deployed yet: <b>Edit code</b> → paste <b>relay/worker.js</b> → <b>Deploy</b>.<br>• If the page doesn’t open, the address is wrong. Copy the exact <b>…workers.dev</b> link from your worker’s page (the worker name may be <b>loop-relay</b>, with a dash).<br>• If it shows text starting with <b>{"loop":"relay"</b>, tap Save and test again.`,
+  'not-loop': () => 'That address works but isn’t running Loop’s code. In Cloudflare: <b>Edit code</b> → delete everything → paste <b>relay/worker.js</b> → <b>Deploy</b>.',
+  'no-token': () => 'The worker has no <b>RELAY_TOKEN</b>. Add it under <b>Settings → Variables and Secrets</b> as type <b>Secret</b>, then deploy.',
+  'no-kv': () => 'The worker can’t find its storage. Under <b>Settings → Bindings</b>, add a <b>KV namespace</b> binding with the variable name <b>INBOX</b> (all capitals) pointing to <b>loop-inbox</b>.',
+  origin: (_, c) => `<b>ALLOWED_ORIGIN</b> on the worker is <b>${esc(c.got)}</b>, but it must be exactly <b>${esc(location.origin)}</b> (no <b>/WebApp</b>, no slash at the end). Change it under <b>Settings → Variables and Secrets</b> and deploy.`,
+  token: () => 'The relay is fine, but the token doesn’t match the <b>RELAY_TOKEN</b> secret. Paste it again in both places (watch for spaces at the start or end).',
+  error: (_, c) => `The relay replied with an error: ${esc(c.msg)}`,
+};
+
+function relayResult(url) {
+  if (!relayCheck) return '';
+  if (relayCheck.busy) return `<div class="check-box">${icon('repeat')} Checking your relay…</div>`;
+  if (relayCheck.ok) return `<div class="check-box ok">${icon('check')}<div><b>Relay connected.</b> Next, set up <a data-act="sheet" data-sheet="guideApplePay">Apple Pay logging</a>.${relayCheck.version < 2 ? '<br>Tip: paste the latest <b>relay/worker.js</b> again for clearer error messages.' : ''}</div></div>`;
+  return `<div class="check-box bad">${icon('alert')}<div>${FIXES[relayCheck.why](url, relayCheck)}</div></div>
+    ${url && /^https:/.test(url) ? `<a class="btn soft" href="${esc(url)}" target="_blank" rel="noopener" style="margin-top:10px">${icon('globe')} Open in Safari</a>` : ''}`;
+}
 
 sheets.guideRelay = () => {
   const r = relay();
@@ -213,7 +272,7 @@ sheets.guideRelay = () => {
     <p class="note">A tiny free server you own on Cloudflare. It holds Apple Pay taps and Siri notes until Loop picks them up, and passes Canvas requests through (Canvas blocks apps calling it directly). It never stores your Canvas token.</p>
     <ol class="steps">
       <li>Sign up free at <b>dash.cloudflare.com</b> → <b>Workers &amp; Pages</b> → <b>Create</b> → <b>Hello World</b> worker, name it <b>loop-relay</b>.</li>
-      <li><b>Edit code</b>: paste the code from <b>relay/worker.js</b> in the Loop GitHub repo, then <b>Deploy</b>.</li>
+      <li><b>Edit code</b>: delete everything, paste Loop's relay code, then <b>Deploy</b>. <a class="chip-btn soft" href="https://raw.githubusercontent.com/kylev202/WebApp/main/relay/worker.js" target="_blank" rel="noopener">${icon('code')} Open the code</a> (tap and hold → Select All → Copy)</li>
       <li><b>Storage &amp; Databases → KV</b> → create a namespace <b>loop-inbox</b>. In the worker's <b>Settings → Bindings</b>, add KV namespace binding named <b>INBOX</b>.</li>
       <li><b>Settings → Variables and Secrets</b>: add secret <b>RELAY_TOKEN</b> (any long random password) and variable <b>ALLOWED_ORIGIN</b> = <b>${esc(location.origin)}</b>.</li>
       <li>Paste the worker URL and token below.</li>
@@ -222,7 +281,8 @@ sheets.guideRelay = () => {
       <div class="field"><label>Worker URL</label><input class="input-x" name="url" value="${esc(r.url)}" placeholder="https://loop-relay.you.workers.dev" inputmode="url" autocomplete="off"></div>
       <div class="field"><label>Relay token</label><input class="input-x" name="token" value="${esc(r.token)}" placeholder="the RELAY_TOKEN secret" autocomplete="off"></div>
       <button class="btn">Save and test</button>
-    </form>`;
+    </form>
+    ${relayResult(cleanRelayUrl(r.url))}`;
 };
 
 sheets.guideApplePay = () => {
@@ -289,6 +349,7 @@ sheets.guideGcal = () => {
 };
 
 Object.assign(actions, {
+  openRelay: () => { relayCheck = null; openSheet('guideRelay'); },
   gcalConnect: connectGcal,
   gcalSync: () => syncGcal(),
   async gcalForget() { await setKV('gcal', {}); await setKV('gcalEvents', []); closeSheet(); render(); },
@@ -301,16 +362,13 @@ Object.assign(actions, {
 
 Object.assign(forms, {
   async relay(f) {
-    const url = String(f.get('url')).trim().replace(/\/$/, ''), token = String(f.get('token')).trim();
+    const url = cleanRelayUrl(f.get('url')), token = String(f.get('token')).trim();
     await setKV('relay', { url, token });
-    try {
-      await relayFetch('/ping');
-      haptic();
-      toast('Relay connected', { icon: 'link' });
-      closeSheet();
-    } catch (err) {
-      toast(`Relay: ${err.message}`, { icon: 'alert', ms: 4000 });
-    }
+    relayCheck = { busy: true };
+    refreshSheet();
+    relayCheck = await checkRelay(url, token);
+    if (relayCheck.ok) { haptic(); toast('Relay connected', { icon: 'link' }); }
+    refreshSheet();
     render();
   },
   async canvas(f) {
