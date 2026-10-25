@@ -185,8 +185,22 @@ Westpac has **no personal API**; Australian open banking (CDR) only lets accredi
 - **Decision: Apple Pay + Shortcuts** (no Gmail reading). If a transfer is paid with Apple Pay and the Shortcut catches it, it's tagged Remittance automatically; otherwise it's caught by the Westpac CSV import. Extra details can be added by telling the AI.
 - New budget category: **💸 Sending home / Remittances**, with monthly total and line chart.
 
+### 🎓 Canvas (uni LMS) — via Canvas API
+- Canvas → Account → Settings → **New Access Token** (personal token; some unis disable this, check first).
+- Pulls **all units**: courses, assignments + due dates, grades/scores, announcements, modules/files list.
+- Feeds School (courses, GPA, assignments), Up Next, To-Do and the AI briefing/study plans. Auto-refresh on app open.
+- Canvas blocks direct calls from other websites (CORS), so a **tiny free relay** (e.g. Cloudflare Worker) passes requests through. It stores nothing.
+- The token gives full access to my Canvas account → kept only on my phone / in the relay's secret settings, never in the repo.
+
+### 🗓 Café roster from a photo
+- Snap/screenshot the roster → Gemini reads it → adds my shifts to the app calendar with hours and expected pay (hourly rate from Settings). I confirm before saving.
+
+### 🏋️ Progressive overload
+- After each session the AI suggests next weights/reps per exercise (e.g. +2.5 kg when all sets hit target reps).
+- PR detection + celebration 🎉, rest timer between sets, plate calculator.
+
 ### Security
-- Google sign-in and any keys stay **only on my phone**, never in the repo.
+- Google sign-in, Canvas token and any keys stay **only on my phone** (or the relay's secret settings), never in the repo.
 - Bank data never leaves the phone except to Gemini for categorising (only merchant + amount, not account numbers).
 
 ## 8. Tech Plan (proposed)
@@ -199,6 +213,9 @@ Westpac has **no personal API**; Australian open banking (CDR) only lets accredi
 
 ---
 
+## 8b. Ideas considered and skipped
+Tax-time helper, freelance invoicing/time tracking, payslip check, visa work-hour cap tracker, exchange-rate watch, budget meal plan, notes→flashcards. Can revisit later.
+
 ## 9. Open Questions
 
 - Feedback on mockup v3 (Today / Ask / Money) — approve or adjust?
@@ -210,9 +227,9 @@ Westpac has **no personal API**; Australian open banking (CDR) only lets accredi
 ## 10. Build Roadmap
 
 1. **v1 — Core:** Today screen, local data storage, PWA install, Settings. Logging for Diet, Water, Sleep, Habits (+ streaks).
-2. **v2 — Gym:** exercises, sets/reps/weight, strength charts, body weight trend.
+2. **v2 — Gym:** exercises, sets/reps/weight, strength charts, body weight trend, progressive overload, PRs, rest timer, plate calculator.
 3. **v3 — AI:** Ask screen with Gemini function calling for all logging; AI routine builder.
 4. **v4 — School & Work:** courses, timetable, assignments, grades/GPA, exam plans; shifts & pay; freelance clients/projects/invoices.
 5. **v5 — Money:** expenses, income, budgets, subscriptions, savings goals, bills.
-6. **v6 — Connections:** Google Calendar sync, Apple Pay Shortcut, Westpac CSV import, Remitly tagging.
+6. **v6 — Connections:** Canvas API sync, roster-from-photo, Google Calendar sync, Apple Pay Shortcut, Westpac CSV import, Remitly tagging.
 7. **v7 — Coaching & Siri:** morning briefing, evening review, weekly report, badges, Shortcuts integration.
