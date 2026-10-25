@@ -106,19 +106,43 @@ async function finishWorkout() {
     await discardWorkout();
     return;
   }
-  const prs = exercises.filter(x => {
-    const best = bestBefore(x.exId, aw.start);
-    return x.sets.some(set => isPR(set, best));
-  }).map(x => x.exId);
-  const volume = exercises.reduce((t, x) => t + x.sets.reduce((s, y) => s + y.kg * y.reps, 0), 0);
-  const entry = await addEntry('workout', { name: aw.name, dayId: aw.dayId, start: aw.start, end: Date.now(), exercises, prs, volume }, dayKey(new Date(aw.start)));
-  const gym = habits().find(h => h.id === 'gym');
-  if (gym && !habitDone('gym', entry.date)) await addEntry('habit', { habitId: 'gym' }, entry.date);
+  const entry = await recordWorkout({ name: aw.name, dayId: aw.dayId, start: aw.start, end: Date.now(), exercises });
+  const prs = entry.prs;
   await setKV('activeWorkout', null);
   haptic();
   go('health');
   ui.tab.health = 'gym';
   setTimeout(() => { openSheet('wkDetail', { id: entry.id, done: '1' }); if (prs.length) confetti(); }, 350);
+}
+
+// Save a finished workout: PRs, volume, and tick the Gym habit. Used by the live logger and the AI.
+export async function recordWorkout({ name, dayId = null, start, end, exercises }) {
+  const prs = exercises.filter(x => {
+    const best = bestBefore(x.exId, start);
+    return x.sets.some(set => isPR(set, best));
+  }).map(x => x.exId);
+  const volume = exercises.reduce((t, x) => t + x.sets.reduce((s, y) => s + y.kg * y.reps, 0), 0);
+  const entry = await addEntry('workout', { name, dayId, start, end, exercises, prs, volume }, dayKey(new Date(start)));
+  const habit = habits().find(h => h.id === 'gym') && !habitDone('gym', entry.date) ? await addEntry('habit', { habitId: 'gym' }, entry.date) : null;
+  entry.habitEntryId = habit?.id ?? null;
+  return entry;
+}
+
+// Match a spoken/typed exercise name to the library ("db bench", "rdl", "lat pull down").
+const ALIASES = { ohp: 'ohp', 'military press': 'ohp', 'shoulder press': 'db_shoulder', rdl: 'rdl', 'romanian deadlift': 'rdl', pulldown: 'lat_pulldown', 'lat pull down': 'lat_pulldown', 'pull ups': 'pullup', 'chin ups': 'chinup', 'skull crushers': 'skull', 'tricep pushdown': 'pushdown', 'triceps pushdown': 'pushdown', squats: 'squat', 'db bench': 'db_bench', 'db row': 'db_row', 'incline db': 'incline_db', 'db curl': 'db_curl', 'leg extensions': 'leg_ext', 'leg curls': 'leg_curl', 'calf raises': 'calf_raise', 'lateral raises': 'lateral_raise', 'laterals': 'lateral_raise', 'hammer curls': 'hammer', flyes: 'cable_fly', flys: 'cable_fly' };
+export function exByName(name) {
+  const n = String(name).toLowerCase().replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+  if (ALIASES[n]) return exById(ALIASES[n]);
+  const list = allExercises();
+  return list.find(e => e.name.toLowerCase() === n)
+    ?? list.find(e => e.name.toLowerCase().replace(/s$/, '') === n.replace(/s$/, ''))
+    ?? list.find(e => n.includes(e.name.toLowerCase()) || e.name.toLowerCase().includes(n))
+    ?? null;
+}
+export async function addCustomExercise(name, muscle = 'core') {
+  const ex = { id: `c_${uid().slice(0, 8)}`, name: String(name).trim().replace(/^./, c => c.toUpperCase()), muscle: MUSCLES[muscle] ? muscle : 'core', equip: 'Custom', inc: 2.5 };
+  await setKV('customExercises', [...(state.kv.customExercises ?? []), ex]);
+  return ex;
 }
 
 async function discardWorkout() {
@@ -200,12 +224,11 @@ const muscleIcon = m => ({ chest: 'dumbbell', back: 'dumbbell', shoulders: 'dumb
 export function gymTab() {
   const r = routine();
   const aw = active();
-  if (!r) {
-    return `<section class="card glass"><div class="head"><div class="title">${tile('dumbbell', 'move')}Choose a routine</div></div>
+  const chooser = `<section class="card glass"><div class="head"><div class="title">${tile('dumbbell', 'move')}Choose a routine</div></div>
       <p class="note">Pick a starting split. You can change every exercise, set and rep range later.</p>
       <div class="tpl-list">${Object.entries(TEMPLATES).map(([k, t]) => `<button class="tpl tap" data-act="useTemplate" data-t="${k}"><div class="t">${t.name}</div><div class="d">${t.blurb}</div><div class="tpl-days">${t.days.map(d => `<span>${esc(d.name)}</span>`).join('')}</div></button>`).join('')}</div>
       <button class="btn ghost" data-act="startEmpty">Or start an empty workout</button></section>`;
-  }
+  if (!r && !workouts().length && !aw) return chooser;
   const next = nextDay();
   const ws = workouts();
   const thisWeek = ws.filter(w => w.date >= weekStart()).length;
@@ -214,17 +237,17 @@ export function gymTab() {
   const lifts = keyLifts();
   return `
   ${aw ? `<section class="card glass live-card tap" data-act="nav" data-to="workout"><div class="head"><div class="title">${tile('play', 'move')}${esc(aw.name)} in progress</div><div class="chev">${icon('chevron')}</div></div><p class="note" style="margin:0">Started ${fmtDuration(Date.now() - aw.start)} ago. Tap to resume.</p></section>` : `
-  <section class="card glass">
+  ${!r ? chooser : `<section class="card glass">
     <div class="head"><div class="title">${tile('dumbbell', 'move')}Next up</div><span class="sub-note">${r.name}</span></div>
     <div class="big-md">${esc(next.name)}</div>
     <div class="ex-chips">${next.exercises.map(x => `<span>${esc(exById(x.exId).name)} <b>${x.sets}×${x.repMin}–${x.repMax}</b></span>`).join('')}</div>
     <button class="btn" data-act="startWorkout" data-day="${next.id}">${icon('play')} Start ${esc(next.name)}</button>
     <div class="day-pick">${r.days.filter(d => d.id !== next.id).map(d => `<button class="chip-btn soft" data-act="startWorkout" data-day="${d.id}">${esc(d.name)}</button>`).join('')}<button class="chip-btn soft" data-act="startEmpty">Empty</button></div>
-  </section>`}
+  </section>`}`}
 
   <section class="card glass">
     <div class="head"><div class="title">This week</div><span class="sub-note">sets per week</span></div>
-    <div class="stats two"><div class="stat"><div class="l">Workouts</div><div class="v">${thisWeek}<span> / ${r.perWeek}</span></div></div>
+    <div class="stats two"><div class="stat"><div class="l">Workouts</div><div class="v">${thisWeek}<span>${r ? ` / ${r.perWeek}` : ''}</span></div></div>
       <div class="stat"><div class="l">Sets</div><div class="v">${setsPerWeek.at(-1)}<span> this week</span></div></div></div>
     ${lineChart({ series: [{ values: setsPerWeek.map(v => v || null), color: 'var(--move)' }], labels: weeks.map((w, i) => (i === 7 ? 'Now' : i % 2 === 1 ? shortDate(w) : '')), live: true, empty: 'Your weekly sets line appears after your first workout.' })}
   </section>

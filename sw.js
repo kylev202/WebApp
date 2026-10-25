@@ -1,9 +1,9 @@
 // Offline support. Network first (so updates show up straight away), falling back to the
 // cached copy when offline or the network is slow. Bump CACHE when releasing.
-const CACHE = 'loop-v2.1.0';
+const CACHE = 'loop-v3.0.0';
 const SHELL = [
   './', './index.html', './css/app.css', './js/app.js', './js/store.js', './js/charts.js', './js/util.js', './js/icons.js',
-  './js/core.js', './js/data.js', './js/health.js', './js/gym.js', './js/gym-data.js', './js/today.js', './js/settings.js', './js/plan.js', './js/money.js',
+  './js/core.js', './js/data.js', './js/health.js', './js/gym.js', './js/gym-data.js', './js/today.js', './js/settings.js', './js/plan.js', './js/money.js', './js/ai.js', './js/ask.js',
   './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png',
 ];
 

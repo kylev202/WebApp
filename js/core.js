@@ -40,7 +40,7 @@ export function render({ enter = false } = {}) {
 // Liquid pill that slides under the active tab.
 export function moveTabIndicator() {
   const ind = document.getElementById('tab-ind');
-  const active = document.querySelector('.tab.active');
+  const active = document.querySelector('.tab.active:not(.ask)');
   if (!active) { ind.style.opacity = '0'; return; }
   ind.style.opacity = '1';
   ind.style.width = `${active.offsetWidth}px`;

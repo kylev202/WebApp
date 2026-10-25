@@ -24,6 +24,7 @@ _Last updated: Oct 25, 2026_
 | v1.1 polish: new loop icon, edit/undo, bulk calculator, bulk rate, animations, haptics | ✅ Done |
 | v2 Gym + custom icon set | ✅ Done |
 | v4 Plan (uni, work, tasks, agenda) + v5 Money | ✅ Done (built before AI so the AI can cover every area) |
+| v3 AI assistant (Gemini function calling, voice, photo, undo) | ✅ Done |
 
 Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
 
