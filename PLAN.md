@@ -1,4 +1,6 @@
-# Life — Personal Life Manager (Plan)
+# Loop — Personal Life Manager (Plan)
+
+> App name: **Loop** (short, easy; your daily loop of habits, gym, study, work and money).
 
 A personal app to manage every part of my life — diet, gym, sleep, university, work, money, habits — in one place, with an AI assistant that does the logging and coaching. Built for **one user (me)**, used mainly on **iPhone**.
 
@@ -34,6 +36,7 @@ Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Scr
 | AI coach check-ins | **Morning briefing**, **evening review**, **Sunday weekly report** |
 | AI provider | **Google Gemini, free tier** (can switch to paid later by swapping the key) |
 | Theme | **Light only** (soft pastel) |
+| App name | **Loop** |
 | Currency | **AUD (A$)** |
 | Diet goal | **Bulking** — calorie surplus (≈3,000 kcal/day placeholder), high protein (≈160 g); AI can suggest exact targets from body weight |
 
@@ -208,7 +211,10 @@ Westpac has **no personal API**; Australian open banking (CDR) only lets accredi
 ## 8. Tech Plan (proposed)
 
 - **Type:** installable web app (PWA) — "Add to Home Screen" on iPhone, works offline.
-- **Data:** stored only on the device (IndexedDB). Export/import backup as JSON file.
+- **Data:** stored only on the device (IndexedDB), with `navigator.storage.persist()` requested so iOS treats it as persistent.
+  - Must be **opened from the Home Screen icon** (not a Safari tab): Safari tabs can have site data wiped after ~7 days of not visiting; Home Screen apps are treated separately.
+  - Data is lost if: the Home Screen app is deleted, Safari website data is cleared, the phone is lost/reset, or iOS clears it when storage is critically low.
+  - **Automatic weekly backup** to iCloud Drive (JSON file) + reminder; one-tap restore. Manual export/import too.
 - **No backend, no login.**
 - **Hosting:** free static hosting (e.g. GitHub Pages).
 - **Stack:** to be decided at build start (lightweight, e.g. vanilla JS or a small framework + Vite).
