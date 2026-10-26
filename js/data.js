@@ -1,6 +1,6 @@
 // Read-only views over the stored entries (health, habits, goals).
 import { state } from './store.js';
-import { dayKey, addDays, toDate, mean, sum } from './util.js';
+import { dayKey, addDays, toDate, mean, sum, clamp } from './util.js';
 
 export const DEFAULT_GOALS = { kcal: 3000, protein: 160, water: 8, sleep: 8 };
 export const DEFAULT_HABITS = [
@@ -10,20 +10,54 @@ export const DEFAULT_HABITS = [
   { id: 'bed', name: 'Bed by 11', icon: 'bed' },
 ];
 
-export const goals = () => ({ ...DEFAULT_GOALS, ...state.kv.goals });
+// Sane bounds, applied on the way out. Today draws one tappable drop per glass
+// of water, so a goal of 5000 (a typo, or the assistant mishearing) used to bury
+// the screen in buttons; a stored value this far out is a mistake, not a plan.
+const GOAL_LIMITS = { kcal: [500, 10000], protein: [10, 500], water: [1, 30], sleep: [2, 16] };
+export const goals = () => {
+  const g = { ...DEFAULT_GOALS, ...state.kv.goals };
+  for (const [k, [lo, hi]] of Object.entries(GOAL_LIMITS)) {
+    g[k] = Number.isFinite(Number(g[k])) ? clamp(Number(g[k]), lo, hi) : DEFAULT_GOALS[k];
+  }
+  return g;
+};
 // Older habits stored an emoji; give them an icon.
 export const habits = () => (state.kv.habits ?? DEFAULT_HABITS).map(h => ({ icon: DEFAULT_HABITS.find(d => d.id === h.id)?.icon ?? 'star', ...h }));
 
-export const of = (type, date) => state.entries.filter(e => e.type === type && (date == null || e.date === date)).sort((a, b) => a.ts - b.ts);
-export const byId = id => state.entries.find(e => e.id === id);
+// Entries are read hundreds of times per screen and change a few times a day, so
+// group them once per change instead of filtering and sorting the whole list on
+// every call. The index is rebuilt lazily the first time it's read after a write.
+let idx = null;
+function index() {
+  if (idx?.version === state.version) return idx;
+  const byType = new Map(), byTypeDay = new Map(), byId = new Map(), loggedDays = new Set(), habitDays = new Set();
+  const push = (map, key, e) => { const list = map.get(key); if (list) list.push(e); else map.set(key, [e]); };
+  for (const e of [...state.entries].sort((a, b) => a.ts - b.ts)) {
+    push(byType, e.type, e);
+    push(byTypeDay, `${e.type}\n${e.date}`, e);
+    byId.set(e.id, e);
+    if (LOG_TYPES.has(e.type)) loggedDays.add(e.date);
+    if (e.type === 'habit') habitDays.add(`${e.habitId}\n${e.date}`);
+  }
+  idx = { version: state.version, byType, byTypeDay, byId, loggedDays, habitDays };
+  return idx;
+}
+
+// A copy, because plenty of callers sort or reverse what they get back.
+export const of = (type, date) => {
+  const i = index();
+  const list = date == null ? i.byType.get(type) : i.byTypeDay.get(`${type}\n${date}`);
+  return list ? list.slice() : [];
+};
+export const byId = id => index().byId.get(id);
 export const kcalOn = d => sum(of('meal', d), 'kcal');
 export const proteinOn = d => sum(of('meal', d), 'protein');
 export const waterOn = d => sum(of('water', d), 'amount');
 export const sleepOn = d => sum(of('sleep', d), 'hours');
 export const weights = () => of('weight').sort((a, b) => a.date.localeCompare(b.date) || a.ts - b.ts);
-export const habitDone = (id, d) => state.entries.some(e => e.type === 'habit' && e.habitId === id && e.date === d);
+export const habitDone = (id, d) => index().habitDays.has(`${id}\n${d}`);
 const LOG_TYPES = new Set(['meal', 'water', 'sleep', 'weight', 'habit', 'workout']);
-export const anyLogOn = d => state.entries.some(e => e.date === d && LOG_TYPES.has(e.type));
+export const anyLogOn = d => index().loggedDays.has(d);
 
 // Consecutive days ending today (or yesterday, if today isn't done yet).
 export function streak(test) {

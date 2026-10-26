@@ -203,9 +203,15 @@ async function checkBadges() {
     confetti();
   } else await setKV('badgesSeeded', true);
 }
-// Checked shortly after each render (debounced), so a burst of renders costs one check.
-let badgeTimer;
-afterRender.push(() => { clearTimeout(badgeTimer); badgeTimer = setTimeout(checkBadges, 400); });
+// Checked shortly after each render (debounced), so a burst of renders costs one
+// check — and skipped entirely when nothing has been logged since the last one,
+// since no badge can change until an entry does.
+let badgeTimer, checkedVersion = -1;
+afterRender.push(() => {
+  if (state.version === checkedVersion) return;
+  clearTimeout(badgeTimer);
+  badgeTimer = setTimeout(() => { checkedVersion = state.version; checkBadges(); }, 400);
+});
 
 sheets.badges = () => {
   const earned = state.kv.badges ?? {};

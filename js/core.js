@@ -22,10 +22,28 @@ const toastEl = document.getElementById('toast');
 
 export function go(route) { location.hash = route; }
 
+// One screen that can't draw itself used to take the whole app down with it: the
+// old screen stayed up, every tab stopped responding and the only way out was to
+// clear the app's data. Now the screen that broke says so and the rest still works.
+function brokenScreen(route, err) {
+  return `${header(TITLES[route] ?? 'Loop', 'Something went wrong')}
+  <section class="card glass"><div class="t">This screen couldn’t be drawn</div>
+    <p class="note">The rest of Loop still works, and nothing you logged is lost. If it keeps happening, back up your data from Settings and send me this message:</p>
+    <p class="note"><b>${esc(String(err?.message ?? err))}</b></p>
+    <button class="btn soft" data-act="nav" data-to="settings">${icon('gear')} Open Settings</button></section>`;
+}
+
 export function render({ enter = false } = {}) {
   const route = screens[ui.route] ? ui.route : 'today';
   main.classList.toggle('enter', enter && !reduceMotion);
-  main.innerHTML = `<div class="screen">${screens[route]()}</div>`;
+  let html;
+  try {
+    html = screens[route]();
+  } catch (err) {
+    console.error(`Loop: the ${route} screen failed to render`, err);
+    html = brokenScreen(route, err);
+  }
+  main.innerHTML = `<div class="screen">${html}</div>`;
   document.body.classList.toggle('fullscreen', FULLSCREEN.has(route));
   document.querySelectorAll('.tab[data-to]').forEach(t => t.classList.toggle('active', t.dataset.to === route));
   document.getElementById('topbar-title').textContent = TITLES[route] ?? '';
@@ -34,7 +52,8 @@ export function render({ enter = false } = {}) {
     main.querySelector(ui.pulse)?.classList.add('pop');
     ui.pulse = null;
   }
-  afterRender.forEach(fn => fn(route));
+  // An after-render hook that throws must not take the screen down with it.
+  afterRender.forEach(fn => { try { fn(route); } catch (err) { console.error('Loop: after-render hook failed', err); } });
 }
 
 // Liquid pill that slides under the active tab.

@@ -122,8 +122,8 @@ export async function sendMessage(text, image) {
   const msgs = [...chat(), { id: uid(), role: 'user', text: text || 'What is in this photo? Log it if it is food, a roster or a receipt.', photo: !!image, ts: Date.now() }];
   state.kv.chat = msgs;
   ui.askPhoto = null;
-  render();
   try {
+    render();
     const contents = history(msgs);
     if (image) contents.at(-1).parts.push({ inlineData: { mimeType: 'image/jpeg', data: image } });
     const cards = [];
@@ -155,8 +155,11 @@ export async function sendMessage(text, image) {
     if (cards.some(c => c.confetti)) confetti();
   } catch (err) {
     msgs.push({ id: uid(), role: 'model', text: friendlyError(err), error: true, ts: Date.now() });
+  } finally {
+    // Whatever happened, the composer has to come back: a stuck flag left Ask
+    // showing "Thinking…" with the input disabled until the app was restarted.
+    busy = false;
   }
-  busy = false;
   await setKV('chat', msgs.slice(-60));
   render();
 }

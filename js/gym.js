@@ -237,7 +237,7 @@ export function gymTab() {
   const lifts = keyLifts();
   return `
   ${aw ? `<section class="card glass live-card tap" data-act="nav" data-to="workout"><div class="head"><div class="title">${tile('play', 'move')}${esc(aw.name)} in progress</div><div class="chev">${icon('chevron')}</div></div><p class="note" style="margin:0">Started ${fmtDuration(Date.now() - aw.start)} ago. Tap to resume.</p></section>` : `
-  ${!r ? chooser : `<section class="card glass">
+  ${!r || !next ? chooser : `<section class="card glass">
     <div class="head"><div class="title">${tile('dumbbell', 'move')}Next up</div><span class="sub-note">${r.name}</span></div>
     <div class="big-md">${esc(next.name)}</div>
     <div class="ex-chips">${next.exercises.map(x => `<span>${esc(exById(x.exId).name)} <b>${x.sets}×${x.repMin}–${x.repMax}</b></span>`).join('')}</div>
@@ -294,11 +294,11 @@ export function workoutCard() {
     return `<section class="card glass wk-card tap" data-act="sheet" data-sheet="wkDetail" data-id="${todays.id}">${tile('check', 'diet', 'lg')}
       <div class="grow"><div class="label-sm">Workout done</div><div class="t">${esc(todays.name)}</div><div class="d">${fmtDuration(todays.end - todays.start)} · ${plural(todays.exercises.reduce((t, x) => t + x.sets.length, 0), 'set')}${todays.prs?.length ? ` · ${todays.prs.length} PR` : ''}</div></div>${todays.prs?.length ? `<span class="pr-badge big">${icon('trophy')}</span>` : ''}</section>`;
   }
-  if (!r) {
+  const next = nextDay(); // null when the routine has no days left
+  if (!r || !next) {
     return `<section class="card glass wk-card tap" data-act="nav" data-to="health">${tile('dumbbell', 'move', 'lg')}
-      <div class="grow"><div class="label-sm">Gym</div><div class="t">Set up your routine</div><div class="d">Push/Pull/Legs, Upper/Lower or Full body</div></div><div class="chev">${icon('chevron')}</div></section>`;
+      <div class="grow"><div class="label-sm">Gym</div><div class="t">${r ? 'Add a day to your routine' : 'Set up your routine'}</div><div class="d">Push/Pull/Legs, Upper/Lower or Full body</div></div><div class="chev">${icon('chevron')}</div></section>`;
   }
-  const next = nextDay();
   return `<section class="card glass wk-card">${tile('dumbbell', 'move', 'lg')}
     <div class="grow tap" data-act="nav" data-to="health"><div class="label-sm">Next workout</div><div class="t">${esc(next.name)}</div><div class="d">${plural(next.exercises.length, 'exercise')} · ${plural(next.exercises.reduce((t, x) => t + x.sets, 0), 'set')}</div></div>
     <button class="pill-btn strong" data-act="startWorkout" data-day="${next.id}">${icon('play')} Start</button></section>`;

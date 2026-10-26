@@ -5,7 +5,10 @@ const DB_NAME = 'loop';
 const DB_VERSION = 1;
 
 let db;
-export const state = { entries: [], kv: {} };
+// `version` counts changes to `entries`. Views that group or sort the entries
+// cache their work and rebuild only when this moves (see data.js).
+export const state = { entries: [], kv: {}, version: 0 };
+const changed = () => { state.version++; };
 
 const done = r => new Promise((resolve, reject) => {
   r.onsuccess = () => resolve(r.result);
@@ -39,6 +42,7 @@ async function load() {
   ]);
   state.entries = entries;
   state.kv = Object.fromEntries(keys.map((k, i) => [k, values[i]]));
+  changed();
 }
 
 // Insert or replace a whole entry (also used to undo a delete).
@@ -49,6 +53,7 @@ export async function putEntry(entry) {
   const i = state.entries.findIndex(e => e.id === entry.id);
   if (i >= 0) state.entries[i] = entry;
   else state.entries.push(entry);
+  changed();
   return entry;
 }
 
@@ -68,6 +73,7 @@ export async function removeEntry(id) {
   tx.objectStore('entries').delete(id);
   await txDone(tx);
   state.entries = state.entries.filter(e => e.id !== id);
+  changed();
   return entry;
 }
 
@@ -104,4 +110,5 @@ export async function eraseAll() {
   await txDone(tx);
   state.entries = [];
   state.kv = {};
+  changed();
 }
