@@ -38,14 +38,29 @@ export function bestModel(names) {
   return pool.sort((a, b) => version(b) - version(a) || a.length - b.length)[0] ?? 'gemini-flash-latest';
 }
 
+// Gemini 2.5 and newer think before they answer, and the thinking comes out of
+// the same output budget. With a small cap a long message (a whole gym routine,
+// say) spends the budget on thoughts and the reply comes back with no parts —
+// which read as "Sorry, I didn't catch that". So: a roomy cap and no thinking.
+// A few models refuse to turn thinking off, so drop the setting and retry once.
+let noThinking = true;
+
 export async function generate({ system, contents, tools }) {
   const model = aiSettings().model || 'gemini-flash-latest';
-  return call(`models/${model}:generateContent`, {
+  const body = {
     systemInstruction: { parts: [{ text: system }] },
     contents,
     ...(tools ? { tools: [{ functionDeclarations: tools }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } } } : {}),
-    generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
-  });
+    generationConfig: { temperature: 0.4, maxOutputTokens: 8192, ...(noThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}) },
+  };
+  try {
+    return await call(`models/${model}:generateContent`, body);
+  } catch (err) {
+    if (!noThinking || !/thinking|thought/i.test(String(err.message ?? err))) throw err;
+    noThinking = false; // this model always thinks; let it, the cap is big enough
+    delete body.generationConfig.thinkingConfig;
+    return call(`models/${model}:generateContent`, body);
+  }
 }
 
 // ---------- context ----------

@@ -102,6 +102,19 @@ function friendlyError(err) {
   return `Something went wrong: ${m}`;
 }
 
+// Gemini answered with nothing we can show. Say which of the handful of reasons it was.
+function blankReply(res, cards) {
+  const reason = res.candidates?.[0]?.finishReason;
+  if (res.promptFeedback?.blockReason || ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST'].includes(reason)) return 'I can’t help with that one.';
+  if (reason === 'MAX_TOKENS') {
+    return cards.length
+      ? 'Saved — that one was long, so I ran out of room to write back.'
+      : 'That was a lot in one go. Send it in smaller pieces — one day of the routine at a time works well.';
+  }
+  if (reason === 'RECITATION') return 'I had to stop that answer. Try asking it a different way?';
+  return 'Sorry, I didn’t catch that. Try again?';
+}
+
 export async function sendMessage(text, image) {
   text = String(text ?? '').trim();
   if (busy || (!text && !image)) return;
@@ -117,21 +130,26 @@ export async function sendMessage(text, image) {
     let reply = '';
     for (let step = 0; step < 6; step++) {
       const res = await generate({ system: systemPrompt(), contents, tools: tools() });
-      const content = res.candidates?.[0]?.content;
-      if (!content?.parts?.length) { reply = res.promptFeedback?.blockReason ? 'I can’t help with that one.' : 'Sorry, I didn’t catch that. Try again?'; break; }
-      contents.push(content); // passed back unchanged so thought signatures survive
-      const calls = content.parts.filter(p => p.functionCall);
-      const said = content.parts.filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
+      const parts = res.candidates?.[0]?.content?.parts ?? [];
+      const calls = parts.filter(p => p.functionCall);
+      const said = parts.filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
       if (said) reply = said;
-      if (!calls.length) break;
-      const responses = [];
-      for (const p of calls) {
-        const { result, card } = await runTool(p.functionCall.name, p.functionCall.args);
-        if (card) cards.push(card);
-        responses.push({ functionResponse: { ...(p.functionCall.id ? { id: p.functionCall.id } : {}), name: p.functionCall.name, response: result } });
+      if (parts.length) contents.push(res.candidates[0].content); // passed back unchanged so thought signatures survive
+      if (calls.length) {
+        const responses = [];
+        for (const p of calls) {
+          const { result, card } = await runTool(p.functionCall.name, p.functionCall.args);
+          if (card) cards.push(card);
+          responses.push({ functionResponse: { ...(p.functionCall.id ? { id: p.functionCall.id } : {}), name: p.functionCall.name, response: result } });
+        }
+        contents.push({ role: 'user', parts: responses });
+        continue;
       }
-      contents.push({ role: 'user', parts: responses });
+      if (said) break;
+      reply = blankReply(res, cards); // nothing usable came back — say why
+      break;
     }
+    if (!reply) reply = cards.length ? 'Done.' : blankReply({}, cards);
     msgs.push({ id: uid(), role: 'model', text: reply, cards, ts: Date.now() });
     if (cards.length) haptic();
     if (cards.some(c => c.confetti)) confetti();
