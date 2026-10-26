@@ -145,7 +145,7 @@ export const tools = () => [
     name: 'create_routine', description: 'Create or replace the gym routine (a weekly split).',
     parameters: obj({
       name: S('string', 'Routine name'), per_week: S('number', 'Workouts per week'),
-      days: S('array', 'Training days in order', { items: obj({ name: S('string', 'Day name'), exercises: S('array', 'Exercises', { items: obj({ exercise: S('string', 'Exercise name'), sets: S('number', 'Sets'), rep_min: S('number', 'Min reps'), rep_max: S('number', 'Max reps') }, ['exercise', 'sets', 'rep_min', 'rep_max']) }) }, ['name', 'exercises']) }),
+      days: S('array', 'Training days in order', { items: obj({ name: S('string', 'Day name'), exercises: S('array', 'Exercises', { items: obj({ exercise: S('string', 'Exercise name'), muscle: S('string', 'chest, back, shoulders, legs, arms or core'), sets: S('number', 'Sets'), rep_min: S('number', 'Min reps'), rep_max: S('number', 'Max reps') }, ['exercise', 'sets', 'rep_min', 'rep_max']) }) }, ['name', 'exercises']) }),
     }, ['name', 'days']),
   },
   { name: 'add_task', description: 'Add a to-do task.', parameters: obj({ title: S('string', 'Task'), due: S('string', 'YYYY-MM-DD, optional'), area: S('string', `One of: ${Object.keys(AREAS).join(', ')}`) }, ['title']) },
@@ -232,7 +232,7 @@ const RUN = {
     for (const d of a.days ?? []) {
       const exs = [];
       for (const x of d.exercises ?? []) {
-        const ex = exByName(x.exercise) ?? await addCustomExercise(x.exercise);
+        const ex = exByName(x.exercise) ?? await addCustomExercise(x.exercise, x.muscle);
         exs.push({ exId: ex.id, sets: Math.max(1, Math.round(num(x.sets)) || 3), repMin: Math.max(1, Math.round(num(x.rep_min)) || 8), repMax: Math.max(1, Math.round(num(x.rep_max)) || 12) });
       }
       days.push({ id: `d_${days.length}_${Date.now().toString(36)}`, name: String(d.name).slice(0, 30), exercises: exs });
