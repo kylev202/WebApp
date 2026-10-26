@@ -1,8 +1,8 @@
 // v4 Plan: agenda, uni (courses, timetable, assessments, GPA), work (shifts, freelance), tasks.
 import { state, addEntry, updateEntry, removeEntry, setKV } from './store.js';
-import { esc, uid, dayKey, addDays, toDate, weekStart, dayLabel, shortDate, time12, toMin, nowHHMM, fmt, fmt1, money, num, plural, daysBetween } from './util.js';
+import { esc, uid, pad, dayKey, addDays, addMonths, toDate, weekStart, monthKey, monthDays, monthName, dayLabel, shortDate, initial, time12, toMin, nowHHMM, fmt, fmt1, money, num, plural, daysBetween } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo, chips, dateField, readDate, toggle } from './core.js';
+import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo, chips, dateField, readDate, toggle, afterRender } from './core.js';
 import { of, byId } from './data.js';
 import { lineChart } from './charts.js';
 import { todaySections } from './today.js';
@@ -141,21 +141,51 @@ function renderPlan() {
 }
 screens.plan = renderPlan;
 
+// The agenda calendar: a week strip you can expand into a month grid. The choice sticks.
+const monthView = () => !!state.kv.planMonthView;
+
+// Week view: the Monday-based week around the selected day. Month view: whole
+// weeks covering the selected month, so the grid is 4-6 rows with no gaps.
+function calDays(sel) {
+  if (!monthView()) return Array.from({ length: 7 }, (_, i) => addDays(weekStart(sel), i));
+  const month = monthKey(sel), start = weekStart(`${month}-01`);
+  const rows = Math.ceil((daysBetween(start, `${month}-${pad(monthDays(month))}`) + 1) / 7);
+  return Array.from({ length: rows * 7 }, (_, i) => addDays(start, i));
+}
+
+function calCell(d, sel, month) {
+  const its = agendaFor(d);
+  const areas = [...new Set(its.map(i => i.area))].slice(0, 3);
+  const cls = ['day', d === sel && 'on', d === dayKey() && 'today', month && monthKey(d) !== month && 'off'].filter(Boolean).join(' ');
+  return `<button class="${cls}" data-act="planDay" data-d="${d}" aria-pressed="${d === sel}" aria-label="${dayLabel(d)}${its.length ? `, ${plural(its.length, 'item')}` : ''}">
+    ${month ? '' : `<span>${initial(d)}</span>`}<b>${toDate(d).getDate()}</b>
+    <i>${areas.map(a => `<em style="background:var(--${a})"></em>`).join('')}</i></button>`;
+}
+
+function planCalendar(sel) {
+  const open = monthView(), month = open ? monthKey(sel) : null;
+  const step = open ? 'month' : 'week';
+  return `
+  <section class="card glass cal ${open ? 'month' : ''}" data-cal>
+    <div class="cal-top">
+      <button class="cal-title" data-act="planExpand" aria-expanded="${open}" aria-label="${open ? 'Show one week' : 'Show the whole month'}">
+        <b>${monthName(sel)}</b><span>${toDate(sel).getFullYear()}</span>${icon('chevron')}</button>
+      <div class="cal-nav">
+        ${sel === dayKey() ? '' : `<button class="cal-today" data-act="planToday">Today</button>`}
+        <button class="x-btn" data-act="planStep" data-d="-1" aria-label="Previous ${step}">${icon('back')}</button>
+        <button class="x-btn" data-act="planStep" data-d="1" aria-label="Next ${step}">${icon('chevron')}</button>
+        <label class="x-btn cal-jump">${icon('calendar')}<input type="date" class="cal-jump-in" value="${sel}" aria-label="Jump to a date"></label>
+      </div>
+    </div>
+    ${open ? `<div class="cal-dow">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<span>${d}</span>`).join('')}</div>` : ''}
+    <div class="cal-grid">${calDays(sel).map(d => calCell(d, sel, month)).join('')}</div>
+  </section>`;
+}
+
 function planAgenda() {
   const sel = ui.planDay ?? dayKey();
-  const w0 = weekStart(sel);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(w0, i));
   const items = agendaFor(sel);
-  return `
-  <section class="card glass week-strip">
-    <button class="x-btn" data-act="planWeek" data-d="-7" aria-label="Previous week">${icon('back')}</button>
-    <div class="days">${days.map(d => {
-      const its = agendaFor(d);
-      const areas = [...new Set(its.map(i => i.area))].slice(0, 3);
-      return `<button class="day ${d === sel ? 'on' : ''} ${d === dayKey() ? 'today' : ''}" data-act="planDay" data-d="${d}"><span>${toDate(d).toLocaleDateString('en-AU', { weekday: 'narrow' })}</span><b>${toDate(d).getDate()}</b><i>${areas.map(a => `<em style="background:var(--${a})"></em>`).join('')}</i></button>`;
-    }).join('')}</div>
-    <button class="x-btn" data-act="planWeek" data-d="7" aria-label="Next week">${icon('chevron')}</button>
-  </section>
+  return `${planCalendar(sel)}
   <div class="section-label">${dayLabel(sel)} <span>${toDate(sel).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}</span></div>
   <section class="card glass">${items.length ? `<div class="list">${items.map(agendaRow).join('')}</div>` : `<div class="empty">Nothing planned. Enjoy the free time.</div>`}</section>
   <div class="row2"><button class="btn soft" data-act="sheet" data-sheet="event" data-date="${sel}">${icon('calendar')} Event</button><button class="btn soft" data-act="sheet" data-sheet="task" data-date="${sel}">${icon('list')} Task</button></div>`;
@@ -466,9 +496,47 @@ const save = async (type, f, fields, date) => {
   return id;
 };
 
+// A step is a week in week view and a month once the calendar is expanded.
+function calStep(n) {
+  const sel = ui.planDay ?? dayKey();
+  ui.planDay = monthView() ? addMonths(sel, n) : addDays(sel, n * 7);
+  haptic();
+  render();
+}
+
+// Swipe the calendar sideways to change week or month, like the iOS calendar.
+afterRender.push(route => {
+  const cal = route === 'plan' ? document.querySelector('[data-cal]') : null;
+  if (!cal) return;
+  let x0 = null, y0 = 0, swiped = false;
+  cal.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; swiped = false; }, { passive: true });
+  cal.addEventListener('touchend', e => {
+    if (x0 == null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) < 46 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    swiped = true; // a swipe must not also select the day under the finger
+    calStep(dx < 0 ? 1 : -1);
+  }, { passive: true });
+  cal.addEventListener('click', e => { if (swiped) { swiped = false; e.stopPropagation(); e.preventDefault(); } }, true);
+});
+
+// Jumping with the native date picker hidden behind the calendar button.
+document.addEventListener('change', e => {
+  if (!e.target.classList?.contains('cal-jump-in') || !e.target.value) return;
+  ui.planDay = e.target.value;
+  haptic();
+  render();
+});
+document.addEventListener('click', e => {
+  if (e.target.classList?.contains('cal-jump-in')) { try { e.target.showPicker?.(); } catch { /* iOS opens it natively */ } }
+});
+
 Object.assign(actions, {
   planDay: el => { ui.planDay = el.dataset.d; haptic(); render(); },
-  planWeek: el => { ui.planDay = addDays(ui.planDay ?? dayKey(), Number(el.dataset.d)); render(); },
+  planStep: el => calStep(Number(el.dataset.d)),
+  planToday: () => { ui.planDay = dayKey(); haptic(); render(); },
+  async planExpand() { await setKV('planMonthView', !monthView()); haptic(); render(); },
   toTasks: () => { ui.tab.plan = 'tasks'; location.hash = 'plan'; },
   async toggleTask(el) {
     const t = byId(el.dataset.id);

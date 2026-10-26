@@ -13,6 +13,13 @@ export const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 864e5)
 export const weekStart = (key = dayKey()) => { const d = toDate(key); return addDays(key, -((d.getDay() + 6) % 7)); }; // Monday
 export const monthKey = (key = dayKey()) => key.slice(0, 7);
 export const monthDays = month => { const [y, m] = month.split('-').map(Number); return new Date(y, m, 0).getDate(); };
+// Same day of the month n months away, clamped to the shorter month (31 Jan + 1 → 28/29 Feb).
+export const addMonths = (key, n) => {
+  const [y, m, d] = key.split('-').map(Number);
+  const t = new Date(y, m - 1 + n, 1);
+  t.setDate(Math.min(d, new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()));
+  return dayKey(t);
+};
 
 export const fmt = n => Math.round(n).toLocaleString('en-AU');
 export const fmt1 = n => (Math.round(n * 10) / 10).toLocaleString('en-AU', { maximumFractionDigits: 1 });
@@ -29,6 +36,7 @@ export const dayLabel = key => {
   return toDate(key).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 };
 export const shortDate = key => toDate(key).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+export const monthName = key => toDate(key).toLocaleDateString('en-AU', { month: 'long' });
 export const weekday = key => toDate(key).toLocaleDateString('en-AU', { weekday: 'short' });
 export const initial = key => toDate(key).toLocaleDateString('en-AU', { weekday: 'narrow' });
 export const timeOf = ts => new Date(ts).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' });
