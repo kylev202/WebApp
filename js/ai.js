@@ -4,7 +4,7 @@ import { state, addEntry, removeEntry, putEntry, setKV } from './store.js';
 import { dayKey, addDays, lastDays, monthKey, nowHHMM, fmt, fmt1, money, num, weekStart } from './util.js';
 import { goals, habits, of, kcalOn, proteinOn, waterOn, sleepOn, weights, weeklyRate, habitDone, sleepHours } from './data.js';
 import { routine, nextDay, workouts, exById, exByName, addCustomExercise, recordWorkout } from './gym.js';
-import { courses, assessments, tasks, shifts, job, shiftHours, shiftPay, projects, invoices, invoiceStatus, courseResult, band, AREAS } from './plan.js';
+import { courses, assessments, tasks, shifts, jobs, jobOf, shiftHours, shiftPay, projects, invoices, invoiceStatus, courseResult, band, AREAS } from './plan.js';
 import { CATEGORIES, INCOME, ACCOUNTS, monthSummary, bills, budgets, spentIn, goalsList } from './money.js';
 
 const API = 'https://generativelanguage.googleapis.com/v1beta';
@@ -77,8 +77,8 @@ export function snapshot() {
     },
     tasks_open: tasks().filter(x => !x.done).slice(0, 15).map(x => `${x.title}${x.due ? ` due ${x.due}` : ''}`),
     work: {
-      job: job(),
-      upcoming_shifts: shifts().filter(s => s.date >= t).slice(0, 6).map(s => `${s.date} ${s.start}-${s.end} (${fmt1(shiftHours(s))}h, ${money(shiftPay(s), false)})`),
+      jobs: jobs().map(j => ({ name: j.name, weekday_rate: j.rate, saturday_rate: j.sat, sunday_rate: j.sun })),
+      upcoming_shifts: shifts().filter(s => s.date >= t).slice(0, 8).map(s => `${s.date} ${jobOf(s).name} ${s.start}-${s.end} (${fmt1(shiftHours(s))}h, ${money(shiftPay(s), false)})`),
       projects: projects().filter(p => p.status !== 'done').map(p => `${p.title}${p.deadline ? ` due ${p.deadline}` : ''}${p.fee ? ` fee ${p.fee}` : ''}`),
       unpaid_invoices: invoices().filter(i => i.status !== 'paid').map(i => `${i.number} ${money(i.amount, false)} ${invoiceStatus(i)} due ${i.due}`),
     },
@@ -93,7 +93,7 @@ export function snapshot() {
 }
 
 export function systemPrompt() {
-  return `You are Loop, the friendly assistant inside a personal life-manager iPhone app. The user is a university student in Australia who lifts weights (lean bulking), works part-time at a café and does freelance web building. Use Australian English, metric units and AUD.
+  return `You are Loop, the friendly assistant inside a personal life-manager iPhone app. The user is a university student in Australia who lifts weights (lean bulking), has part-time job(s) (listed under work.jobs) and does freelance web building. Use Australian English, metric units and AUD.
 
 Rules:
 - When the user tells you something they ate, drank, did, lifted, spent, earned or need to do, CALL THE MATCHING TOOL. Several tools in one turn is fine.
@@ -135,7 +135,7 @@ export const tools = () => [
   },
   { name: 'add_task', description: 'Add a to-do task.', parameters: obj({ title: S('string', 'Task'), due: S('string', 'YYYY-MM-DD, optional'), area: S('string', `One of: ${Object.keys(AREAS).join(', ')}`) }, ['title']) },
   { name: 'add_event', description: 'Add a calendar event (study block, appointment, plan).', parameters: obj({ title: S('string', 'Title'), date: DATE, start: TIME('Start'), end: TIME('End'), area: S('string', `One of: ${Object.keys(AREAS).join(', ')}`), note: S('string', 'Optional note') }, ['title', 'date']) },
-  { name: 'add_shift', description: 'Add a café work shift.', parameters: obj({ date: DATE, start: TIME('Start'), end: TIME('End'), break_min: S('number', 'Unpaid break minutes') }, ['date', 'start', 'end']) },
+  { name: 'add_shift', description: 'Add a shift at one of the user’s part-time jobs.', parameters: obj({ job: S('string', `Which job, one of: ${jobs().map(j => j.name).join(', ')}`), date: DATE, start: TIME('Start'), end: TIME('End'), break_min: S('number', 'Unpaid break minutes') }, ['date', 'start', 'end']) },
   { name: 'add_assessment', description: 'Add a uni assessment or exam due date.', parameters: obj({ course_code: S('string', 'Course code, e.g. COMP2123'), title: S('string', 'Title'), due: S('string', 'YYYY-MM-DD'), weight: S('number', 'Weight %'), kind: S('string', 'assignment, exam, quiz, presentation or report') }, ['course_code', 'title', 'due']) },
   { name: 'log_expense', description: 'Log money the user spent.', parameters: obj({ amount: S('number', 'AUD amount'), merchant: S('string', 'Where'), category: S('string', `One of: ${Object.keys(CATEGORIES).join(', ')}`), account: S('string', `One of: ${Object.keys(ACCOUNTS).filter(k => k !== 'savings').join(', ')}`), date: DATE, note: S('string', 'Optional') }, ['amount', 'category']) },
   { name: 'log_income', description: 'Log money the user received.', parameters: obj({ amount: S('number', 'AUD amount'), source: S('string', 'From whom'), category: S('string', `One of: ${Object.keys(INCOME).join(', ')}`), account: S('string', 'westpac, revolut or cash'), date: DATE }, ['amount', 'category']) },
@@ -238,8 +238,10 @@ const RUN = {
   async add_shift(a) {
     const start = validTime(a.start), end = validTime(a.end);
     if (!start || !end) return { result: { ok: false, error: 'Need start and end' } };
-    const e = await addEntry('shift', { start, end, breakMin: Math.round(num(a.break_min)), rate: null, source: 'ai' }, validDate(a.date));
-    return { result: { ok: true, hours: shiftHours(e), pay: Math.round(shiftPay(e)) }, card: { icon: 'coffee', area: 'work', title: `${job().name} shift`, sub: `${e.date} · ${start}–${end} · ≈ ${money(shiftPay(e), false)}`, ids: [e.id] } };
+    const want = String(a.job ?? '').trim().toLowerCase();
+    const j = jobs().find(x => x.name.toLowerCase() === want) ?? jobs().find(x => want && (x.name.toLowerCase().includes(want) || want.includes(x.name.toLowerCase()))) ?? jobs()[0];
+    const e = await addEntry('shift', { jobId: j.id, start, end, breakMin: Math.round(num(a.break_min)), rate: null, source: 'ai' }, validDate(a.date));
+    return { result: { ok: true, job: j.name, hours: shiftHours(e), pay: Math.round(shiftPay(e)) }, card: { icon: j.icon, area: j.color, title: `${j.name} shift`, sub: `${e.date} · ${start}–${end} · ≈ ${money(shiftPay(e), false)}`, ids: [e.id] } };
   },
   async add_assessment(a) {
     const code = String(a.course_code).toUpperCase().replace(/\s+/g, '');

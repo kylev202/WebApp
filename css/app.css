@@ -766,3 +766,10 @@ form:has(input[name="allDay"]:checked) .times { display: none; }
 .check-box.bad > .i { color: var(--move-ink); }
 .check-box a { color: var(--sleep-ink); font-weight: 600; cursor: pointer; }
 a.btn { text-decoration: none; }
+
+/* v4.2 multiple jobs */
+.pick.icons .pk > span { min-height: 44px; padding: 8px 0; }
+.pick.icons .pk > span em { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.pick.icons .pk > span .i { width: 21px; height: 21px; }
+.pick.icons { gap: 5px; }
+.job-split { margin: 4px 0 6px; }

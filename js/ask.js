@@ -15,7 +15,7 @@ const SUGGESTIONS = [
   ['card', 'money', 'Spent $18.50 on lunch at uni'],
   ['calendar', 'school', 'Plan study blocks for my exams this week'],
   ['chart', 'diet', 'How is my bulk going?'],
-  ['coffee', 'work', 'Add a café shift Saturday 9 to 3'],
+  ['coffee', 'work', 'Add a shift Saturday 9 to 3'],
 ];
 const CHIPS = [['diet', 'Log meal', 'I ate '], ['dumbbell', 'Log workout', 'I did '], ['card', 'Spent…', 'Spent $'], ['calendar', 'Plan tomorrow', 'Plan my day tomorrow'], ['plus', 'Quick log', null]];
 

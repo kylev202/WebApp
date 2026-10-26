@@ -1,6 +1,6 @@
 // v4 Plan: agenda, uni (courses, timetable, assessments, GPA), work (shifts, freelance), tasks.
 import { state, addEntry, updateEntry, removeEntry, setKV } from './store.js';
-import { esc, dayKey, addDays, toDate, weekStart, dayLabel, shortDate, time12, toMin, nowHHMM, fmt, fmt1, money, num, plural, daysBetween } from './util.js';
+import { esc, uid, dayKey, addDays, toDate, weekStart, dayLabel, shortDate, time12, toMin, nowHHMM, fmt, fmt1, money, num, plural, daysBetween } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo, chips, dateField, readDate, toggle } from './core.js';
 import { of, byId } from './data.js';
@@ -34,7 +34,13 @@ export const projects = () => of('project');
 export const invoices = () => of('invoice');
 export const tasks = () => of('task');
 export const events = () => of('event');
-export const job = () => ({ name: 'Café', rate: 30, sat: 36, sun: 42, ...state.kv.job });
+// Part-time jobs, each with its own pay rates. Older versions kept a single job in kv.job; it becomes the first one.
+// Shifts point at a job with jobId; shifts without one belong to the first job.
+export const JOB_ICONS = [['coffee', 'Café'], ['dining', 'Restaurant'], ['cart', 'Supermarket'], ['bag', 'Retail'], ['briefcase', 'Office'], ['book', 'Tutoring'], ['dumbbell', 'Gym'], ['laptop', 'Tech']];
+const JOB_COLORS = ['work', 'money', 'sleep', 'school', 'diet', 'move'];
+export const jobs = () => (state.kv.jobs?.length ? state.kv.jobs : [{ id: 'main', name: 'Café', rate: 30, sat: 36, sun: 42, icon: 'coffee', color: 'work', ...state.kv.job }]);
+export const jobOf = s => jobs().find(j => j.id === s?.jobId) ?? jobs()[0];
+const jobShifts = (j, list) => list.filter(s => jobOf(s).id === j.id);
 
 export function shiftHours(s) {
   let m = toMin(s.end) - toMin(s.start);
@@ -43,7 +49,7 @@ export function shiftHours(s) {
 }
 export function shiftRate(s) {
   if (Number(s.rate) > 0) return Number(s.rate);
-  const j = job(), d = dow(s.date);
+  const j = jobOf(s), d = dow(s.date);
   return d === 5 ? j.sat : d === 6 ? j.sun : j.rate;
 }
 export const shiftPay = s => shiftHours(s) * shiftRate(s);
@@ -90,7 +96,8 @@ export function agendaFor(date) {
     items.push({ time: e.start || null, end: e.end, title: e.title, sub: e.note ?? '', area: a.color, icon: a.icon, tag: a.label, sheet: 'event', id: e.id });
   });
   shifts().filter(s => s.date === date).forEach(s => {
-    items.push({ time: s.start, end: s.end, title: `${job().name} shift`, sub: `${fmt1(shiftHours(s))} h · ≈ ${money(shiftPay(s), false)}`, area: 'work', icon: 'coffee', tag: 'Work', sheet: 'shift', id: s.id });
+    const j = jobOf(s);
+    items.push({ time: s.start, end: s.end, title: `${j.name} shift`, sub: `${fmt1(shiftHours(s))} h · ≈ ${money(shiftPay(s), false)}`, area: j.color, icon: j.icon, tag: 'Work', sheet: 'shift', id: s.id });
   });
   assessments().filter(a => a.due === date && !a.done).forEach(a => {
     const course = courseById(a.courseId);
@@ -188,25 +195,33 @@ function planUni() {
 }
 
 function planWork() {
-  const j = job();
+  const js = jobs(), many = js.length > 1;
   const thisWeek = weekShifts();
   const hours = thisWeek.reduce((t, s) => t + shiftHours(s), 0);
   const pay = thisWeek.reduce((t, s) => t + shiftPay(s), 0);
   const upcoming = shifts().filter(s => s.date >= dayKey()).slice(0, 8);
   const weeks = Array.from({ length: 8 }, (_, i) => addDays(weekStart(), (i - 7) * 7));
-  const weeklyPay = weeks.map(w => weekShifts(w).reduce((t, s) => t + shiftPay(s), 0));
+  const payOf = list => list.reduce((t, s) => t + shiftPay(s), 0);
+  const weeklyPay = js.map(j => weeks.map(w => payOf(jobShifts(j, weekShifts(w)))));
   const ps = projects().sort((a, b) => (a.status === 'done') - (b.status === 'done') || (a.deadline ?? '9').localeCompare(b.deadline ?? '9'));
   const unpaid = invoices().filter(i => i.status !== 'paid');
   const overdue = unpaid.filter(i => invoiceStatus(i) === 'overdue');
   return `
   <section class="card glass">
-    <div class="head"><div class="title">${tile('coffee', 'work')}${esc(j.name)}</div><button class="sub-note" data-act="sheet" data-sheet="job">Pay rates ${icon('chevron')}</button></div>
+    <div class="head"><div class="title">${tile(many ? 'briefcase' : js[0].icon, 'work')}${many ? 'Part-time jobs' : esc(js[0].name)}</div><button class="sub-note" data-act="sheet" data-sheet="jobs">${many ? plural(js.length, 'job') : 'Jobs &amp; pay'} ${icon('chevron')}</button></div>
     <div class="calc-result"><div><span>This week</span><b>${fmt1(hours)} h</b></div><div><span>Expected pay</span><b>${money(pay, false)}</b></div><div><span>Shifts</span><b>${thisWeek.length}</b></div></div>
-    ${weeklyPay.some(Boolean) ? payChart(weeks, weeklyPay) : ''}
+    ${many ? `<div class="list job-split">${js.map(j => {
+      const mine = jobShifts(j, thisWeek);
+      return `<div class="row tap" data-act="sheet" data-sheet="job" data-id="${esc(j.id)}" role="button">${tile(j.icon, j.color)}<div class="grow"><div class="t">${esc(j.name)}</div><div class="d">${mine.length ? `${plural(mine.length, 'shift')} · ${fmt1(mine.reduce((t, s) => t + shiftHours(s), 0))} h this week` : 'No shifts this week'}</div></div><div class="amt">${money(payOf(mine), false)}</div></div>`;
+    }).join('')}</div>` : ''}
+    ${weeklyPay.flat().some(Boolean) ? payChart(weeks, weeklyPay, js) : ''}
     <div class="row2"><button class="btn soft" data-act="sheet" data-sheet="shift">${icon('plus')} Shift</button><button class="btn soft" data-act="addPay" ${pay ? '' : 'disabled'}>${icon('coins')} Add pay to Money</button></div>
   </section>
-  ${upcoming.length ? `<div class="section-label">Upcoming shifts</div><section class="card glass"><div class="list">${upcoming.map(s => `<div class="row tap" data-act="sheet" data-sheet="shift" data-id="${s.id}" role="button">
-    <div class="time">${dayLabel(s.date).replace('Tomorrow', 'Tmrw')}</div><div class="bar" style="background:var(--work)"></div><div class="grow"><div class="t">${time12(s.start)}–${time12(s.end)}</div><div class="d">${fmt1(shiftHours(s))} h · ${money(shiftRate(s), false)}/h</div></div><div class="amt">${money(shiftPay(s), false)}</div></div>`).join('')}</div></section>` : ''}
+  ${upcoming.length ? `<div class="section-label">Upcoming shifts</div><section class="card glass"><div class="list">${upcoming.map(s => {
+    const j = jobOf(s);
+    return `<div class="row tap" data-act="sheet" data-sheet="shift" data-id="${s.id}" role="button">
+    <div class="time">${dayLabel(s.date).replace('Tomorrow', 'Tmrw')}</div><div class="bar" style="background:var(--${j.color})"></div><div class="grow"><div class="t">${time12(s.start)}–${time12(s.end)}</div><div class="d">${many ? `${esc(j.name)} · ` : ''}${fmt1(shiftHours(s))} h · ${money(shiftRate(s), false)}/h</div></div><div class="amt">${money(shiftPay(s), false)}</div></div>`;
+  }).join('')}</div></section>` : ''}
 
   <section class="card glass">
     <div class="head"><div class="title">${tile('laptop', 'work')}Freelance web</div><button class="sub-note" data-act="sheet" data-sheet="client">${plural(clients().length, 'client')} ${icon('chevron')}</button></div>
@@ -223,8 +238,9 @@ function planWork() {
   }).join('')}</div></section>` : ''}`;
 }
 
-function payChart(weeks, values) {
-  return lineChart({ series: [{ values: values.map(v => v || null), color: 'var(--work)' }], labels: weeks.map((w, i) => (i === 7 ? 'Now' : i % 2 === 1 ? shortDate(w) : '')), live: true });
+// One line per job.
+function payChart(weeks, perJob, js) {
+  return lineChart({ series: perJob.map((values, i) => ({ values: values.map(v => v || null), color: `var(--${js[i].color})` })), labels: weeks.map((w, i) => (i === 7 ? 'Now' : i % 2 === 1 ? shortDate(w) : '')), live: true });
 }
 
 function planTasks() {
@@ -373,29 +389,36 @@ sheets.courseDetail = ({ id }) => {
 
 sheets.shift = ({ id }) => {
   const s = id ? byId(id) : null;
+  const js = jobs(), j = s ? jobOf(s) : js.find(x => x.id === state.kv.lastJob) ?? js[0];
   return `<h2>${s ? 'Edit shift' : 'New shift'} ${closeBtn}</h2><form data-form="shift" class="nice-form"><input type="hidden" name="id" value="${s?.id ?? ''}">
+    ${js.length > 1 ? field('Job', chips('jobId', js.map(x => [x.id, x.name, x.icon, x.color]), j.id, { cols: Math.min(js.length, 3) })) : `<input type="hidden" name="jobId" value="${esc(j.id)}">`}
     ${field('Day', dateField('date', s?.date ?? dayKey()))}
     <div class="row2">${field('Starts', inp('start', s?.start ?? '17:00', 'type="time" required'))}${field('Ends', inp('end', s?.end ?? '21:00', 'type="time" required'))}</div>
     ${field('Unpaid break', chips('breakMin', [[0, 'None'], [15, '15 min'], [30, '30 min'], [45, '45 min'], [60, '1 h']], s?.breakMin ?? 0, { cols: 5 }))}
     <details class="fx" ${s?.rate ? 'open' : ''}><summary>Different pay rate for this shift</summary>
-      ${field('Hourly rate', `<div class="suffix prefix"><span>A$</span>${inp('rate', s?.rate, `inputmode="decimal" placeholder="${esc(String(job().rate))}"`)}<span>/h</span></div>`)}</details>
+      ${field('Hourly rate', `<div class="suffix prefix"><span>A$</span>${inp('rate', s?.rate, `inputmode="decimal" placeholder="${esc(String(j.rate))}"`)}<span>/h</span></div>`)}</details>
     <div class="preview-pill" id="shift-preview"></div>
     ${saveRow(s?.id, 'Add shift')}</form>`;
 };
 previews.shift = form => {
   const f = new FormData(form);
-  const s = { date: readDate(f, 'date') || dayKey(), start: f.get('start'), end: f.get('end'), breakMin: num(f.get('breakMin')), rate: num(f.get('rate')) };
+  const s = { jobId: f.get('jobId'), date: readDate(f, 'date') || dayKey(), start: f.get('start'), end: f.get('end'), breakMin: num(f.get('breakMin')), rate: num(f.get('rate')) };
   const el = document.getElementById('shift-preview');
-  if (el && s.start && s.end) el.innerHTML = `${icon('coffee')} ${fmt1(shiftHours(s))} hours · about <b>${money(shiftPay(s))}</b>`;
+  if (el && s.start && s.end) el.innerHTML = `${icon(jobOf(s).icon)} ${fmt1(shiftHours(s))} hours · about <b>${money(shiftPay(s))}</b>`;
 };
 
-sheets.job = () => {
-  const j = job();
-  return `<h2>Pay rates ${closeBtn}</h2><form data-form="job">
-    ${field('Job name', inp('name', j.name, 'maxlength="30"'))}
-    <div class="row3">${field('Weekday $/h', inp('rate', j.rate, 'inputmode="decimal"'))}${field('Saturday $/h', inp('sat', j.sat, 'inputmode="decimal"'))}${field('Sunday $/h', inp('sun', j.sun, 'inputmode="decimal"'))}</div>
+sheets.jobs = () => `<h2>Jobs ${closeBtn}</h2>
+  <div class="list">${jobs().map(j => `<div class="row tap" data-act="sheet" data-sheet="job" data-id="${esc(j.id)}" role="button">${tile(j.icon, j.color)}<div class="grow"><div class="t">${esc(j.name)}</div><div class="d">${money(j.rate, false)}/h · Sat ${money(j.sat, false)} · Sun ${money(j.sun, false)}</div></div>${icon('chevron')}</div>`).join('')}</div>
+  <button class="btn soft" style="margin-top:14px" data-act="sheet" data-sheet="job">${icon('plus')} Add a job</button>`;
+
+sheets.job = ({ id }) => {
+  const j = id ? jobs().find(x => x.id === id) : null;
+  return `<h2>${j ? esc(j.name) : 'New job'} ${closeBtn}</h2><form data-form="job" class="nice-form"><input type="hidden" name="id" value="${esc(j?.id ?? '')}">
+    ${field('Job name', inp('name', j?.name, 'required maxlength="30" placeholder="e.g. Woolworths"'))}
+    ${field('Icon', chips('icon', JOB_ICONS.map(([n, label]) => [n, label, n]), j?.icon ?? 'coffee', { cols: 8, cls: 'icons' }))}
+    <div class="row3">${field('Weekday $/h', inp('rate', j?.rate, 'inputmode="decimal" required placeholder="30"'))}${field('Saturday $/h', inp('sat', j?.sat, 'inputmode="decimal" placeholder="Same"'))}${field('Sunday $/h', inp('sun', j?.sun, 'inputmode="decimal" placeholder="Same"'))}</div>
     <p class="note">Casual award rates differ by day. Use the rates on your payslip.</p>
-    <button class="btn">Save rates</button></form>`;
+    <div class="btn-row"><button class="btn">${j ? 'Save' : 'Add job'}</button>${j && jobs().length > 1 ? `<button type="button" class="btn danger" data-act="delJob" data-id="${esc(j.id)}">Delete</button>` : ''}</div></form>`;
 };
 
 sheets.client = ({ id }) => {
@@ -466,13 +489,30 @@ Object.assign(actions, {
     render();
   },
   async toggleScale() { await setKV('gpaScale', gpaScale() === 7 ? 4 : 7); render(); },
+  // One income per job, since each employer pays separately.
   async addPay() {
-    const list = weekShifts();
-    const pay = Math.round(list.reduce((t, s) => t + shiftPay(s), 0) * 100) / 100;
-    if (!pay) return;
-    await addEntry('txn', { kind: 'income', amount: pay, category: 'wages', account: 'westpac', merchant: `${job().name} pay`, note: `${plural(list.length, 'shift')} · week of ${shortDate(weekStart())}` }, dayKey());
+    let total = 0;
+    for (const j of jobs()) {
+      const list = jobShifts(j, weekShifts());
+      const pay = Math.round(list.reduce((t, s) => t + shiftPay(s), 0) * 100) / 100;
+      if (!pay) continue;
+      await addEntry('txn', { kind: 'income', amount: pay, category: 'wages', account: 'westpac', merchant: `${j.name} pay`, note: `${plural(list.length, 'shift')} · week of ${shortDate(weekStart())}` }, dayKey());
+      total += pay;
+    }
+    if (!total) return;
     haptic();
-    toast(`${money(pay)} added to Money`, { icon: 'coins' });
+    toast(`${money(total)} added to Money`, { icon: 'coins' });
+    render();
+  },
+  async delJob(el) {
+    const j = jobs().find(x => x.id === el.dataset.id);
+    if (!j) return;
+    const mine = jobShifts(j, shifts());
+    if (!confirm(`Delete ${j.name}${mine.length ? ` and its ${plural(mine.length, 'shift')}` : ''}? Pay already added to Money stays.`)) return;
+    for (const s of mine) await removeEntry(s.id);
+    await setKV('jobs', jobs().filter(x => x.id !== j.id));
+    closeSheet();
+    toast(`${j.name} deleted`, { icon: 'trash' });
     render();
   },
 });
@@ -515,14 +555,20 @@ Object.assign(forms, {
     toast('Assessment saved', { icon: 'pen' });
   },
   async shift(f) {
-    await save('shift', f, { start: f.get('start'), end: f.get('end'), breakMin: num(f.get('breakMin')), rate: num(f.get('rate')) || null }, readDate(f, 'date') || dayKey());
-    toast('Shift saved', { icon: 'coffee' });
+    const jobId = f.get('jobId') || jobs()[0].id;
+    if (jobs().length > 1) await setKV('lastJob', jobId);
+    await save('shift', f, { jobId, start: f.get('start'), end: f.get('end'), breakMin: num(f.get('breakMin')), rate: num(f.get('rate')) || null }, readDate(f, 'date') || dayKey());
+    toast('Shift saved', { icon: jobOf({ jobId }).icon });
   },
   async job(f) {
-    await setKV('job', { name: f.get('name').trim() || 'Café', rate: num(f.get('rate')), sat: num(f.get('sat')), sun: num(f.get('sun')) });
+    const id = f.get('id'), list = jobs();
+    const rate = num(f.get('rate'));
+    const fields = { name: f.get('name').trim() || 'Job', icon: f.get('icon') || 'coffee', rate, sat: num(f.get('sat')) || rate, sun: num(f.get('sun')) || rate };
+    const used = new Set(list.map(j => j.color));
+    await setKV('jobs', id ? list.map(j => (j.id === id ? { ...j, ...fields } : j)) : [...list, { id: uid(), color: JOB_COLORS.find(c => !used.has(c)) ?? 'work', ...fields }]);
     haptic();
     closeSheet();
-    toast('Pay rates saved', { icon: 'coins' });
+    toast(id ? `${fields.name} saved` : `${fields.name} added`, { icon: fields.icon });
     render();
   },
   async client(f) {
