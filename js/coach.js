@@ -1,10 +1,11 @@
 // v7 Coaching: morning briefing, evening review, weekly report, badges, reminder guide.
-import { state, addEntry, setKV } from './store.js';
-import { esc, dayKey, addDays, weekStart, monthKey, shortDate, initial, fmt, fmt1, fmtHours, money, plural, avgLogged, time12 } from './util.js';
+import { state, addEntry, updateEntry, setKV } from './store.js';
+import { esc, dayKey, addDays, weekStart, monthKey, monthDays, shortDate, initial, fmt, fmt1, fmtHours, money, plural, avgLogged, time12, toMin, fromMin, minNow, clamp, dayLabel } from './util.js';
 import { icon, tile } from './icons.js';
 import { sheets, actions, forms, afterRender, render, refreshSheet, toast, haptic, confetti, closeBtn } from './core.js';
+import { targets, targetsSection, targetLines, TARGET_METRICS } from './targets.js';
 import { lineChart } from './charts.js';
-import { goals, habits, kcalOn, proteinOn, waterOn, sleepOn, weights, habitDone, streak, anyLogOn, weeklyRate, bulkStatus } from './data.js';
+import { of, goals, habits, kcalOn, proteinOn, waterOn, sleepOn, weights, habitDone, streak, anyLogOn, weeklyRate, bulkStatus, BLOCK_KINDS, kindOf } from './data.js';
 import { workouts, nextDay, suggestion, exById, routine } from './gym.js';
 import { agendaFor, tasks, assessments, invoices } from './plan.js';
 import { bills, monthSummary, spentIn, budgets, goalsList, txns } from './money.js';
@@ -17,6 +18,19 @@ const aiText = res => res.candidates?.[0]?.content?.parts?.filter(p => p.text &&
 const fmtAI = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 
 // AI notes are cached by key (one briefing per day, one report per week) so the free tier lasts.
+// They are also the coach's memory, so they are kept by what they're worth rather
+// than by a flat count: a nudge is stale by tomorrow, a weekly report is the record
+// of a whole week and is never dropped. (A flat cap of 30 used to evict the weekly
+// reports within a week of the checkpoint nudges arriving.)
+const NOTE_DAYS = { nudge: 3, brief: 120, eve: 120 };
+function pruneNotes(notes) {
+  return Object.fromEntries(Object.entries(notes).filter(([k]) => {
+    const [kind, date] = k.split(':');
+    const days = NOTE_DAYS[kind];
+    return !days || !date || date >= addDays(dayKey(), -days);
+  }));
+}
+
 const pending = new Set();
 async function aiNote(key, prompt) {
   if (!hasAI() || pending.has(key) || state.kv.notes?.[key]) return;
@@ -24,7 +38,7 @@ async function aiNote(key, prompt) {
   try {
     const res = await generate({ system: systemPrompt(), contents: [{ role: 'user', parts: [{ text: prompt }] }] });
     const text = aiText(res);
-    if (text) await setKV('notes', { ...Object.fromEntries(Object.entries(state.kv.notes ?? {}).slice(-30)), [key]: text });
+    if (text) await setKV('notes', { ...pruneNotes(state.kv.notes ?? {}), [key]: text });
     render();
   } catch { /* fall back to the rule-based text */ }
   pending.delete(key);
@@ -61,6 +75,74 @@ function morningCard() {
   aiNote(key, 'Write my morning briefing for today in 2–3 short, warm sentences: sleep, what’s on (classes, shifts, deadlines), today’s workout with a target weight if known, and food targets for my bulk. No greeting line, no lists.');
   const ai = state.kv.notes?.[key];
   return `<section class="card glass brief">${tile('sun', 'school')}<div class="grow"><div class="meta">Morning briefing${ai ? ` · ${icon('sparkle')}` : ''}</div><p>${ai ? fmtAI(ai) : briefingText()}</p></div></section>`;
+}
+
+// ---------- checkpoint nudges (the day view) ----------
+// Three moments chosen around a 10am-to-midnight day: mid-afternoon, early evening,
+// and late enough to still act on it before bed. Each one is costed once and cached
+// like the briefing, so opening the app twenty times is still one Gemini call.
+export const CHECKPOINTS = ['14:00', '18:00', '22:30'];
+const WAKE = 10 * 60, BED = 24 * 60;
+const STUDYISH = ['study', 'revision', 'reading', 'coding'];
+
+// Everything already claimed on the day, so a gap is really a gap.
+function busyOn(date) {
+  const iv = [];
+  agendaFor(date).forEach(it => { if (it.time) iv.push([toMin(it.time), it.end ? toMin(it.end) : toMin(it.time) + 45]); });
+  of('block', date).forEach(b => iv.push([toMin(b.start), b.end ? toMin(b.end) : BED]));
+  return iv.sort((a, b) => a[0] - b[0]);
+}
+
+function nextGap(date, from) {
+  let t = from;
+  for (const [a, b] of busyOn(date)) {
+    if (b <= t) continue;
+    if (a - t >= 90) return [t, a];
+    t = Math.max(t, b);
+  }
+  return BED - t >= 90 ? [t, BED] : null;
+}
+
+// Plain facts first: whatever the AI is or isn't up to, these are true and free.
+function dayFacts(date, cp) {
+  const g = goals(), out = [];
+  const hoursLeft = Math.max(0, BED - cp) / 60;
+  const pace = clamp((cp - WAKE) / (BED - WAKE), 0, 1);
+  const protein = proteinOn(date), kcal = kcalOn(date), water = waterOn(date);
+
+  if (!of('meal', date).length) out.push(`Nothing eaten logged yet, and about ${fmt1(hoursLeft)} h of the day left.`);
+  else if (protein < g.protein * pace * 0.8) out.push(`Protein is ${fmt(protein)} of ${g.protein} g with about ${fmt1(hoursLeft)} h left.`);
+  if (kcal && kcal < g.kcal * pace * 0.7) out.push(`Calories at ${fmt(kcal)}; the bulk still wants ${fmt(g.kcal - kcal)}.`);
+  if (water < Math.floor(g.water * pace) - 1) out.push(`Water is ${water} of ${g.water} glasses.`);
+
+  const studied = of('block', date).some(b => STUDYISH.includes(b.kind) && b.done !== false);
+  const soon = assessments().filter(a => !a.done && a.due >= date && a.due <= addDays(date, 2));
+  if (soon.length && !studied) out.push(`${soon[0].title} is due ${dayLabel(soon[0].due).toLowerCase()} and nothing has been logged against it.`);
+  const gap = nextGap(date, Math.max(cp, minNow()));
+  const until = m => (m >= BED ? 'midnight' : time12(fromMin(m)));
+  if (gap) out.push(`Clear from ${time12(fromMin(gap[0]))} to ${until(gap[1])}${soon.length && !studied ? ', which is the obvious study window' : ''}.`);
+
+  if (cp >= 18 * 60 && !workouts().find(w => w.date === date) && nextDay()) out.push(`No workout logged and ${nextDay().name} is next up.`);
+
+  const spent = spentIn(txns().filter(x => x.date === date));
+  const daily = Object.values(budgets()).reduce((t, v) => t + (Number(v) || 0), 0) / monthDays(monthKey(date));
+  if (daily && spent > daily * 1.5) out.push(`Spent ${money(spent, false)} today against a ${money(daily, false)} daily pace.`);
+  return out;
+}
+
+// Only checkpoints the clock has already passed, and only on the live day: the
+// framing ("hours left") is meaningless once the day is over.
+export function nudgesFor(date) {
+  if (date !== dayKey()) return [];
+  const now = minNow();
+  return CHECKPOINTS.filter(cp => toMin(cp) <= now).map(cp => {
+    const facts = dayFacts(date, toMin(cp));
+    if (!facts.length) return null;
+    const key = `nudge:${date}:${cp}`;
+    aiNote(key, `It is ${time12(cp)} and my day runs to about midnight. Where my day stands:\n- ${facts.join('\n- ')}\nWrite me one checkpoint nudge, two short sentences at most: the one thing worth doing with the rest of the day. No greeting, no lists.`);
+    const ai = state.kv.notes?.[key];
+    return { at: cp, facts, ai: !!ai, html: ai ? fmtAI(ai) : facts.map(esc).join(' ') };
+  }).filter(Boolean);
 }
 
 // ---------- evening review ----------
@@ -139,6 +221,8 @@ sheets.weekReport = ({ w }) => {
     <div class="calc-result"><div><span>Workouts</span><b>${s.workouts.length}/${perWeek}</b></div><div><span>PRs</span><b>${s.prs.length}</b></div><div><span>Days logged</span><b>${s.logged}/7</b></div></div>
     ${lineChart({ series: [{ values: s.days.map(d => kcalOn(d) || null), color: 'var(--diet)' }, { values: s.days.map(d => (proteinOn(d) ? (proteinOn(d) / s.g.protein) * s.g.kcal : null)), color: 'var(--move)' }], labels: s.days.map(initial), goal: s.g.kcal, empty: 'No meals logged this week.' })}
     <div class="legend-inline"><span><i class="dot" style="background:var(--diet)"></i>Calories</span><span><i class="dot" style="background:var(--move)"></i>Protein (scaled to goal)</span><span>dashed = goal</span></div>
+    ${(() => { const tr = trendLines(w0); return tr.length ? `<div class="label-sm" style="margin-top:12px">Against the weeks before</div><ul class="trend">${tr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''; })()}
+    ${targets().length ? `<div class="label-sm" style="margin-top:12px">Targets</div><ul class="trend">${targetLines().map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
     <div class="list" style="margin-top:12px">
       ${row('diet', 'diet', 'Average calories', s.kcalAvg ? `${fmt(s.kcalAvg)} kcal` : '–', s.kcalAvg >= s.g.kcal * 0.95)}
       ${row('shaker', 'move', 'Protein goal hit', `${s.proteinDays}/7 days`, s.proteinDays >= 5)}
@@ -166,6 +250,211 @@ todaySections.push({
     if (h < 12) html += morningCard();
     else if (h >= 18) html += eveningCard();
     return html;
+  },
+});
+
+// Once a week the coach rewrites what it knows about me; once a day, after the
+// evening review, it looks for something worth suggesting. Both are cached, so
+// opening Today twenty times costs what opening it once does.
+todaySections.push({
+  pos: 'top',
+  render() {
+    refreshProfile();
+    if (hour() >= 18) makeProposals(`prop:${dayKey()}`, `Today is ${dayKey()} and the day is nearly done. Look at today against the last few weeks and suggest what I should change or put in the diary for tomorrow.`);
+    if (new Date().getDay() === 0) makeProposals(`prop:w:${weekStart()}`, `The week is ending. Looking at how the last few weeks compare rather than at this week alone, suggest what I should change: a daily target that no longer fits, time I should put aside, or a long-term target worth setting.`);
+    const open = openProposals();
+    if (!open.length) return '';
+    return `<div class="section-label">Coach suggests <span>${open.length}</span></div>
+      <section class="card glass">${open.map(p => `<div class="prop">
+        <div class="prop-h">${tile('sparkle', 'sleep')}<div class="grow"><div class="t">${esc(p.title)}</div><div class="d">${esc(p.why)}</div></div></div>
+        <div class="prop-btns"><button class="pill-btn go" data-act="acceptProposal" data-id="${p.id}">${icon('check')} Accept</button><button class="pill-btn" data-act="dismissProposal" data-id="${p.id}">Not now</button></div>
+      </div>`).join('')}</section>`;
+  },
+});
+todaySections.push({ pos: 'end', render: targetsSection });
+
+
+// ---------- the long view ----------
+// A week on its own says nothing: 6.4 hours of sleep only means something next to
+// the three weeks before it. Everything here is about putting a week in a row.
+export function weekCompare(w0) {
+  const hist = Array.from({ length: 9 }, (_, i) => weekStats(addDays(w0, -7 * i)));
+  const [cur, prev] = hist;
+  const perWeek = routine()?.perWeek ?? 4;
+  // How many weeks back, counting from this one, a thing has been true.
+  const run = test => { let n = 0; for (const s of hist) { if (!s.logged || !test(s)) break; n++; } return n; };
+  const delta = (a, b) => (a && b ? a - b : null);
+  return {
+    cur, prev, perWeek,
+    kcal: delta(cur.kcalAvg, prev.kcalAvg),
+    protein: delta(cur.proteinAvg, prev.proteinAvg),
+    sleep: delta(cur.sleepAvg, prev.sleepAvg),
+    workouts: cur.workouts.length - prev.workouts.length,
+    spent: cur.spent - prev.spent,
+    runs: {
+      sleepShort: run(s => s.sleepAvg && s.sleepAvg < s.g.sleep - 0.5),
+      proteinShort: run(s => s.proteinDays < 5),
+      overBudget: run(s => s.weeklyBudget && s.spent > s.weeklyBudget),
+      trainingLight: run(s => s.workouts.length < perWeek),
+    },
+  };
+}
+
+// The lines that turn a snapshot into a trend, for the report and the prompts.
+export function trendLines(w0) {
+  const c = weekCompare(w0);
+  const out = [];
+  // Each metric needs a move big enough to mean something: a 17 kcal difference
+  // between two weeks is noise, and reporting it as a trend costs trust.
+  const move = (v, unit, what, min, dp = 0) => { if (v == null || Math.abs(v) < min) return; out.push(`${what} ${v > 0 ? 'up' : 'down'} ${Math.abs(v).toFixed(dp)}${unit} on last week.`); };
+  move(c.kcal, ' kcal', 'Average calories', 80);
+  move(c.protein, ' g', 'Average protein', 8);
+  move(c.sleep, 'h', 'Average sleep', 0.3, 1);
+  if (c.workouts) out.push(`${Math.abs(c.workouts)} ${c.workouts > 0 ? 'more' : 'fewer'} workout${Math.abs(c.workouts) === 1 ? '' : 's'} than last week.`);
+  const weeks = n => `${n} weeks running`;
+  if (c.runs.sleepShort >= 2) out.push(`Sleep has been under goal ${weeks(c.runs.sleepShort)}.`);
+  if (c.runs.proteinShort >= 2) out.push(`Protein has missed 5 days a week ${weeks(c.runs.proteinShort)}.`);
+  if (c.runs.trainingLight >= 2) out.push(`Training has been under ${c.perWeek} a week ${weeks(c.runs.trainingLight)}.`);
+  if (c.runs.overBudget >= 2) out.push(`Spending has been over budget pace ${weeks(c.runs.overBudget)}.`);
+  return out;
+}
+
+// ---------- the coach's standing notes ----------
+// Everything else the coach sees is a snapshot of now. This is the one thing it
+// carries: a short note about me that it rewrites once a week from its own recent
+// briefings and reviews, and that goes into the context of every later call.
+export const coachProfile = () => state.kv.coachProfile ?? null;
+const lastFullWeek = () => addDays(weekStart(), -7);
+
+async function refreshProfile() {
+  const w0 = lastFullWeek();
+  if (!hasAI() || pending.has('profile') || state.kv.coachProfile?.week === w0) return;
+  pending.add('profile');
+  try {
+    const recent = Object.entries(state.kv.notes ?? {})
+      .filter(([k]) => k.startsWith('brief:') || k.startsWith('eve:'))
+      .sort(([a], [b]) => a.localeCompare(b)).slice(-14)
+      .map(([k, v]) => `${k.split(':')[1]}: ${v}`).join('\n');
+    const prompt = `Rewrite your standing notes about me for the week ending ${addDays(w0, 6)}.
+
+What you had written before:
+${state.kv.coachProfile?.text || '(nothing yet)'}
+
+What the last week looked like against the weeks before it:
+- ${trendLines(w0).join('\n- ') || 'Not enough history to compare yet.'}
+
+My long-term targets:
+- ${targetLines().join('\n- ') || '(none set)'}
+
+Your own recent briefings and reviews:
+${recent || '(none)'}
+
+Write at most 150 words, as notes to yourself, not to me. Keep what still holds, drop what has gone stale. Cover: the patterns that keep repeating, what actually works for me, what I keep slipping on, and anything I have decided. No greeting, no headings, no lists.`;
+    const res = await generate({ system: systemPrompt(), contents: [{ role: 'user', parts: [{ text: prompt }] }] });
+    const text = aiText(res);
+    if (text) await setKV('coachProfile', { week: w0, updated: dayKey(), text: text.slice(0, 1400) });
+    render();
+  } catch { /* the coach simply keeps last week's notes */ }
+  pending.delete('profile');
+}
+
+// ---------- proposals ----------
+// The coach may suggest anything but change nothing: each suggestion lands as a
+// card you accept or dismiss. Dismissals go back into its context, so saying no
+// twice is itself a signal.
+const PROPOSE_TOOLS = [
+  { name: 'propose_daily_goals', description: 'Suggest changing my daily targets. Only send the ones that should change.', parameters: { type: 'object', properties: { kcal: { type: 'number', description: 'Calories' }, protein: { type: 'number', description: 'Protein g' }, water: { type: 'number', description: 'Glasses' }, sleep: { type: 'number', description: 'Hours' }, why: { type: 'string', description: 'One sentence, the evidence for it' } }, required: ['why'] } },
+  { name: 'propose_block', description: 'Suggest a block of time I should put aside (study, revision, reading, coding, admin, chores, social, rest).', parameters: { type: 'object', properties: { kind: { type: 'string', description: `One of: ${Object.keys(BLOCK_KINDS).join(', ')}` }, title: { type: 'string', description: 'What specifically' }, date: { type: 'string', description: 'YYYY-MM-DD' }, start: { type: 'string', description: 'HH:MM' }, end: { type: 'string', description: 'HH:MM' }, why: { type: 'string', description: 'One sentence, the evidence for it' } }, required: ['kind', 'date', 'start', 'why'] } },
+  { name: 'propose_task', description: 'Suggest a to-do I should add.', parameters: { type: 'object', properties: { title: { type: 'string', description: 'The task' }, due: { type: 'string', description: 'YYYY-MM-DD, optional' }, why: { type: 'string', description: 'One sentence, the evidence for it' } }, required: ['title', 'why'] } },
+  { name: 'propose_target', description: 'Suggest a long-term target to set or change.', parameters: { type: 'object', properties: { metric: { type: 'string', description: `One of: ${Object.keys(TARGET_METRICS).join(', ')}` }, to: { type: 'number', description: 'The number to reach, or to sustain each week' }, due: { type: 'string', description: 'YYYY-MM-DD, optional for weekly ones' }, why: { type: 'string', description: 'One sentence, the evidence for it' } }, required: ['metric', 'to', 'why'] } },
+];
+
+const isDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d ?? '');
+const isTime = t => /^\d{1,2}:\d{2}$/.test(t ?? '');
+const posNum = v => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
+export const openProposals = () => of('proposal').filter(p => p.status === 'open');
+
+// Whatever the model sends back is a suggestion, not a fact: anything that
+// doesn't survive validation is dropped rather than stored for a later tap.
+function validate(name, a) {
+  const why = String(a.why ?? '').slice(0, 200);
+  if (!why) return null;
+  if (name === 'propose_daily_goals') {
+    const payload = {};
+    for (const k of ['kcal', 'protein', 'water', 'sleep']) if (posNum(a[k])) payload[k] = Math.round(posNum(a[k]) * 100) / 100;
+    if (!Object.keys(payload).length) return null;
+    const g = goals();
+    const words = Object.entries(payload).map(([k, v]) => `${k} ${fmt(g[k])} → ${fmt(v)}`).join(', ');
+    return { kind: 'daily_goals', payload, why, title: `Change daily goals: ${words}` };
+  }
+  if (name === 'propose_block') {
+    const kind = Object.keys(BLOCK_KINDS).includes(a.kind) ? a.kind : null;
+    if (!kind || !isDate(a.date) || !isTime(a.start)) return null;
+    const start = String(a.start).padStart(5, '0');
+    const end = isTime(a.end) ? String(a.end).padStart(5, '0') : null;
+    const payload = { kind, title: String(a.title ?? '').slice(0, 60), date: a.date, start, end };
+    return { kind: 'block', payload, why, title: `${kindOf(kind).label}${payload.title ? `: ${payload.title}` : ''} — ${dayLabel(a.date)} ${time12(start)}` };
+  }
+  if (name === 'propose_task') {
+    const title = String(a.title ?? '').trim().slice(0, 80);
+    if (!title) return null;
+    return { kind: 'task', payload: { title, due: isDate(a.due) ? a.due : null }, why, title: `Add task: ${title}` };
+  }
+  if (name === 'propose_target') {
+    const metric = Object.keys(TARGET_METRICS).includes(a.metric) ? a.metric : null;
+    const to = posNum(a.to);
+    if (!metric || !to) return null;
+    const m = TARGET_METRICS[metric];
+    return { kind: 'target', payload: { metric, to, due: isDate(a.due) ? a.due : null }, why, title: `Target: ${m.label} ${m.kind === 'rate' ? `${fmt1(to)} a week` : fmt1(to)}` };
+  }
+  return null;
+}
+
+async function makeProposals(key, prompt) {
+  if (!hasAI() || pending.has(key) || state.kv.proposalRuns?.[key] || openProposals().length >= 3) return;
+  pending.add(key);
+  try {
+    const recentlyRefused = of('proposal').filter(p => p.status === 'dismissed').slice(-6).map(p => p.title).join('; ');
+    const res = await generate({
+      system: systemPrompt(),
+      contents: [{ role: 'user', parts: [{ text: `${prompt}\n\nSuggest at most two things, and only where the data actually supports one — suggesting nothing is a fine answer. Each needs one sentence of evidence from my own numbers. Do not suggest anything I have already turned down: ${recentlyRefused || '(nothing yet)'}` }] }],
+      tools: PROPOSE_TOOLS,
+    });
+    const calls = (res.candidates?.[0]?.content?.parts ?? []).filter(p => p.functionCall);
+    for (const p of calls.slice(0, 2)) {
+      const v = validate(p.functionCall.name, p.functionCall.args ?? {});
+      if (v) await addEntry('proposal', { ...v, status: 'open', source: 'coach' }, dayKey());
+    }
+    await setKV('proposalRuns', { ...Object.fromEntries(Object.entries(state.kv.proposalRuns ?? {}).slice(-20)), [key]: dayKey() });
+    render();
+  } catch { /* no suggestions this time */ }
+  pending.delete(key);
+}
+
+Object.assign(actions, {
+  async acceptProposal(el) {
+    const p = of('proposal').find(x => x.id === el.dataset.id);
+    if (!p) return;
+    const a = p.payload ?? {};
+    if (p.kind === 'daily_goals') await setKV('goals', { ...goals(), ...a });
+    if (p.kind === 'block') await addEntry('block', { kind: a.kind, title: a.title, note: '', start: a.start, end: a.end, planned: true, done: false, source: 'coach' }, a.date);
+    if (p.kind === 'task') await addEntry('task', { title: a.title, due: a.due, area: 'life', done: false, source: 'coach' }, dayKey());
+    if (p.kind === 'target') {
+      const m = TARGET_METRICS[a.metric];
+      const existing = targets().find(t => t.metric === a.metric);
+      const fields = { metric: a.metric, label: '', to: a.to, from: m.kind === 'point' ? m.now() ?? 0 : null, due: a.due, done: false };
+      if (existing) await updateEntry(existing.id, fields);
+      else await addEntry('target', { ...fields, source: 'coach' }, dayKey());
+    }
+    await updateEntry(p.id, { status: 'accepted', decidedAt: dayKey() });
+    haptic();
+    toast('Done', { icon: 'check' });
+    render();
+  },
+  async dismissProposal(el) {
+    await updateEntry(el.dataset.id, { status: 'dismissed', decidedAt: dayKey() });
+    haptic();
+    render();
   },
 });
 
@@ -213,6 +502,15 @@ afterRender.push(() => {
   badgeTimer = setTimeout(() => { checkedVersion = state.version; checkBadges(); }, 400);
 });
 
+// What the coach has been carrying, in its own words. Shown because a memory you
+// can't read is one you can't correct.
+sheets.coachNotes = () => {
+  const p = coachProfile();
+  return `<h2>What your coach has noticed ${closeBtn}</h2>
+    ${p ? `<p class="ai-note">${tile('sparkle', 'sleep')}<span>${fmtAI(p.text)}</span></p><p class="note">Rewritten each week from its own briefings and reviews. Last updated ${shortDate(p.updated)}.</p>`
+      : `<div class="empty">Nothing yet. Your coach writes these notes once a week${hasAI() ? '' : ', once you connect it in Settings'}.</div>`}`;
+};
+
 sheets.badges = () => {
   const earned = state.kv.badges ?? {};
   const got = BADGES.filter(b => earned[b.id]);
@@ -236,7 +534,16 @@ sheets.guideReminders = () => `<h2>Reminders ${closeBtn}</h2>
 Object.assign(actions, {
   eveFeedback: () => aiNote(`eve:${dayKey()}`, 'Give me a short, kind evening review of today in 2–3 sentences: what went well for my bulk, gym, study and money, and one concrete thing to do better tomorrow.'),
   weekAI: async el => {
-    await aiNote(`week:${el.dataset.w}`, `Write my weekly review for the week starting ${el.dataset.w} in 3–4 sentences: training (workouts, PRs), nutrition for the bulk, sleep, money and study. End with one focus for next week.`);
+    const w0 = el.dataset.w;
+    await aiNote(`week:${w0}`, `Write my weekly review for the week starting ${w0} in 3–4 sentences: training (workouts, PRs), nutrition for the bulk, sleep, money and study.
+
+How this week sits against the weeks before it:
+- ${trendLines(w0).join('\n- ') || 'Not enough history to compare yet.'}
+
+My long-term targets:
+- ${targetLines().join('\n- ') || '(none set)'}
+
+Where something has been repeating for weeks, say so plainly rather than treating it as new. End with one focus for next week.`);
     refreshSheet();
   },
 });
@@ -260,6 +567,7 @@ settingsSections.push(() => {
   <section class="card glass conn">
     <div class="row tap" data-act="sheet" data-sheet="badges" role="button">${tile('medal', 'school')}<div class="grow"><div class="t">Badges</div><div class="d">${earned} of ${BADGES.length} unlocked</div></div><div class="chev">${icon('chevron')}</div></div>
     <div class="row tap" data-act="sheet" data-sheet="weekReport" role="button">${tile('chart', 'diet')}<div class="grow"><div class="t">Week in review</div><div class="d">Your weekly report</div></div><div class="chev">${icon('chevron')}</div></div>
+    <div class="row tap" data-act="sheet" data-sheet="coachNotes" role="button">${tile('brain', 'sleep')}<div class="grow"><div class="t">What your coach has noticed</div><div class="d">${coachProfile() ? `Updated ${shortDate(coachProfile().updated)}` : 'Written weekly once the AI is connected'}</div></div><div class="chev">${icon('chevron')}</div></div>
     <div class="row tap" data-act="sheet" data-sheet="guideReminders" role="button">${tile('bell', 'sleep')}<div class="grow"><div class="t">Reminders</div><div class="d">Notifications with iPhone Shortcuts</div></div><div class="chev">${icon('chevron')}</div></div>
   </section>`;
 });

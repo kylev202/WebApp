@@ -11,7 +11,9 @@ import './plan.js';
 import './money.js';
 import './ask.js';
 import './csv.js';
+import './targets.js';
 import './coach.js';
+import './day.js';
 import { handleOAuthRedirect, startConnections } from './connect.js';
 
 const soon = (title, ic, area, text) => () => `${header(title, 'Coming soon')}

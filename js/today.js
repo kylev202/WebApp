@@ -2,7 +2,7 @@
 import { state, addEntry, removeEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, lastDays, initial, fmt, fmtHours, avgLogged, sum, longDate } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, actions, ui, render, toast, haptic, header } from './core.js';
+import { screens, actions, ui, render, toast, haptic, header, seg, views } from './core.js';
 import { lineChart, sparkline } from './charts.js';
 import { goals, habits, of, kcalOn, waterOn, sleepOn, weights, habitDone, anyLogOn, streak, weeklyRate, bulkStatus, isStandalone } from './data.js';
 import { mealRow } from './health.js';
@@ -35,7 +35,13 @@ function banners() {
   return html;
 }
 
+// Summary is what Today has always been; Day is the same data at arm's length.
+// It isn't remembered between opens on purpose: the summary is the thing you want
+// first thing and last thing, which is when the app is usually opened cold.
+export const viewToggle = () => seg('todayView', [['summary', 'Summary'], ['timeline', 'Day']], ui.tab.todayView ?? 'summary');
+
 function renderToday() {
+  if (ui.tab.todayView === 'timeline' && views.day) return views.day();
   const t = dayKey();
   const g = goals();
   const meals = of('meal', t);
@@ -57,6 +63,7 @@ function renderToday() {
 
   return `
   ${header(greeting(), dateLine, `<button class="icon-btn glass" data-act="nav" data-to="settings" aria-label="Settings">${icon('gear')}</button>`)}
+  ${viewToggle()}
   ${banners()}
   ${todaySections.filter(s => s.pos === 'top').map(s => s.render()).join('')}
   ${workoutCard()}
@@ -145,7 +152,9 @@ Object.assign(actions, {
     const t = dayKey();
     for (const m of of('meal', addDays(t, -1))) {
       const { id, ts, date, ...fields } = m;
-      await addEntry('meal', fields, t);
+      // Keep yesterday's clock time where there was one; otherwise leave it
+      // unplaced rather than stacking the whole day at the moment you tapped.
+      await addEntry('meal', { ...fields, time: m.time ?? null }, t);
     }
     haptic();
     toast('Yesterday’s meals added', { icon: 'repeat' });
