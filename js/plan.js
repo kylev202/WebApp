@@ -67,9 +67,11 @@ export const gpaScale = () => Number(state.kv.gpaScale ?? 7);
 export function courseResult(courseId) {
   const list = assessments().filter(a => a.courseId === courseId);
   const marked = list.filter(a => a.score != null && a.score !== '');
-  const weightDone = marked.reduce((t, a) => t + Number(a.weight || 0), 0);
+  // Round summed weights to kill float drift (e.g. 38.800000000000004).
+  const round2 = n => Math.round(n * 100) / 100;
+  const weightDone = round2(marked.reduce((t, a) => t + Number(a.weight || 0), 0));
   const earned = marked.reduce((t, a) => t + (Number(a.weight || 0) * Number(a.score)) / 100, 0);
-  const totalWeight = list.reduce((t, a) => t + Number(a.weight || 0), 0);
+  const totalWeight = round2(list.reduce((t, a) => t + Number(a.weight || 0), 0));
   return { list, weightDone, earned, totalWeight, average: weightDone ? (earned / weightDone) * 100 : null, remaining: Math.max(0, 100 - weightDone) };
 }
 
