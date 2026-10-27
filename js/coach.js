@@ -17,6 +17,19 @@ const aiText = res => res.candidates?.[0]?.content?.parts?.filter(p => p.text &&
 const fmtAI = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 
 // AI notes are cached by key (one briefing per day, one report per week) so the free tier lasts.
+// They are also the coach's memory, so they are kept by what they're worth rather
+// than by a flat count: a nudge is stale by tomorrow, a weekly report is the record
+// of a whole week and is never dropped. (A flat cap of 30 used to evict the weekly
+// reports within a week of the checkpoint nudges arriving.)
+const NOTE_DAYS = { nudge: 3, brief: 120, eve: 120 };
+function pruneNotes(notes) {
+  return Object.fromEntries(Object.entries(notes).filter(([k]) => {
+    const [kind, date] = k.split(':');
+    const days = NOTE_DAYS[kind];
+    return !days || !date || date >= addDays(dayKey(), -days);
+  }));
+}
+
 const pending = new Set();
 async function aiNote(key, prompt) {
   if (!hasAI() || pending.has(key) || state.kv.notes?.[key]) return;
@@ -24,7 +37,7 @@ async function aiNote(key, prompt) {
   try {
     const res = await generate({ system: systemPrompt(), contents: [{ role: 'user', parts: [{ text: prompt }] }] });
     const text = aiText(res);
-    if (text) await setKV('notes', { ...Object.fromEntries(Object.entries(state.kv.notes ?? {}).slice(-30)), [key]: text });
+    if (text) await setKV('notes', { ...pruneNotes(state.kv.notes ?? {}), [key]: text });
     render();
   } catch { /* fall back to the rule-based text */ }
   pending.delete(key);
