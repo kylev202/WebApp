@@ -29,6 +29,9 @@ The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups a
 - **Day (new):** a `Summary / Day` switch on Today opens a close-up of one day on a single timeline — classes, shifts, events and workouts as blocks down the left, meals, spending and weigh-ins as dots down the right, a live "now" line between what's scheduled and what's happened. Add **blocks** for the time you actually spend (study, revision, reading, coding, admin, chores, social, rest): tap **Start** for a live timer, or tell Ask "studied 2 til 4". Plans you lay out ahead are hatched, and stay as an empty outline if the hour passes without them — the gap is the point. Hold any block or dot to **drag it to another time** (15-minute snap); anything imported or backdated waits in **No time yet** until you place it. Quiet hours shrink so an empty afternoon costs a few pixels. Swipe back through any past day, and leave a line in **How the day went** that the coach reads at the evening review.
   - **Checkpoint nudges:** at 2pm, 6pm and 10:30pm the coach looks at the day so far — protein against the hours left, a clear 90-minute gap worth studying in, a deadline with nothing logged against it, spending past its daily pace — and pins a note on the timeline. Costed once per checkpoint per day, so the free Gemini tier lasts; without a key the same facts show in plain text.
 
+- **Targets (new):** long-term goals the coach manages toward — body weight, WAM, GPA, money saved (pace against a deadline, with a projected landing date), or study hours, workouts, protein days and sleep a week (a four-week average against what you're aiming to keep up). They show on Today with how far ahead or behind pace you are, and in the weekly report.
+- **A coach with a memory (new):** it keeps **standing notes about you**, rewritten once a week from its own briefings and reviews and carried into every later answer, so it can say "five weeks running" instead of treating today as new (Settings → *What your coach has noticed*). The **week in review** now compares against the eight weeks before it rather than describing the week alone. And it **proposes rather than changes**: a new protein target, a study block before a deadline, a task, a long-term target — each arrives as a card on Today with **Accept** or **Not now**, and what you turn down goes back into its thinking so it doesn't ask twice.
+
 - **Coaching (new):** a **morning briefing** on Today (sleep, classes, shifts, deadlines, today's lift target, bulk targets, bills), an **evening review** (today's wins plus your top 3 for tomorrow, saved as tasks), and a **week in review** report every Sunday. With the AI connected, the briefing and reviews are written by Gemini (once per day/week, to save the free tier). **17 badges** for training, nutrition, sleep, money and uni. A **reminders guide** for iPhone Shortcuts notifications.
 
 The app icon is drawn by [`design/icon.html`](design/icon.html): an infinity "loop" ribbon flowing through each life area's colour.
@@ -68,6 +71,7 @@ python3 -m http.server 8000
 | `js/util.js`, `js/data.js` | Helpers and data selectors |
 | `js/today.js`, `js/health.js`, `js/gym.js`, `js/settings.js` | Screens and their sheets/actions |
 | `js/day.js` | The day timeline: blocks, dots, dragging, live timer |
+| `js/targets.js` | Long-term targets and pace against them |
 | `js/gym-data.js` | Exercise library and routine templates |
 | `js/store.js` | IndexedDB storage, backup export/import |
 | `js/charts.js` | SVG line charts and sparklines |

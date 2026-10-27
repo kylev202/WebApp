@@ -6,6 +6,7 @@ import { goals, habits, of, kcalOn, proteinOn, waterOn, sleepOn, weights, weekly
 import { routine, nextDay, workouts, exById, exByName, addCustomExercise, recordWorkout } from './gym.js';
 import { courses, assessments, tasks, shifts, jobs, jobOf, shiftHours, shiftPay, projects, invoices, invoiceStatus, courseResult, band, AREAS } from './plan.js';
 import { CATEGORIES, INCOME, ACCOUNTS, monthSummary, bills, budgets, spentIn, goalsList } from './money.js';
+import { targetLines } from './targets.js';
 
 const API = 'https://generativelanguage.googleapis.com/v1beta';
 export const aiSettings = () => ({ key: '', model: '', ...state.kv.ai });
@@ -95,6 +96,9 @@ export function snapshot() {
       upcoming: assessments().filter(a => !a.done && a.due >= t).slice(0, 8).map(a => `${a.due} ${a.title} (${courses().find(c => c.id === a.courseId)?.code ?? ''}${a.weight ? `, ${a.weight}%` : ''})`),
     },
     tasks_open: tasks().filter(x => !x.done).slice(0, 15).map(x => `${x.title}${x.due ? ` due ${x.due}` : ''}`),
+    // The long horizon, so advice can be measured against where I said I'm going.
+    long_term_targets: targetLines(),
+    coach_suggestions_open: of('proposal').filter(x => x.status === 'open').map(x => x.title),
     work: {
       jobs: jobs().map(j => ({ name: j.name, weekday_rate: j.rate, saturday_rate: j.sat, sunday_rate: j.sun })),
       upcoming_shifts: shifts().filter(s => s.date >= t).slice(0, 8).map(s => `${s.date} ${jobOf(s).name} ${s.start}-${s.end} (${fmt1(shiftHours(s))}h, ${money(shiftPay(s), false)})`),
@@ -120,9 +124,13 @@ Rules:
 - Dates are YYYY-MM-DD. Default to today (${dayKey()}) unless they say otherwise ("yesterday", "on Friday"...).
 - For questions, answer from the DATA below. Never invent numbers that aren't there. If data is missing, say so briefly.
 - Keep replies short: 1–3 sentences, warm and encouraging, no markdown headings. After logging, confirm in one line and add one useful nudge (e.g. protein left for the bulk).
+- You are managing my life over time, not just answering today. Where something has been true for weeks (see your standing notes), say so rather than treating it as new, and tie advice back to my long_term_targets.
 - When asked to plan (study plan, week plan, gym routine), create the items with tools (add_event, add_task, log_block, create_routine) and summarise.
 - A stretch of time spent on something (study, revision, reading, freelance coding, admin, chores, social, rest) is a BLOCK, not an event: use log_block for "I studied 2 til 4", start_block/stop_block for "starting now" / "done", and log_block with planned=true to lay out a plan the user will tick off. Keep add_event for appointments and anything with other people.
 - Loop draws the day on a timeline, so pass a 'time' on log_meal and log_expense whenever the user says or implies when it happened. Without one, anything logged today is placed at the moment they told you.
+
+YOUR STANDING NOTES ABOUT ME (written by you, rewritten weekly — treat as what you already know, and prefer the DATA below where they disagree):
+${state.kv.coachProfile?.text || '(nothing yet)'}
 
 DATA (JSON):
 ${JSON.stringify(snapshot())}`;

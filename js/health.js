@@ -1,6 +1,6 @@
 // Health: diet, sleep and body tabs (gym lives in gym.js), plus their logging sheets.
 import { state, addEntry, updateEntry, putEntry, removeEntry, setKV } from './store.js';
-import { esc, dayKey, lastDays, toDate, shortDate, dayLabel, fmt, fmtHours, timeOf, avgLogged, sum, num } from './util.js';
+import { esc, dayKey, lastDays, toDate, shortDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sheetForm, dateField, readDate } from './core.js';
 import { lineChart } from './charts.js';
@@ -12,7 +12,7 @@ const sparseLabels = days => days.map((d, i) => (i === days.length - 1 ? 'Today'
 
 export function mealRow(m) {
   return `<div class="row tap" data-act="sheet" data-sheet="meal" data-id="${m.id}" role="button">
-    <div class="time">${timeOf(m.ts)}</div><div class="bar" style="background:var(--diet)"></div>
+    <div class="time">${m.time ? time12(m.time) : timeOf(m.ts)}</div><div class="bar" style="background:var(--diet)"></div>
     <div class="grow"><div class="t">${esc(m.name)}</div><div class="d">${fmt(m.kcal)} kcal${m.protein ? ` · ${fmt(m.protein)} g protein` : ''}</div></div>
     <button class="x-btn" data-act="del" data-id="${m.id}" aria-label="Delete">${icon('close')}</button></div>`;
 }

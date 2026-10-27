@@ -28,6 +28,7 @@ _Last updated: Oct 27, 2026_
 | v6 Connections (CSV import, relay worker, Apple Pay + Siri inbox, Canvas, Google Calendar) | ✅ Done |
 | v7 Coaching (briefing, evening review, weekly report, badges, reminders guide) | ✅ Done |
 | v8 Day view (timeline, blocks, drag, checkpoint nudges) | ✅ Done |
+| v9 Long-term coach (targets, memory, trend-aware weekly, proposals) | ✅ Done |
 | Next: set up relay, Gemini key, Canvas token, Google Client ID on the phone | ⏳ Your setup |
 
 Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
@@ -75,6 +76,24 @@ timeline, close enough to act on.
 | Noise control | Water and habits are **chips at the foot**, never dots on the spine | Otherwise the day reads as confetti |
 | Coach | **Checkpoint nudges at 2pm, 6pm, 10:30pm**, pinned at their hour, in-app only | Cached once per checkpoint per day like the briefing, so the free Gemini tier lasts. No web push — reminders stay on Shortcuts |
 | Per day | A one-line **"How the day went"** note | The only thing the coach had no input of |
+
+---
+
+## 2c. The coach over time — decisions (Oct 2026)
+
+The coach used to be stateless: every call rebuilt a snapshot of *now*, so it could
+see that today's protein was low but never that it had been low for a month, and
+never that it had already said so. The day view finally produces data worth looking
+back at, so the coach was given a past and a horizon.
+
+| Topic | Decision | Why |
+|---|---|---|
+| Memory | **Both**: a standing profile the coach rewrites weekly from its own briefings and reviews, in the context of every call; plus its recent notes fed in at the weekly review | The profile is cheap and always present; the raw notes cost tokens, so they're only spent where the detail earns it |
+| Long-term goals | **Real `target` objects**: a metric, a number, a date | Point targets (body weight, WAM, GPA, saved) measure pace against a deadline; rate targets (study hours, workouts, protein days, sleep) measure a weekly average over four weeks. Gives the coach something to manage toward |
+| Horizon | **Weekly, but trend-aware.** No monthly or semester review | The weekly is the one that gets read. It now compares against the eight weeks before it and says "n weeks running" rather than describing the week in isolation |
+| Agency | **Propose, you accept.** Every suggestion is a card with Accept / Not now | Nothing changes behind your back, and a dismissal is itself a signal — recent ones go back into the prompt so it doesn't ask twice |
+| Note retention | Nudges 3 days, briefings and reviews 120 days, **weekly reports forever** | They are the coach's memory. The old flat cap of 30 was evicting weekly reports within a week |
+| Proposal safety | Every tool payload is **validated before it is stored** | A suggestion you can tap is a change you've agreed to; a malformed one is dropped rather than parked for a later tap |
 
 ---
 
