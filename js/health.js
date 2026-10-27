@@ -1,11 +1,12 @@
-// Health: diet, sleep and body tabs (gym lives in gym.js), plus their logging sheets.
+// Health: diet, sleep and body tabs (the overview lives in overview.js, gym in gym.js), plus their logging sheets.
 import { state, addEntry, updateEntry, putEntry, removeEntry, setKV } from './store.js';
 import { esc, dayKey, lastDays, toDate, shortDate, longDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sheetForm, dateField, readDate } from './core.js';
 import { lineChart } from './charts.js';
-import { goals, of, byId, kcalOn, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, sleepHours, recentMeals } from './data.js';
+import { goals, of, byId, kcalOn, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, maintenanceKcal, sleepHours, recentMeals } from './data.js';
 import { gymTab } from './gym.js';
+import { overviewTab, overviewHeader } from './overview.js';
 
 const C = { diet: 'var(--diet)', move: 'var(--move)', sleep: 'var(--sleep)', work: 'var(--work)' };
 const sparseLabels = days => days.map((d, i) => (i === days.length - 1 ? 'Today' : i % 3 === 1 ? toDate(d).getDate() : ''));
@@ -18,9 +19,10 @@ export function mealRow(m) {
 }
 
 function renderHealth() {
-  const tab = ui.tab.health ?? 'gym';
-  const body = { gym: gymTab, diet: healthDiet, sleep: healthSleep, body: healthBody }[tab]();
-  return `${header('Health', longDate())}${seg('health', [['gym', 'Gym'], ['diet', 'Diet'], ['sleep', 'Sleep'], ['body', 'Body']], tab)}${body}`;
+  const tab = ui.tab.health ?? 'overview';
+  const body = { overview: overviewTab, gym: gymTab, diet: healthDiet, sleep: healthSleep, body: healthBody }[tab]();
+  const top = tab === 'overview' ? overviewHeader() : header('Health', longDate());
+  return `${top}${seg('health', [['overview', 'Overview'], ['gym', 'Gym'], ['diet', 'Diet'], ['sleep', 'Sleep'], ['body', 'Body']], tab)}${body}`;
 }
 screens.health = renderHealth;
 
@@ -194,11 +196,10 @@ sheets.welcome = () => `<div class="welcome">
 
 export function calcGoals(f) {
   const n = k => num(f.get(k));
-  const age = n('age'), height = n('height'), weight = n('weight');
-  if (!(age > 10 && height > 100 && weight > 30)) return null;
-  // Mifflin–St Jeor resting energy, times activity, plus a bulking surplus.
-  const bmr = 10 * weight + 6.25 * height - 5 * age + (f.get('sex') === 'female' ? -161 : 5);
-  const maintenance = bmr * Number(f.get('activity'));
+  const weight = n('weight');
+  // Maintenance plus a bulking surplus.
+  const maintenance = maintenanceKcal({ sex: f.get('sex'), age: n('age'), height: n('height'), activity: f.get('activity') }, weight);
+  if (maintenance == null) return null;
   const kcal = Math.round((maintenance + Number(f.get('pace'))) / 50) * 50;
   const protein = Math.round((weight * 2) / 5) * 5; // ~2 g per kg
   return { maintenance: Math.round(maintenance / 10) * 10, kcal, protein };

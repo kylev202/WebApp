@@ -36,6 +36,13 @@ The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups a
 
 - **Motion (new):** everything moves on springs. Cards bounce in, and buttons and cards squash when pressed and wobble back like jelly; a habit, set or task you tick and a glass of water you add pop as they change. Sheets spring up (and stretch like a rubber band if you pull them up), toasts drop in and bounce, the tab pill stretches across like a drop of liquid, the active tab icon hops, the Ask orb slowly turns and breathes, chat messages inflate from their tail and the typing dots bounce. The background colour blobs drift slowly. All of it switches off with iOS **Reduce Motion**.
 
+- **Health overview (new):** Health now opens on **Overview**, a close read of one day instead of a single number per area. A short written summary and six status tiles (sleep, calories, protein, water, training, weight) say whether each is on track, behind or done, paced against how much of your waking day has gone. Below that:
+  - **Sleep & recovery:** last night's bed and wake times, difference from goal, 7-night average, sleep debt, a 7-night bar strip against your goal, how steady your bedtime has been, and whether you're rested enough to train hard.
+  - **Nutrition:** calories against where you should be by now, macros, where your energy came from (protein/carbs/fat), protein per kg of body weight against the 1.6–2.2 g/kg range, how much is left split over your remaining meals, and your surplus against estimated maintenance (from the bulk calculator).
+  - **Water and Body:** glasses against pace with quick +/−, latest weight, weekly trend, BMI and a 30-day line.
+  - **Training:** today's workout (sets per muscle, volume, PRs) or the next routine day with a Start button, the week's training days, 7-day sets, **muscle recovery** (which groups have had 48 hours since they were last trained), and whether what's next works a muscle that's still recovering.
+  - **Day log:** sleep, meals, workouts and weigh-ins in time order; tap any entry to edit it. Step back with ‹ › to read any past day the same way.
+
 - **Polish:** Today puts today's numbers and habits first and the weekly chart lower down; bigger tap targets (close/delete buttons, water, section links); clearer text and tag colours (WCAG AA); press feedback and no double-tap zoom; tap the active tab to scroll to top; the page behind a sheet no longer scrolls; keyboard and VoiceOver can reach every card.
 
 The app icon is drawn by [`design/icon.html`](design/icon.html): an infinity "loop" ribbon flowing through each life area's colour.
@@ -74,6 +81,7 @@ python3 -m http.server 8000
 | `js/icons.js` | Loop's duotone icon set |
 | `js/util.js`, `js/data.js` | Helpers and data selectors |
 | `js/today.js`, `js/health.js`, `js/gym.js`, `js/settings.js` | Screens and their sheets/actions |
+| `js/overview.js` | Health overview: one day's sleep, recovery, nutrition, training and body read in detail |
 | `js/day.js` | The day timeline: blocks, dots, dragging, live timer |
 | `js/targets.js` | Long-term targets and pace against them |
 | `js/gym-data.js` | Exercise library and routine templates |

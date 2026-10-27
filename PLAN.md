@@ -29,6 +29,7 @@ _Last updated: Oct 27, 2026_
 | v7 Coaching (briefing, evening review, weekly report, badges, reminders guide) | ✅ Done |
 | v8 Day view (timeline, blocks, drag, checkpoint nudges) | ✅ Done |
 | v9 Long-term coach (targets, memory, trend-aware weekly, proposals) | ✅ Done |
+| v10 Health overview (default Health tab: day summary, recovery, nutrition pace, muscle recovery, day log) | ✅ Done |
 | Next: set up relay, Gemini key, Canvas token, Google Client ID on the phone | ⏳ Your setup |
 
 Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
