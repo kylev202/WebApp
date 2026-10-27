@@ -43,7 +43,10 @@ async function relayFetch(path, { method = 'GET', body, headers = {} } = {}) {
   // The relay answers { error }; Canvas errors passed through look like { errors: [{ message }] },
   // or plain text such as "403 Forbidden (Rate Limit Exceeded)".
   if (!res.ok) {
-    const err = new Error(data.error ?? data.errors?.[0]?.message ?? data.message ?? (text.trim().slice(0, 120) || `Relay error ${res.status}`));
+    // An older relay passes Canvas's web pages (e.g. a firewall block) straight through.
+    const title = (text.match(/<title[^>]*>([^<]*)/i)?.[1] ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    const page = /^\s*</.test(text) && `${path.startsWith('/canvas/') ? 'Canvas' : 'The relay'} sent a web page instead of data (${res.status}${title ? `: ${title}` : ''}). Paste the latest relay/worker.js into Cloudflare and deploy.`;
+    const err = new Error(data.error ?? data.errors?.[0]?.message ?? data.message ?? (page || text.trim().slice(0, 120) || `Relay error ${res.status}`));
     err.status = res.status;
     throw err;
   }
@@ -299,7 +302,7 @@ const FIXES = {
 function relayResult(url) {
   if (!relayCheck) return '';
   if (relayCheck.busy) return `<div class="check-box">${icon('repeat')} Checking your relay…</div>`;
-  if (relayCheck.ok) return `<div class="check-box ok">${icon('check')}<div><b>Relay connected.</b> Next, set up <a data-act="sheet" data-sheet="guideApplePay">Apple Pay logging</a>.${relayCheck.version < 2 ? '<br>Tip: paste the latest <b>relay/worker.js</b> again for clearer error messages.' : ''}</div></div>`;
+  if (relayCheck.ok) return `<div class="check-box ok">${icon('check')}<div><b>Relay connected.</b> Next, set up <a data-act="sheet" data-sheet="guideApplePay">Apple Pay logging</a>.${relayCheck.version < 3 ? '<br>Tip: paste the latest <b>relay/worker.js</b> again so Canvas sync works and errors are clearer.' : ''}</div></div>`;
   return `<div class="check-box bad">${icon('alert')}<div>${FIXES[relayCheck.why](url, relayCheck)}</div></div>
     ${url && /^https:/.test(url) ? `<a class="btn soft" href="${esc(url)}" target="_blank" rel="noopener" style="margin-top:10px">${icon('globe')} Open in Safari</a>` : ''}`;
 }

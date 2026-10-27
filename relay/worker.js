@@ -4,7 +4,7 @@
 //  - /           public status page (no secrets) so you can check the setup in Safari.
 // Bindings: KV namespace INBOX. Secret RELAY_TOKEN. Variable ALLOWED_ORIGIN (e.g. https://kylev202.github.io).
 
-const VERSION = 2;
+const VERSION = 3;
 const CANVAS_DOMAIN = /^[a-z0-9.-]+\.(edu\.au|edu|ac\.nz|ac\.uk|instructure\.com)$/i;
 const MONTH = 60 * 60 * 24 * 30;
 
@@ -67,10 +67,17 @@ export default {
       if (path.startsWith('/canvas/') && req.method === 'GET') {
         const domain = req.headers.get('X-Canvas-Domain') || '';
         if (!CANVAS_DOMAIN.test(domain)) return json({ error: 'Canvas address not allowed' }, 400);
+        // Instructure's firewall answers requests without a User-Agent with a 403 web page.
         const res = await fetch(`https://${domain}/api/v1/${path.slice('/canvas/'.length)}${url.search}`, {
-          headers: { Authorization: `Bearer ${req.headers.get('X-Canvas-Token') || ''}`, Accept: 'application/json' },
+          headers: { Authorization: `Bearer ${req.headers.get('X-Canvas-Token') || ''}`, Accept: 'application/json', 'User-Agent': `LoopRelay/${VERSION} (Cloudflare Worker)` },
         });
-        return new Response(res.body, { status: res.status, headers: { ...cors, 'Content-Type': 'application/json' } });
+        const text = await res.text();
+        // A web page (firewall block, login redirect, outage) instead of data: send a short, readable error.
+        if (/^\s*</.test(text)) {
+          const title = (text.match(/<title[^>]*>([^<]*)/i)?.[1] ?? '').replace(/\s+/g, ' ').trim();
+          return json({ error: `Canvas sent a web page instead of data (${res.status}${title ? `: ${title.slice(0, 80)}` : ''})` }, res.ok ? 502 : res.status);
+        }
+        return new Response(text, { status: res.status, headers: { ...cors, 'Content-Type': 'application/json' } });
       }
 
       return json({ error: 'not found' }, 404);
