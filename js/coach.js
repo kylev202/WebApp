@@ -12,7 +12,6 @@ import { bills, monthSummary, spentIn, budgets, goalsList, txns } from './money.
 import { hasAI, generate, systemPrompt } from './ai.js';
 import { todaySections } from './today.js';
 import { settingsSections } from './settings.js';
-import { burst } from './fx.js';
 
 const hour = () => new Date().getHours();
 const aiText = res => res.candidates?.[0]?.content?.parts?.filter(p => p.text && !p.thought).map(p => p.text).join('').trim() ?? '';
@@ -436,7 +435,6 @@ Object.assign(actions, {
   async acceptProposal(el) {
     const p = of('proposal').find(x => x.id === el.dataset.id);
     if (!p) return;
-    burst(el, { color: ['var(--diet)', 'var(--sleep)'] });
     const a = p.payload ?? {};
     if (p.kind === 'daily_goals') await setKV('goals', { ...goals(), ...a });
     if (p.kind === 'block') await addEntry('block', { kind: a.kind, title: a.title, note: '', start: a.start, end: a.end, planned: true, done: false, source: 'coach' }, a.date);

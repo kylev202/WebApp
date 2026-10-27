@@ -3,7 +3,6 @@ import { state, addEntry, removeEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, lastDays, initial, fmt, fmtHours, avgLogged, sum, longDate } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, actions, ui, render, toast, haptic, header, seg, views } from './core.js';
-import { burst, fizz } from './fx.js';
 import { lineChart, sparkline } from './charts.js';
 import { goals, habits, of, kcalOn, waterOn, sleepOn, weights, habitDone, anyLogOn, streak, weeklyRate, bulkStatus, isStandalone } from './data.js';
 import { mealRow } from './health.js';
@@ -142,13 +141,12 @@ Object.assign(actions, {
   async habit(el) {
     const id = el.dataset.id, t = dayKey();
     const existing = state.entries.find(e => e.type === 'habit' && e.habitId === id && e.date === t);
-    if (!existing) burst(el.querySelector('.c'), { color: 'var(--diet)' });
     if (existing) await removeEntry(existing.id);
     else await addEntry('habit', { habitId: id }, t);
     haptic();
     ui.pulse = `.habit[data-id="${CSS.escape(id)}"]`;
     render();
-    if (!existing && habits().every(h => habitDone(h.id, t))) { toast('All habits done today', { icon: 'star' }); fizz(); }
+    if (!existing && habits().every(h => habitDone(h.id, t))) toast('All habits done today', { icon: 'star' });
   },
   async repeatYesterday() {
     const t = dayKey();

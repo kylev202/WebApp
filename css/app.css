@@ -904,7 +904,7 @@ body.sheet-open { overflow: hidden; }
 /* Ask: Send looks idle until there's something to send */
 .composer:not(:has(.photo-preview)) .input-bar:has(#ask-q:placeholder-shown) .cbtn.send { opacity: .3; }
 
-/* ---------- v4.7: Motion — bubbles, springs and bounce ---------- */
+/* ---------- v4.7: Motion — springs, jelly and bounce ---------- */
 /* Spring curves, sampled from a damped spring. Older iPhones without linear()
    easing get a cubic-bezier that overshoots once. js/fx.js reads these too. */
 :root {
@@ -922,8 +922,7 @@ body.sheet-open { overflow: hidden; }
   }
 }
 
-/* Wallpaper: the colour blobs drift like a lava lamp and soap bubbles float up
-   behind the glass. Transform and opacity only, so it stays on the GPU. */
+/* Wallpaper: the colour blobs drift like a lava lamp. Transform only, so it stays on the GPU. */
 .blob { will-change: transform; }
 .b1 { animation: drift-a 26s ease-in-out infinite alternate; }
 .b2 { animation: drift-b 31s ease-in-out infinite alternate; }
@@ -932,28 +931,7 @@ body.sheet-open { overflow: hidden; }
 @keyframes drift-b { 50% { transform: translate(-80px, 60px) scale(.9); } 100% { transform: translate(-30px, -70px) scale(1.15); } }
 @keyframes drift-c { 50% { transform: translate(90px, -60px) scale(1.1); } 100% { transform: translate(140px, -10px) scale(.92); } }
 
-.bubbles { position: absolute; inset: 0; }
-.bubbles i {
-  position: absolute; bottom: -70px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
-  background:
-    radial-gradient(circle at 30% 27%, rgba(255,255,255,.95) 0 9%, rgba(255,255,255,0) 24%),
-    radial-gradient(circle at 50% 50%, rgba(255,255,255,.08) 45%, var(--c) 100%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.75), 0 0 0 .5px var(--c);
-  opacity: 0; will-change: transform, opacity;
-  animation: float-up var(--d) linear var(--w) infinite, sway calc(var(--d) / 4) ease-in-out var(--w) infinite alternate;
-}
-@keyframes float-up {
-  0% { translate: 0 0; opacity: 0; }
-  8% { opacity: .9; }
-  85% { opacity: .75; }
-  100% { translate: 0 calc(-100vh - 140px); opacity: 0; }
-}
-@keyframes sway { from { transform: translateX(-14px) scale(1, 1); } to { transform: translateX(14px) scale(1.06, .95); } }
 body.sheet-open .wallpaper * { animation-play-state: paused; }
-/* A workout keeps the screen on for an hour; the bubbles step aside to save battery. */
-.bubbles { transition: opacity .6s; }
-body.fullscreen .bubbles { opacity: 0; }
-body.fullscreen .bubbles i { animation-play-state: paused; }
 
 /* Press: squash fast, then spring back with a wobble on release. */
 .tap, .btn, .pill-btn, .chip-btn, .x-btn, .icon-btn, .qchip, .mini, .quick-btn, .sugg, .menu-row, .pick-row, .tpl, .tool,
@@ -980,7 +958,7 @@ body.fullscreen .bubbles i { animation-play-state: paused; }
 .toggle:active .sw::after { width: 28px; }
 .toggle:active input:checked + .sw::after { transform: translateX(12px); }
 
-/* Screens: cards bounce up one after another, widgets and habits pop like bubbles. */
+/* Screens: cards bounce up one after another, widgets and habits pop in. */
 .enter .screen > * { animation: spring-rise .85s var(--spring-soft) both; }
 .enter .screen > *:nth-child(2) { animation-delay: .05s; }
 .enter .screen > *:nth-child(3) { animation-delay: .1s; }
@@ -988,12 +966,12 @@ body.fullscreen .bubbles i { animation-play-state: paused; }
 .enter .screen > *:nth-child(5) { animation-delay: .2s; }
 .enter .screen > *:nth-child(6) { animation-delay: .25s; }
 .enter .screen > *:nth-child(n+7) { animation-delay: .3s; }
-.enter .grid > * { animation: bubble-in .8s var(--spring) both; }
+.enter .grid > * { animation: pop-in .8s var(--spring) both; }
 .enter .grid > *:nth-child(1) { animation-delay: .12s; }
 .enter .grid > *:nth-child(2) { animation-delay: .18s; }
 .enter .grid > *:nth-child(3) { animation-delay: .24s; }
 .enter .grid > *:nth-child(4) { animation-delay: .3s; }
-.enter .habits > * .c { animation: bubble-in .75s var(--spring) both; animation-delay: calc(.25s + var(--i, 0) * .05s); }
+.enter .habits > * .c { animation: pop-in .75s var(--spring) both; animation-delay: calc(.25s + var(--i, 0) * .05s); }
 .enter .habits > :nth-child(2) { --i: 1; } .enter .habits > :nth-child(3) { --i: 2; } .enter .habits > :nth-child(4) { --i: 3; }
 .enter .habits > :nth-child(5) { --i: 4; } .enter .habits > :nth-child(6) { --i: 5; } .enter .habits > :nth-child(7) { --i: 6; }
 .enter .habits > :nth-child(n+8) { --i: 7; }
@@ -1005,7 +983,7 @@ body.fullscreen .bubbles i { animation-play-state: paused; }
 .enter .suggest > :nth-child(2) { --i: 1; } .enter .suggest > :nth-child(3) { --i: 2; } .enter .suggest > :nth-child(4) { --i: 3; }
 .enter .suggest > :nth-child(5) { --i: 4; } .enter .suggest > :nth-child(6) { --i: 5; }
 @keyframes spring-rise { from { opacity: 0; translate: 0 28px; scale: .95; } }
-@keyframes bubble-in { from { opacity: 0; scale: .6; } 40% { opacity: 1; } }
+@keyframes pop-in { from { opacity: 0; scale: .6; } 40% { opacity: 1; } }
 @keyframes tile-pop { from { scale: .4; rotate: -18deg; } }
 @keyframes pt-pop { from { transform: translate(-50%, -50%) scale(0); } }
 @keyframes drop-fill { from { scale: .7 .15; } }
@@ -1041,7 +1019,7 @@ body.fullscreen .bubbles i { animation-play-state: paused; }
 .fresh .sheet > :nth-child(4), .fresh .sheet > form > :nth-child(3) { --i: 2; }
 .fresh .sheet > :nth-child(5), .fresh .sheet > form > :nth-child(4) { --i: 3; }
 .fresh .sheet > :nth-child(n+6), .fresh .sheet > form > :nth-child(n+5) { --i: 4; }
-.fresh .quick-grid > * { animation: bubble-in .7s var(--spring) both; animation-delay: calc(.12s + var(--i, 0) * .045s); }
+.fresh .quick-grid > * { animation: pop-in .7s var(--spring) both; animation-delay: calc(.12s + var(--i, 0) * .045s); }
 .fresh .quick-grid > :nth-child(2) { --i: 1; } .fresh .quick-grid > :nth-child(3) { --i: 2; } .fresh .quick-grid > :nth-child(4) { --i: 3; }
 .fresh .quick-grid > :nth-child(5) { --i: 4; } .fresh .quick-grid > :nth-child(6) { --i: 5; } .fresh .quick-grid > :nth-child(n+7) { --i: 6; }
 .fresh .done-hero .tile, .fresh .welcome-list .tile { animation: tile-pop .9s var(--jelly) .25s both; }
@@ -1077,13 +1055,13 @@ body.fullscreen .bubbles i { animation-play-state: paused; }
   50% { border-radius: 47% 53% 52% 48% / 53% 47% 53% 47%; }
   75% { border-radius: 52% 48% 46% 54% / 50% 52% 48% 50%; }
 }
-.cbtn.mic.on { animation: mic-bubble 1.3s ease-out infinite; }
-@keyframes mic-bubble { 0% { box-shadow: 0 0 0 0 rgba(244,167,181,.55); } 100% { box-shadow: 0 0 0 12px rgba(244,167,181,0); } }
+.cbtn.mic.on { animation: mic-ring 1.3s ease-out infinite; }
+@keyframes mic-ring { 0% { box-shadow: 0 0 0 0 rgba(244,167,181,.55); } 100% { box-shadow: 0 0 0 12px rgba(244,167,181,0); } }
 
-/* Ask: new messages inflate from their tail like bubbles; the typing dots bounce. */
+/* Ask: new messages inflate from their tail; the typing dots bounce. */
 .msg-me, .msg-ai { animation: none; }
-.msg-me.fx-new { animation: bubble-in .65s var(--spring) both; transform-origin: 100% 100%; }
-.msg-ai.fx-new { animation: bubble-in .7s var(--spring) both; transform-origin: 0 0; }
+.msg-me.fx-new { animation: pop-in .65s var(--spring) both; transform-origin: 100% 100%; }
+.msg-ai.fx-new { animation: pop-in .7s var(--spring) both; transform-origin: 0 0; }
 .msg-ai.fx-new .logged { animation: spring-rise .7s var(--spring-soft) .15s both; }
 .typing i { animation: ball 1.05s infinite; transform-origin: 50% 100%; opacity: .6; }
 @keyframes ball {
@@ -1099,21 +1077,3 @@ body.fullscreen .bubbles i { animation-play-state: paused; }
 .streak .i, .habit .s .i { transform-origin: 50% 90%; animation: flicker 1.8s ease-in-out infinite; }
 @keyframes flicker { 0%, 100% { transform: scale(1) rotate(0); } 30% { transform: scale(1.12, .94) rotate(-6deg); } 60% { transform: scale(.95, 1.08) rotate(5deg); } }
 
-/* Bubble particles (js/fx.js): soap bubbles, the pop ring and the tap bubble. */
-.fx-layer { position: fixed; inset: 0; z-index: 75; pointer-events: none; overflow: hidden; }
-.fx-bubble, .fx-ring, .fx-tap { position: absolute; border-radius: 50%; will-change: transform, opacity; }
-.fx-bubble {
-  background:
-    radial-gradient(circle at 30% 27%, #fff 0 11%, rgba(255,255,255,0) 28%),
-    radial-gradient(circle at 50% 55%, rgba(255,255,255,.3) 22%, var(--c) 100%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.9), 0 0 0 1px var(--c), 0 3px 10px -3px var(--c);
-}
-.fx-ring { border: 2px solid var(--c); }
-.fx-tap {
-  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.9) 0 9%, rgba(255,255,255,0) 28%), radial-gradient(circle, rgba(180,178,239,.08) 40%, rgba(180,178,239,.6) 100%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.8), 0 0 0 1px rgba(180,178,239,.35);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bubbles, .fx-layer { display: none; }
-}

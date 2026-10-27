@@ -2,7 +2,7 @@
 import { esc, dayKey, addDays, shortDate } from './util.js';
 import { icon } from './icons.js';
 import { setKV, removeEntry, putEntry } from './store.js';
-import { fizz, slidePill } from './fx.js';
+import { slidePill } from './fx.js';
 
 export const screens = {};  // route -> () => html
 export const sheets = {};   // name -> (params) => html
@@ -207,7 +207,6 @@ export function confetti() {
   }
   document.body.append(box);
   setTimeout(() => box.remove(), 2600);
-  fizz();
 }
 
 // A short soft chime (rest timer). Audio must be unlocked by a tap first on iOS.

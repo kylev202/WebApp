@@ -80,7 +80,7 @@ afterRender.push(route => {
 });
 
 // The chat redraws whole on every render. Only messages that weren't on screen
-// last time inflate like bubbles; opening Ask shows the history without a pop each.
+// last time inflate; opening Ask shows the history without a pop each.
 const shown = new Set();
 let lastRoute = null;
 afterRender.push(route => {

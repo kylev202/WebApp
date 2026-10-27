@@ -6,7 +6,7 @@ import { screens, sheets, actions, forms, previews, ui, render, openSheet, close
 import { of, byId } from './data.js';
 import { lineChart } from './charts.js';
 import { todaySections } from './today.js';
-import { burst, slideIn } from './fx.js';
+import { slideIn } from './fx.js';
 
 export const AREAS = {
   uni: { label: 'Uni', color: 'school', icon: 'school' },
@@ -542,7 +542,6 @@ Object.assign(actions, {
   toTasks: () => { ui.tab.plan = 'tasks'; location.hash = 'plan'; },
   async toggleTask(el) {
     const t = byId(el.dataset.id);
-    if (!t.done) burst(el, { color: 'var(--diet)' });
     await updateEntry(t.id, { done: !t.done, doneAt: t.done ? null : Date.now() });
     haptic();
     ui.pulse = t.done ? null : `.check[data-id="${CSS.escape(t.id)}"]`;
