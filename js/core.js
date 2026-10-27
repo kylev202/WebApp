@@ -2,6 +2,7 @@
 import { esc, dayKey, addDays, shortDate } from './util.js';
 import { icon } from './icons.js';
 import { setKV, removeEntry, putEntry } from './store.js';
+import { slidePill } from './fx.js';
 
 export const screens = {};  // route -> () => html
 export const sheets = {};   // name -> (params) => html
@@ -55,7 +56,7 @@ export function render({ enter = false } = {}) {
   document.getElementById('topbar-title').textContent = TITLES[route] ?? '';
   moveTabIndicator();
   if (ui.pulse) {
-    main.querySelector(ui.pulse)?.classList.add('pop');
+    main.querySelectorAll(ui.pulse).forEach(el => el.classList.add('pop'));
     ui.pulse = null;
   }
   // An after-render hook that throws must not take the screen down with it.
@@ -71,14 +72,19 @@ function makeFocusable(root) {
   });
 }
 
-// Liquid pill that slides under the active tab.
-export function moveTabIndicator() {
+// Liquid pill that slides under the active tab. It remembers where it last sat
+// (even while hidden on Ask) so it can stretch across from there.
+let pill = null;
+export function moveTabIndicator(instant = false) {
   const ind = document.getElementById('tab-ind');
   const active = document.querySelector('.tab.active:not(.ask)');
   if (!active) { ind.style.opacity = '0'; return; }
+  const to = { x: active.offsetLeft, w: active.offsetWidth };
   ind.style.opacity = '1';
-  ind.style.width = `${active.offsetWidth}px`;
-  ind.style.transform = `translateX(${active.offsetLeft}px)`;
+  ind.style.width = `${to.w}px`;
+  ind.style.transform = `translateX(${to.x}px)`;
+  if (pill && !instant) slidePill(ind, pill, to);
+  pill = to;
 }
 
 // ---------- sheets ----------
@@ -86,7 +92,7 @@ export function openSheet(name, params = {}) {
   if (ui.sheet === 'welcome') setKV('onboarded', true);
   ui.sheet = name;
   ui.params = params;
-  sheetEl.innerHTML = `<div class="sheet-wrap"><div class="sheet-bg" data-act="close"></div><div class="sheet glass" role="dialog" aria-modal="true"><div class="grabber"></div>${sheets[name](params)}</div></div>`;
+  sheetEl.innerHTML = `<div class="sheet-wrap fresh"><div class="sheet-bg" data-act="close"></div><div class="sheet glass" role="dialog" aria-modal="true"><div class="grabber"></div>${sheets[name](params)}</div></div>`;
   const form = sheetEl.querySelector('form[data-form]');
   if (form) previews[form.dataset.form]?.(form);
   const sheet = sheetEl.querySelector('.sheet');
@@ -94,6 +100,9 @@ export function openSheet(name, params = {}) {
   makeFocusable(sheet);
   enableSheetDrag(sheet);
   document.body.classList.add('sheet-open');
+  // Its contents bounce in once, on opening; redraws inside the sheet stay still.
+  const wrap = sheetEl.firstElementChild;
+  setTimeout(() => wrap.classList.remove('fresh'), 900);
 }
 
 // Screen readers announce the sheet by its title.
@@ -128,7 +137,9 @@ export function closeSheet(immediate = false) {
 
 export const sheetForm = name => sheetEl.querySelector(`form[data-form="${name}"]`);
 
-// Drag the sheet down to dismiss it, like iOS.
+// Drag the sheet down to dismiss it, like iOS. Pulling it up stretches like a
+// rubber band (when there's nothing to scroll) and it springs back on release.
+const rubber = d => Math.sqrt(d) * 3.2;
 function enableSheetDrag(sheet) {
   let startY = null, dy = 0, t0 = 0;
   sheet.addEventListener('touchstart', e => {
@@ -140,8 +151,10 @@ function enableSheetDrag(sheet) {
   }, { passive: true });
   sheet.addEventListener('touchmove', e => {
     if (startY == null) return;
-    dy = Math.max(0, e.touches[0].clientY - startY);
-    sheet.style.transform = dy ? `translateY(${dy}px)` : '';
+    const d = e.touches[0].clientY - startY;
+    dy = Math.max(0, d);
+    const up = d < 0 && sheet.scrollHeight <= sheet.clientHeight + 1 ? -rubber(-d) : 0;
+    sheet.style.transform = dy || up ? `translateY(${dy || up}px)` : '';
   }, { passive: true });
   sheet.addEventListener('touchend', () => {
     if (startY == null) return;

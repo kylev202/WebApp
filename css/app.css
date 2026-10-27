@@ -903,3 +903,177 @@ body.sheet-open { overflow: hidden; }
 
 /* Ask: Send looks idle until there's something to send */
 .composer:not(:has(.photo-preview)) .input-bar:has(#ask-q:placeholder-shown) .cbtn.send { opacity: .3; }
+
+/* ---------- v4.7: Motion — springs, jelly and bounce ---------- */
+/* Spring curves, sampled from a damped spring. Older iPhones without linear()
+   easing get a cubic-bezier that overshoots once. js/fx.js reads these too. */
+:root {
+  --spring-soft: cubic-bezier(.25,1.3,.5,1);  /* settles with a small overshoot: sheets, toasts, pills */
+  --spring: cubic-bezier(.3,1.6,.5,1);        /* a confident overshoot: things popping in */
+  --jelly: cubic-bezier(.3,1.9,.45,1);        /* wobbles a few times: release after a press */
+  --bounce: cubic-bezier(.3,1.5,.5,1);        /* a ball landing: toasts dropping in */
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --spring-soft: linear(0, 0.065, 0.218, 0.405, 0.592, 0.757, 0.887, 0.98, 1.04, 1.072, 1.083, 1.08, 1.068, 1.053, 1.037, 1.023, 1.011, 1.003, 0.997, 0.994, 0.993, 0.993, 0.994, 0.995, 0.997, 0.998, 1);
+    --spring: linear(0, 0.076, 0.263, 0.5, 0.739, 0.946, 1.099, 1.193, 1.231, 1.225, 1.189, 1.136, 1.079, 1.027, 0.987, 0.961, 0.948, 0.946, 0.953, 0.964, 0.977, 0.99, 1, 1.008, 1.012, 1.013, 1.012, 1.009, 1.006, 1.003, 1.001, 0.999, 1);
+    --jelly: linear(0, 0.095, 0.332, 0.632, 0.928, 1.165, 1.315, 1.371, 1.347, 1.265, 1.155, 1.043, 0.951, 0.889, 0.863, 0.868, 0.895, 0.935, 0.978, 1.014, 1.038, 1.05, 1.05, 1.041, 1.027, 1.011, 0.997, 0.987, 0.982, 0.981, 0.984, 0.989, 0.995, 1, 1.004, 1.007, 1.007, 1.006, 1.004, 1.002, 1);
+    --bounce: linear(0, 0.005, 0.019, 0.043, 0.076, 0.118, 0.17, 0.232, 0.303, 0.383, 0.473, 0.572, 0.681, 0.799, 0.926, 0.97, 0.91, 0.86, 0.819, 0.788, 0.766, 0.753, 0.75, 0.757, 0.772, 0.798, 0.833, 0.877, 0.931, 0.994, 0.973, 0.952, 0.94, 0.938, 0.945, 0.962, 0.988, 0.991, 0.985, 0.988, 1);
+  }
+}
+
+/* Wallpaper: the colour blobs drift like a lava lamp. Transform only, so it stays on the GPU. */
+.blob { will-change: transform; }
+.b1 { animation: drift-a 26s ease-in-out infinite alternate; }
+.b2 { animation: drift-b 31s ease-in-out infinite alternate; }
+.b3 { animation: drift-c 23s ease-in-out infinite alternate; }
+@keyframes drift-a { 50% { transform: translate(70px, 90px) scale(1.12); } 100% { transform: translate(20px, 160px) scale(.95); } }
+@keyframes drift-b { 50% { transform: translate(-80px, 60px) scale(.9); } 100% { transform: translate(-30px, -70px) scale(1.15); } }
+@keyframes drift-c { 50% { transform: translate(90px, -60px) scale(1.1); } 100% { transform: translate(140px, -10px) scale(.92); } }
+
+body.sheet-open .wallpaper * { animation-play-state: paused; }
+
+/* Press: squash fast, then spring back with a wobble on release. */
+.tap, .btn, .pill-btn, .chip-btn, .x-btn, .icon-btn, .qchip, .mini, .quick-btn, .sugg, .menu-row, .pick-row, .tpl, .tool,
+.cbtn, .set-check, .check, .cal-today, .toast-act, .undo, .qt-add, .pk > span, .habit .c, .drop, .day b, .seg button {
+  transition: transform .7s var(--jelly), background .2s, color .2s, box-shadow .25s, opacity .15s, border-color .2s;
+}
+.tap:active, .btn:active, .pill-btn:active, .chip-btn:active, .x-btn:active, .icon-btn:active, .qchip:active, .mini:active, .quick-btn:active,
+.sugg:active, .menu-row:active, .pick-row:active, .tpl:active, .tool:active, .cbtn:active, .set-check:active, .check:active, .cal-today:active,
+.toast-act:active, .undo:active, .qt-add:active, .pk:active > span, .habit:active .c, .drop:active, .day:active b, .seg button:active {
+  transition: transform .12s cubic-bezier(.3,.7,.4,1), background .2s, color .2s, box-shadow .25s, opacity .15s, border-color .2s;
+}
+.tap:active { transform: scale(.97); }
+.row.tap:active { transform: none; }
+.btn:active, .quick-btn:active, .tool:active { transform: scale(.94); }
+.habit:active .c { transform: scale(1.1, .84); }
+.drop:active { transform: scale(1.12, .7); }
+.check:active, .set-check:active { transform: scale(.84); }
+.day:active b, .seg button:active { transform: scale(.9); }
+.drop { transform-origin: 50% 100%; } /* glasses fill and squash from the bottom */
+[data-pulse] { transform-origin: 0 70%; } /* numbers wobble from where the text starts */
+
+/* The switch thumb stretches while you hold it, like iOS. */
+.toggle .sw::after { transition: transform .55s var(--spring), width .35s var(--spring); }
+.toggle:active .sw::after { width: 28px; }
+.toggle:active input:checked + .sw::after { transform: translateX(12px); }
+
+/* Screens: cards bounce up one after another, widgets and habits pop in. */
+.enter .screen > * { animation: spring-rise .85s var(--spring-soft) both; }
+.enter .screen > *:nth-child(2) { animation-delay: .05s; }
+.enter .screen > *:nth-child(3) { animation-delay: .1s; }
+.enter .screen > *:nth-child(4) { animation-delay: .15s; }
+.enter .screen > *:nth-child(5) { animation-delay: .2s; }
+.enter .screen > *:nth-child(6) { animation-delay: .25s; }
+.enter .screen > *:nth-child(n+7) { animation-delay: .3s; }
+.enter .grid > * { animation: pop-in .8s var(--spring) both; }
+.enter .grid > *:nth-child(1) { animation-delay: .12s; }
+.enter .grid > *:nth-child(2) { animation-delay: .18s; }
+.enter .grid > *:nth-child(3) { animation-delay: .24s; }
+.enter .grid > *:nth-child(4) { animation-delay: .3s; }
+.enter .habits > * .c { animation: pop-in .75s var(--spring) both; animation-delay: calc(.25s + var(--i, 0) * .05s); }
+.enter .habits > :nth-child(2) { --i: 1; } .enter .habits > :nth-child(3) { --i: 2; } .enter .habits > :nth-child(4) { --i: 3; }
+.enter .habits > :nth-child(5) { --i: 4; } .enter .habits > :nth-child(6) { --i: 5; } .enter .habits > :nth-child(7) { --i: 6; }
+.enter .habits > :nth-child(n+8) { --i: 7; }
+.enter .title .tile, .enter .banner > .tile, .enter .wk-card > .tile { animation: tile-pop .9s var(--jelly) .2s both; }
+.enter .fill { animation: grow 1.2s var(--spring) .3s both; }
+.enter .pt { animation: pt-pop .7s var(--spring) 1s both; }
+.enter .drops .drop.on { animation: drop-fill .7s var(--spring) .3s both; }
+.enter .suggest > * { animation: spring-rise .8s var(--spring-soft) both; animation-delay: calc(.15s + var(--i, 0) * .05s); }
+.enter .suggest > :nth-child(2) { --i: 1; } .enter .suggest > :nth-child(3) { --i: 2; } .enter .suggest > :nth-child(4) { --i: 3; }
+.enter .suggest > :nth-child(5) { --i: 4; } .enter .suggest > :nth-child(6) { --i: 5; }
+@keyframes spring-rise { from { opacity: 0; translate: 0 28px; scale: .95; } }
+@keyframes pop-in { from { opacity: 0; scale: .6; } 40% { opacity: 1; } }
+@keyframes tile-pop { from { scale: .4; rotate: -18deg; } }
+@keyframes pt-pop { from { transform: translate(-50%, -50%) scale(0); } }
+@keyframes drop-fill { from { scale: .7 .15; } }
+
+/* The thing you just tapped wobbles like jelly (ui.pulse). */
+.pop { animation: jelly .75s ease-out; }
+.habit.pop { animation: none; }
+.habit.pop .c { animation: jelly .75s ease-out; }
+.drop.pop { animation: drop-fill .7s var(--spring); }
+.set-check.pop, .check.pop { animation: jelly .7s ease-out; }
+.set-check.pop .i, .check.pop .i { animation: tick-in .55s var(--spring) .05s both; }
+.day b.pop { animation: jelly .7s ease-out; }
+@keyframes jelly {
+  0% { scale: .82; }
+  28% { scale: 1.16 .86; }
+  46% { scale: .9 1.1; }
+  62% { scale: 1.05 .96; }
+  78% { scale: .98 1.02; }
+  100% { scale: 1; }
+}
+@keyframes tick-in { from { scale: 0; rotate: -30deg; } }
+
+/* Sheets spring up and their contents bounce in once, on opening. */
+.sheet {
+  animation: up .7s var(--spring-soft);
+  transition: transform .6s var(--spring-soft);
+  /* A strip of sheet below the bottom edge, so the overshoot never shows a gap. */
+  box-shadow: inset 0 1px 0 #fff, 0 -8px 30px -14px rgba(60,60,100,.2), 0 140px 0 0 rgba(255,255,255,.92);
+}
+.sheet-bg { animation: fade .3s ease; }
+.fresh .sheet > :not(.grabber, form), .fresh .sheet > form > * { animation: spring-rise .7s var(--spring-soft) both; animation-delay: calc(.08s + var(--i, 0) * .04s); }
+.fresh .sheet > :nth-child(3), .fresh .sheet > form > :nth-child(2) { --i: 1; }
+.fresh .sheet > :nth-child(4), .fresh .sheet > form > :nth-child(3) { --i: 2; }
+.fresh .sheet > :nth-child(5), .fresh .sheet > form > :nth-child(4) { --i: 3; }
+.fresh .sheet > :nth-child(n+6), .fresh .sheet > form > :nth-child(n+5) { --i: 4; }
+.fresh .quick-grid > * { animation: pop-in .7s var(--spring) both; animation-delay: calc(.12s + var(--i, 0) * .045s); }
+.fresh .quick-grid > :nth-child(2) { --i: 1; } .fresh .quick-grid > :nth-child(3) { --i: 2; } .fresh .quick-grid > :nth-child(4) { --i: 3; }
+.fresh .quick-grid > :nth-child(5) { --i: 4; } .fresh .quick-grid > :nth-child(6) { --i: 5; } .fresh .quick-grid > :nth-child(n+7) { --i: 6; }
+.fresh .done-hero .tile, .fresh .welcome-list .tile { animation: tile-pop .9s var(--jelly) .25s both; }
+
+/* Toasts drop in from the top and bounce as they land; the icon pops. */
+.toast { transition: transform .38s cubic-bezier(.5,0,.75,0); }
+.toast.show { transition: transform .8s var(--bounce); }
+.toast.show .toast-i { animation: jelly .7s ease-out .3s both; }
+
+/* Tab bar: the active icon hops, the Ask orb is a slowly turning, breathing drop. */
+.tab-ind { transition: opacity .2s; }
+.tab svg { transform-origin: 50% 100%; }
+.tab.active:not(.ask) svg { animation: hop .75s ease-out; }
+@keyframes hop {
+  0% { transform: none; }
+  22% { transform: translateY(1px) scale(1.18, .8); }
+  45% { transform: translateY(-7px) scale(.9, 1.12); }
+  68% { transform: translateY(0) scale(1.1, .9); }
+  84% { transform: translateY(-1px) scale(.97, 1.03); }
+  100% { transform: none; }
+}
+.tab.ask .orb { position: relative; isolation: isolate; overflow: hidden; background: #e9e8fb; animation: orb-wobble 6s ease-in-out infinite, orb-breathe 3.2s ease-in-out infinite; }
+.tab.ask .orb::before { content: ""; position: absolute; inset: -30%; z-index: -1; background: conic-gradient(from 200deg, #dcdcfb, #fbd5de, #d6f1e0, #d3e7fb, #dcdcfb); animation: spin 9s linear infinite; }
+/* The gloss and the inner ring sit on ::after: the turning gradient would paint over the orb's own inset shadow. */
+.tab.ask .orb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1; background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.85) 0 10%, rgba(255,255,255,0) 34%); box-shadow: inset 0 1px 0 #fff; }
+.tab.ask.active .orb::after { box-shadow: inset 0 0 0 2px #fff; }
+.tab.ask.active .orb .i { animation: hop .75s ease-out; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes orb-breathe { 50% { scale: 1.06; } }
+@keyframes orb-wobble {
+  0%, 100% { border-radius: 50%; }
+  25% { border-radius: 54% 46% 50% 50% / 48% 54% 46% 52%; }
+  50% { border-radius: 47% 53% 52% 48% / 53% 47% 53% 47%; }
+  75% { border-radius: 52% 48% 46% 54% / 50% 52% 48% 50%; }
+}
+.cbtn.mic.on { animation: mic-ring 1.3s ease-out infinite; }
+@keyframes mic-ring { 0% { box-shadow: 0 0 0 0 rgba(244,167,181,.55); } 100% { box-shadow: 0 0 0 12px rgba(244,167,181,0); } }
+
+/* Ask: new messages inflate from their tail; the typing dots bounce. */
+.msg-me, .msg-ai { animation: none; }
+.msg-me.fx-new { animation: pop-in .65s var(--spring) both; transform-origin: 100% 100%; }
+.msg-ai.fx-new { animation: pop-in .7s var(--spring) both; transform-origin: 0 0; }
+.msg-ai.fx-new .logged { animation: spring-rise .7s var(--spring-soft) .15s both; }
+.typing i { animation: ball 1.05s infinite; transform-origin: 50% 100%; opacity: .6; }
+@keyframes ball {
+  0% { transform: translateY(0) scale(1.25, .75); animation-timing-function: cubic-bezier(.2,.6,.35,1); }
+  32% { transform: translateY(-9px) scale(.88, 1.14); opacity: 1; animation-timing-function: cubic-bezier(.6,0,.85,.4); }
+  58% { transform: translateY(0) scale(1.3, .7); animation-timing-function: ease-out; }
+  72%, 100% { transform: none; }
+}
+
+/* Little things that never sit quite still. */
+.soon .tile, .ask-hello > .tile { animation: float 4s ease-in-out infinite; }
+.enter .soon .tile, .enter .ask-hello > .tile { animation: tile-pop .9s var(--jelly) .2s both, float 4s ease-in-out 1.1s infinite; }
+.streak .i, .habit .s .i { transform-origin: 50% 90%; animation: flicker 1.8s ease-in-out infinite; }
+@keyframes flicker { 0%, 100% { transform: scale(1) rotate(0); } 30% { transform: scale(1.12, .94) rotate(-6deg); } 60% { transform: scale(.95, 1.08) rotate(5deg); } }
+

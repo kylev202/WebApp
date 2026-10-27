@@ -231,6 +231,7 @@ export async function setWater(target) {
   const t = dayKey();
   let current = waterOn(t);
   target = Math.max(0, target);
+  const was = current;
   while (current < target) { await addEntry('water', { amount: 1 }, t); current++; }
   while (current > target) {
     const last = of('water', t).at(-1);
@@ -239,7 +240,8 @@ export async function setWater(target) {
     current--;
   }
   haptic();
-  ui.pulse = '[data-pulse="water"]';
+  // The number wobbles and each glass just filled sloshes up from the bottom.
+  ui.pulse = ['[data-pulse="water"]', ...Array.from({ length: Math.max(0, target - was) }, (_, i) => `.drop[data-n="${was + i + 1}"]`)].join(', ');
   render();
   if (target === goals().water) toast('Water goal reached', { icon: 'drop' });
 }

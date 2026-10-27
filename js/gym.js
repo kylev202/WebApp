@@ -465,7 +465,7 @@ Object.assign(actions, {
     }
     haptic();
     await saveActive(aw, true);
-    ui.pulse = null;
+    ui.pulse = s.done ? `.set-check[data-ex="${el.dataset.ex}"][data-set="${el.dataset.set}"]` : null;
     render();
   },
   async addSet(el) {

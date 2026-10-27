@@ -6,6 +6,7 @@ import { screens, sheets, actions, forms, previews, ui, render, openSheet, close
 import { of, byId } from './data.js';
 import { lineChart } from './charts.js';
 import { todaySections } from './today.js';
+import { slideIn } from './fx.js';
 
 export const AREAS = {
   uni: { label: 'Uni', color: 'school', icon: 'school' },
@@ -502,6 +503,7 @@ function calStep(n) {
   ui.planDay = monthView() ? addMonths(sel, n) : addDays(sel, n * 7);
   haptic();
   render();
+  slideIn(document.querySelector('[data-cal] .cal-grid'), Math.sign(n));
 }
 
 // Swipe the calendar sideways to change week or month, like the iOS calendar.
@@ -533,7 +535,7 @@ document.addEventListener('click', e => {
 });
 
 Object.assign(actions, {
-  planDay: el => { ui.planDay = el.dataset.d; haptic(); render(); },
+  planDay: el => { ui.planDay = el.dataset.d; ui.pulse = '[data-cal] .day.on b'; haptic(); render(); },
   planStep: el => calStep(Number(el.dataset.d)),
   planToday: () => { ui.planDay = dayKey(); haptic(); render(); },
   async planExpand() { await setKV('planMonthView', !monthView()); haptic(); render(); },
@@ -542,7 +544,7 @@ Object.assign(actions, {
     const t = byId(el.dataset.id);
     await updateEntry(t.id, { done: !t.done, doneAt: t.done ? null : Date.now() });
     haptic();
-    ui.pulse = null;
+    ui.pulse = t.done ? null : `.check[data-id="${CSS.escape(t.id)}"]`;
     render();
     if (!t.done) toast('Task done', { icon: 'check' });
   },

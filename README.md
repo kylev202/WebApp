@@ -34,6 +34,8 @@ The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups a
 
 - **Coaching (new):** a **morning briefing** on Today (sleep, classes, shifts, deadlines, today's lift target, bulk targets, bills), an **evening review** (today's wins plus your top 3 for tomorrow, saved as tasks), and a **week in review** report every Sunday. With the AI connected, the briefing and reviews are written by Gemini (once per day/week, to save the free tier). **17 badges** for training, nutrition, sleep, money and uni. A **reminders guide** for iPhone Shortcuts notifications.
 
+- **Motion (new):** everything moves on springs. Cards bounce in, and buttons and cards squash when pressed and wobble back like jelly; a habit, set or task you tick and a glass of water you add pop as they change. Sheets spring up (and stretch like a rubber band if you pull them up), toasts drop in and bounce, the tab pill stretches across like a drop of liquid, the active tab icon hops, the Ask orb slowly turns and breathes, chat messages inflate from their tail and the typing dots bounce. The background colour blobs drift slowly. All of it switches off with iOS **Reduce Motion**.
+
 - **Polish:** Today puts today's numbers and habits first and the weekly chart lower down; bigger tap targets (close/delete buttons, water, section links); clearer text and tag colours (WCAG AA); press feedback and no double-tap zoom; tap the active tab to scroll to top; the page behind a sheet no longer scrolls; keyboard and VoiceOver can reach every card.
 
 The app icon is drawn by [`design/icon.html`](design/icon.html): an infinity "loop" ribbon flowing through each life area's colour.
@@ -77,6 +79,7 @@ python3 -m http.server 8000
 | `js/gym-data.js` | Exercise library and routine templates |
 | `js/store.js` | IndexedDB storage, backup export/import |
 | `js/charts.js` | SVG line charts and sparklines |
+| `js/fx.js` | Motion that needs JS: the liquid tab pill, sliding calendar weeks |
 | `sw.js` | Offline cache (bump `CACHE` when releasing) |
 | `manifest.webmanifest`, `icons/` | Home Screen install and icons |
 | `design/icon.html` | Icon source (render with Playwright at any size) |
