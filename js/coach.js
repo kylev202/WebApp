@@ -80,7 +80,7 @@ function eveningCard() {
   const planned = tasks().filter(x => x.due === tmr && !x.done);
   const key = `eve:${dayKey()}`;
   const ai = state.kv.notes?.[key];
-  const chip = (ok, text) => `<span class="rv ${ok ? 'ok' : ''}">${icon(ok ? 'check' : 'dots')}${text}</span>`;
+  const chip = (ok, text) => `<span class="rv ${ok ? 'ok' : ''}">${icon(ok ? 'check' : 'ring')}${text}</span>`;
   return `<section class="card glass evening">
     <div class="head"><div class="title">${tile('sunset', 'sleep')}Evening review</div><button class="sub-note" data-act="sheet" data-sheet="guideReminders">Reminders ${icon('bell')}</button></div>
     <div class="rv-chips">

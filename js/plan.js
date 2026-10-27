@@ -1,6 +1,6 @@
 // v4 Plan: agenda, uni (courses, timetable, assessments, GPA), work (shifts, freelance), tasks.
 import { state, addEntry, updateEntry, removeEntry, setKV } from './store.js';
-import { esc, uid, pad, dayKey, addDays, addMonths, toDate, weekStart, monthKey, monthDays, monthName, dayLabel, shortDate, initial, time12, toMin, nowHHMM, fmt, fmt1, money, num, plural, daysBetween } from './util.js';
+import { esc, uid, pad, dayKey, addDays, addMonths, toDate, weekStart, monthKey, monthDays, monthName, dayLabel, shortDate, longDate, initial, time12, toMin, nowHHMM, fmt, fmt1, money, num, plural, daysBetween } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo, chips, dateField, readDate, toggle, afterRender } from './core.js';
 import { of, byId } from './data.js';
@@ -136,7 +136,7 @@ function taskRow(t) {
 function renderPlan() {
   const tab = ui.tab.plan ?? 'agenda';
   const body = { agenda: planAgenda, uni: planUni, work: planWork, tasks: planTasks }[tab]();
-  return `${header('Plan', 'Agenda · Uni · Work · Tasks', `<button class="icon-btn glass" data-act="sheet" data-sheet="planAdd" aria-label="Add">${icon('plus')}</button>`)}
+  return `${header('Plan', longDate(), `<button class="icon-btn glass" data-act="sheet" data-sheet="planAdd" aria-label="Add">${icon('plus')}</button>`)}
     ${seg('plan', [['agenda', 'Agenda'], ['uni', 'Uni'], ['work', 'Work'], ['tasks', 'Tasks']], tab)}${body}`;
 }
 screens.plan = renderPlan;

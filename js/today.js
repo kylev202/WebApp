@@ -1,6 +1,6 @@
 // Today: the home screen pulling every area together.
 import { state, addEntry, removeEntry, setKV } from './store.js';
-import { esc, dayKey, addDays, lastDays, initial, fmt, fmtHours, avgLogged, sum } from './util.js';
+import { esc, dayKey, addDays, lastDays, initial, fmt, fmtHours, avgLogged, sum, longDate } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, actions, ui, render, toast, haptic, header } from './core.js';
 import { lineChart, sparkline } from './charts.js';
@@ -10,6 +10,8 @@ import { workoutCard } from './gym.js';
 
 const WEEK = 7 * 24 * 3600 * 1000;
 // Other areas add their own Today sections (Up Next, To-Do, money...) here.
+// Order on screen: things to do today (workout, numbers, habits), then what's coming
+// up (mid sections), then how the week is going.
 export const todaySections = [];
 
 function greeting() {
@@ -49,7 +51,7 @@ function renderToday() {
   const pct = (v, goal) => (v ? (v / goal) * 100 : null);
   const kcalLeft = g.kcal - kcal;
   const yesterdayMeals = of('meal', addDays(t, -1));
-  const dateLine = new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })
+  const dateLine = longDate()
     + (logStreak >= 2 ? ` · <button class="streak" data-act="sheet" data-sheet="badges">${icon('flame')}${logStreak} days</button>` : '');
   const eatAvg = avgLogged(days.map(kcalOn)), sleepAvg = avgLogged(days.map(sleepOn)), waterAvg = avgLogged(days.map(waterOn));
 
@@ -58,25 +60,6 @@ function renderToday() {
   ${banners()}
   ${todaySections.filter(s => s.pos === 'top').map(s => s.render()).join('')}
   ${workoutCard()}
-
-  <section class="card glass tap" data-act="nav" data-to="health">
-    <div class="head"><div class="title">This Week</div><div class="sub-note">% of goal ${icon('chevron')}</div></div>
-    <div class="stats">
-      <div class="stat"><div class="l"><span class="dot" style="background:var(--diet)"></span>Eat</div><div class="v">${eatAvg ? fmt(eatAvg) : '–'}<span> avg</span></div></div>
-      <div class="stat"><div class="l"><span class="dot" style="background:var(--sleep)"></span>Sleep</div><div class="v">${sleepAvg ? fmtHours(sleepAvg) : '–'}<span> avg</span></div></div>
-      <div class="stat"><div class="l"><span class="dot" style="background:var(--work)"></span>Water</div><div class="v">${waterAvg ? waterAvg.toFixed(1) : '–'}<span> / ${g.water}</span></div></div>
-    </div>
-    ${lineChart({
-      series: [
-        { values: days.map(d => pct(kcalOn(d), g.kcal)), color: 'var(--diet)' },
-        { values: days.map(d => pct(sleepOn(d), g.sleep)), color: 'var(--sleep)' },
-        { values: days.map(d => pct(waterOn(d), g.water)), color: 'var(--work)' },
-      ],
-      labels: days.map((d, i) => (i === 6 ? 'Today' : initial(d))),
-      max: 130, goal: 100, live: true,
-      empty: 'Log meals, water and sleep to see your week here.',
-    })}
-  </section>
 
   <div class="grid">
     <section class="card glass w tap" data-act="sheet" data-sheet="meal">
@@ -106,8 +89,6 @@ function renderToday() {
     </section>
   </div>
 
-  ${todaySections.filter(s => s.pos !== 'top' && s.pos !== 'end').map(s => s.render()).join('')}
-
   <div class="section-label">Habits <a data-act="nav" data-to="settings">Edit</a></div>
   <section class="card glass">
     <div class="habits">${habits().map(h => {
@@ -115,6 +96,27 @@ function renderToday() {
       const s = streak(d => habitDone(h.id, d));
       return `<button class="habit ${on ? 'on' : ''}" data-act="habit" data-id="${esc(h.id)}" aria-pressed="${on}"><div class="c">${icon(h.icon)}</div>${esc(h.name)}<span class="s">${s ? `${icon('flame')}${s}` : '&nbsp;'}</span></button>`;
     }).join('')}</div>
+  </section>
+
+  ${todaySections.filter(s => s.pos !== 'top' && s.pos !== 'end').map(s => s.render()).join('')}
+
+  <section class="card glass tap" data-act="nav" data-to="health">
+    <div class="head"><div class="title">This Week</div><div class="sub-note">% of goal ${icon('chevron')}</div></div>
+    <div class="stats">
+      <div class="stat"><div class="l"><span class="dot" style="background:var(--diet)"></span>Eat</div><div class="v">${eatAvg ? fmt(eatAvg) : '–'}<span> avg</span></div></div>
+      <div class="stat"><div class="l"><span class="dot" style="background:var(--sleep)"></span>Sleep</div><div class="v">${sleepAvg ? fmtHours(sleepAvg) : '–'}<span> avg</span></div></div>
+      <div class="stat"><div class="l"><span class="dot" style="background:var(--work)"></span>Water</div><div class="v">${waterAvg ? waterAvg.toFixed(1) : '–'}<span> / ${g.water}</span></div></div>
+    </div>
+    ${lineChart({
+      series: [
+        { values: days.map(d => pct(kcalOn(d), g.kcal)), color: 'var(--diet)' },
+        { values: days.map(d => pct(sleepOn(d), g.sleep)), color: 'var(--sleep)' },
+        { values: days.map(d => pct(waterOn(d), g.water)), color: 'var(--work)' },
+      ],
+      labels: days.map((d, i) => (i === 6 ? 'Today' : initial(d))),
+      max: 130, goal: 100, live: true,
+      empty: 'Log meals, water and sleep to see your week here.',
+    })}
   </section>
 
   <div class="section-label">Today’s food${meals.length ? ` <span>${fmt(kcal)} kcal · ${fmt(protein)} g P</span>` : ''} <a data-act="sheet" data-sheet="meal">Add</a></div>
