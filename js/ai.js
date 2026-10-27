@@ -1,8 +1,8 @@
 // v3 AI: Gemini client, a compact snapshot of the user's data, and the tools the model may call.
 // The API key lives only in this device's storage and is sent only to Google's Gemini API.
-import { state, addEntry, removeEntry, putEntry, setKV } from './store.js';
-import { dayKey, addDays, lastDays, monthKey, nowHHMM, fmt, fmt1, money, num, weekStart } from './util.js';
-import { goals, habits, of, kcalOn, proteinOn, waterOn, sleepOn, weights, weeklyRate, habitDone, sleepHours } from './data.js';
+import { state, addEntry, updateEntry, removeEntry, putEntry, setKV } from './store.js';
+import { dayKey, addDays, lastDays, monthKey, nowHHMM, toMin, fromMin, fmt, fmt1, fmtHours, money, num, weekStart } from './util.js';
+import { goals, habits, of, kcalOn, proteinOn, waterOn, sleepOn, weights, weeklyRate, habitDone, sleepHours, BLOCK_KINDS, kindOf, runningBlock } from './data.js';
 import { routine, nextDay, workouts, exById, exByName, addCustomExercise, recordWorkout } from './gym.js';
 import { courses, assessments, tasks, shifts, jobs, jobOf, shiftHours, shiftPay, projects, invoices, invoiceStatus, courseResult, band, AREAS } from './plan.js';
 import { CATEGORIES, INCOME, ACCOUNTS, monthSummary, bills, budgets, spentIn, goalsList } from './money.js';
@@ -76,7 +76,11 @@ export function snapshot() {
     now: `${new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} ${nowHHMM()}`,
     today: t,
     goals: g,
-    today_totals: { kcal: kcalOn(t), protein_g: proteinOn(t), water_glasses: waterOn(t), sleep_h: sleepOn(t), meals: of('meal', t).map(m => `${m.name} ${fmt(m.kcal)}kcal ${fmt(m.protein)}gP`) },
+    today_totals: { kcal: kcalOn(t), protein_g: proteinOn(t), water_glasses: waterOn(t), sleep_h: sleepOn(t), meals: of('meal', t).map(m => `${m.time ? `${m.time} ` : ''}${m.name} ${fmt(m.kcal)}kcal ${fmt(m.protein)}gP`) },
+    // The day as the day view draws it, so questions about the shape of a day
+    // ("where did my afternoon go?") have something to answer from.
+    today_blocks: of('block', t).map(b => `${b.start}${b.end ? `–${b.end}` : ' (running)'} ${kindOf(b.kind).label}${b.title ? `: ${b.title}` : ''}${b.planned && !b.done ? ' [planned, not done]' : ''}`),
+    today_note: of('note', t)[0]?.text ?? null,
     last_7_days: days.map(d => ({ d, kcal: kcalOn(d), protein: proteinOn(d), water: waterOn(d), sleep_h: sleepOn(d) })),
     habits: habits().map(h => ({ name: h.name, done_today: habitDone(h.id, t) })),
     body: { latest_kg: ws.at(-1)?.kg ?? null, trend_kg_per_week: weeklyRate() != null ? fmt1(weeklyRate()) : null, goal: 'lean bulk' },
@@ -116,7 +120,9 @@ Rules:
 - Dates are YYYY-MM-DD. Default to today (${dayKey()}) unless they say otherwise ("yesterday", "on Friday"...).
 - For questions, answer from the DATA below. Never invent numbers that aren't there. If data is missing, say so briefly.
 - Keep replies short: 1–3 sentences, warm and encouraging, no markdown headings. After logging, confirm in one line and add one useful nudge (e.g. protein left for the bulk).
-- When asked to plan (study plan, week plan, gym routine), create the items with tools (add_event, add_task, create_routine) and summarise.
+- When asked to plan (study plan, week plan, gym routine), create the items with tools (add_event, add_task, log_block, create_routine) and summarise.
+- A stretch of time spent on something (study, revision, reading, freelance coding, admin, chores, social, rest) is a BLOCK, not an event: use log_block for "I studied 2 til 4", start_block/stop_block for "starting now" / "done", and log_block with planned=true to lay out a plan the user will tick off. Keep add_event for appointments and anything with other people.
+- Loop draws the day on a timeline, so pass a 'time' on log_meal and log_expense whenever the user says or implies when it happened. Without one, anything logged today is placed at the moment they told you.
 
 DATA (JSON):
 ${JSON.stringify(snapshot())}`;
@@ -129,7 +135,7 @@ const TIME = d => S('string', `${d}, 24h HH:MM`);
 const obj = (properties, required = []) => ({ type: 'object', properties, required });
 
 export const tools = () => [
-  { name: 'log_meal', description: 'Log food or drink the user ate.', parameters: obj({ name: S('string', 'Short meal name'), kcal: S('number', 'Calories'), protein_g: S('number', 'Protein grams'), carbs_g: S('number', 'Carb grams'), fat_g: S('number', 'Fat grams'), date: DATE }, ['name', 'kcal', 'protein_g']) },
+  { name: 'log_meal', description: 'Log food or drink the user ate.', parameters: obj({ name: S('string', 'Short meal name'), kcal: S('number', 'Calories'), protein_g: S('number', 'Protein grams'), carbs_g: S('number', 'Carb grams'), fat_g: S('number', 'Fat grams'), date: DATE, time: TIME('When they ate it, if they said or it can be inferred') }, ['name', 'kcal', 'protein_g']) },
   { name: 'log_water', description: 'Add glasses of water (250 ml each).', parameters: obj({ glasses: S('number', 'Number of glasses') }, ['glasses']) },
   { name: 'log_sleep', description: 'Log a night of sleep.', parameters: obj({ bed: TIME('Bed time'), wake: TIME('Wake time'), date: S('string', 'The morning they woke up, YYYY-MM-DD') }, ['bed', 'wake']) },
   { name: 'log_weight', description: 'Log a body-weight weigh-in.', parameters: obj({ kg: S('number', 'Body weight in kg'), date: DATE }, ['kg']) },
@@ -148,11 +154,14 @@ export const tools = () => [
       days: S('array', 'Training days in order', { items: obj({ name: S('string', 'Day name'), exercises: S('array', 'Exercises', { items: obj({ exercise: S('string', 'Exercise name'), muscle: S('string', 'chest, back, shoulders, legs, arms or core'), sets: S('number', 'Sets'), rep_min: S('number', 'Min reps'), rep_max: S('number', 'Max reps') }, ['exercise', 'sets', 'rep_min', 'rep_max']) }) }, ['name', 'exercises']) }),
     }, ['name', 'days']),
   },
+  { name: 'log_block', description: 'Record or plan a stretch of time the user spent (or will spend) on something: study, revision, reading, freelance coding, admin, chores, social, rest. Use this for "I studied 2 til 4" and for planning study blocks.', parameters: obj({ kind: S('string', `One of: ${Object.keys(BLOCK_KINDS).join(', ')}`), title: S('string', 'What specifically, e.g. COMP2123 past papers'), start: TIME('Start'), end: TIME('End'), date: DATE, planned: S('boolean', 'true if this is a plan for later, not something already done'), note: S('string', 'Optional') }, ['kind', 'start']) },
+  { name: 'start_block', description: 'Start timing something the user is beginning right now ("starting study now"). It runs until stopped.', parameters: obj({ kind: S('string', `One of: ${Object.keys(BLOCK_KINDS).join(', ')}`), title: S('string', 'What specifically') }, ['kind']) },
+  { name: 'stop_block', description: 'Stop the block that is currently running.', parameters: obj({}) },
   { name: 'add_task', description: 'Add a to-do task.', parameters: obj({ title: S('string', 'Task'), due: S('string', 'YYYY-MM-DD, optional'), area: S('string', `One of: ${Object.keys(AREAS).join(', ')}`) }, ['title']) },
   { name: 'add_event', description: 'Add a calendar event (study block, appointment, plan).', parameters: obj({ title: S('string', 'Title'), date: DATE, start: TIME('Start'), end: TIME('End'), area: S('string', `One of: ${Object.keys(AREAS).join(', ')}`), note: S('string', 'Optional note') }, ['title', 'date']) },
   { name: 'add_shift', description: 'Add a shift at one of the user’s part-time jobs.', parameters: obj({ job: S('string', `Which job, one of: ${jobs().map(j => j.name).join(', ')}`), date: DATE, start: TIME('Start'), end: TIME('End'), break_min: S('number', 'Unpaid break minutes') }, ['date', 'start', 'end']) },
   { name: 'add_assessment', description: 'Add a uni assessment or exam due date.', parameters: obj({ course_code: S('string', 'Course code, e.g. COMP2123'), title: S('string', 'Title'), due: S('string', 'YYYY-MM-DD'), weight: S('number', 'Weight %'), kind: S('string', 'assignment, exam, quiz, presentation or report') }, ['course_code', 'title', 'due']) },
-  { name: 'log_expense', description: 'Log money the user spent.', parameters: obj({ amount: S('number', 'AUD amount'), merchant: S('string', 'Where'), category: S('string', `One of: ${Object.keys(CATEGORIES).join(', ')}`), account: S('string', `One of: ${Object.keys(ACCOUNTS).filter(k => k !== 'savings').join(', ')}`), date: DATE, note: S('string', 'Optional') }, ['amount', 'category']) },
+  { name: 'log_expense', description: 'Log money the user spent.', parameters: obj({ amount: S('number', 'AUD amount'), merchant: S('string', 'Where'), category: S('string', `One of: ${Object.keys(CATEGORIES).join(', ')}`), account: S('string', `One of: ${Object.keys(ACCOUNTS).filter(k => k !== 'savings').join(', ')}`), date: DATE, time: TIME('When they spent it, if known'), note: S('string', 'Optional') }, ['amount', 'category']) },
   { name: 'log_income', description: 'Log money the user received.', parameters: obj({ amount: S('number', 'AUD amount'), source: S('string', 'From whom'), category: S('string', `One of: ${Object.keys(INCOME).join(', ')}`), account: S('string', 'westpac, revolut or cash'), date: DATE }, ['amount', 'category']) },
   { name: 'set_goals', description: 'Change daily goals.', parameters: obj({ kcal: S('number', 'Calories'), protein: S('number', 'Protein g'), water: S('number', 'Glasses'), sleep: S('number', 'Hours') }) },
 ];
@@ -160,11 +169,14 @@ export const tools = () => [
 const validDate = d => (/^\d{4}-\d{2}-\d{2}$/.test(d ?? '') ? d : dayKey());
 const validTime = t => (/^\d{1,2}:\d{2}$/.test(t ?? '') ? t.padStart(5, '0') : null);
 const pick = (v, allowed, dflt) => (Object.prototype.hasOwnProperty.call(allowed, v) ? v : dflt);
+// Only spread a `time` the model actually gave: an undefined one would wipe the
+// clock time addEntry stamps on anything logged for today.
+const at = t => (validTime(t) ? { time: validTime(t) } : {});
 
 // Each tool returns { result (sent back to the model), card (shown in chat with Undo) }.
 const RUN = {
   async log_meal(a) {
-    const e = await addEntry('meal', { name: String(a.name).slice(0, 60), kcal: Math.round(num(a.kcal)), protein: Math.round(num(a.protein_g)), carbs: Math.round(num(a.carbs_g)), fat: Math.round(num(a.fat_g)), source: 'ai' }, validDate(a.date));
+    const e = await addEntry('meal', { name: String(a.name).slice(0, 60), kcal: Math.round(num(a.kcal)), protein: Math.round(num(a.protein_g)), carbs: Math.round(num(a.carbs_g)), fat: Math.round(num(a.fat_g)), ...at(a.time), source: 'ai' }, validDate(a.date));
     return { result: { ok: true, kcal_today: kcalOn(dayKey()), protein_today: proteinOn(dayKey()) }, card: { icon: 'diet', area: 'diet', title: e.name, sub: `${fmt(e.kcal)} kcal · P ${e.protein}g · C ${e.carbs}g · F ${e.fat}g`, ids: [e.id] } };
   },
   async log_water(a) {
@@ -241,6 +253,45 @@ const RUN = {
     await setKV('routine', { template: 'ai', name: String(a.name || 'My routine').slice(0, 40), perWeek: Math.round(num(a.per_week)) || days.length, days });
     return { result: { ok: true, days: days.length }, card: { icon: 'list', area: 'move', title: a.name || 'New routine', sub: days.map(d => d.name).join(' · '), kv: { key: 'routine', prev } } };
   },
+  async log_block(a) {
+    const kind = pick(a.kind, BLOCK_KINDS, 'study');
+    const k = BLOCK_KINDS[kind];
+    const start = validTime(a.start);
+    if (!start) return { result: { ok: false, error: 'Need a start time' } };
+    const endIn = validTime(a.end);
+    const end = endIn && toMin(endIn) > toMin(start) ? endIn : fromMin(toMin(start) + 60);
+    const planned = !!a.planned;
+    const e = await addEntry('block', { kind, title: String(a.title ?? '').slice(0, 60), note: String(a.note ?? '').slice(0, 120), start, end, planned, done: !planned, source: 'ai' }, validDate(a.date));
+    return {
+      result: { ok: true, minutes: toMin(end) - toMin(start) },
+      card: { icon: k.icon, area: k.color, title: e.title || k.label, sub: `${planned ? 'Planned · ' : ''}${e.date} · ${start}–${end}`, ids: [e.id] },
+    };
+  },
+  async start_block(a) {
+    const kind = pick(a.kind, BLOCK_KINDS, 'study');
+    const k = BLOCK_KINDS[kind];
+    const open = runningBlock();
+    const restore = [];
+    if (open) { restore.push({ ...open }); await updateEntry(open.id, { end: nowHHMM(), done: true }); }
+    const e = await addEntry('block', { kind, title: String(a.title ?? '').slice(0, 60), note: '', start: nowHHMM(), end: null, planned: false, done: false, source: 'ai' }, dayKey());
+    return {
+      result: { ok: true, started: e.start, stopped_previous: open ? (open.title || kindOf(open.kind).label) : null },
+      card: { icon: k.icon, area: k.color, title: `${e.title || k.label} started`, sub: `Running since ${e.start}`, ids: [e.id], restore },
+    };
+  },
+  async stop_block() {
+    const open = runningBlock();
+    if (!open) return { result: { ok: false, error: 'Nothing is running' } };
+    const prev = { ...open };
+    const end = nowHHMM();
+    const mins = Math.max(0, toMin(end) - toMin(open.start));
+    await updateEntry(open.id, { end: mins ? end : open.start, done: true });
+    const k = kindOf(open.kind);
+    return {
+      result: { ok: true, minutes: mins },
+      card: { icon: k.icon, area: k.color, title: `${open.title || k.label} stopped`, sub: `${open.start}–${end} · ${fmtHours(mins / 60)}`, restore: [prev] },
+    };
+  },
   async add_task(a) {
     const e = await addEntry('task', { title: String(a.title).slice(0, 80), due: /^\d{4}-\d{2}-\d{2}$/.test(a.due ?? '') ? a.due : null, area: pick(a.area, AREAS, 'life'), done: false, source: 'ai' }, dayKey());
     return { result: { ok: true }, card: { icon: 'list', area: AREAS[e.area].color, title: e.title, sub: e.due ? `Task · due ${e.due}` : 'Task', ids: [e.id] } };
@@ -272,7 +323,7 @@ const RUN = {
     const amount = Math.abs(num(a.amount));
     if (!amount) return { result: { ok: false, error: 'No amount' } };
     const category = pick(a.category, CATEGORIES, 'other');
-    const e = await addEntry('txn', { kind: 'expense', amount, category, account: pick(a.account, ACCOUNTS, 'westpac'), merchant: String(a.merchant ?? '').slice(0, 60), note: String(a.note ?? '').slice(0, 100), source: 'ai' }, validDate(a.date));
+    const e = await addEntry('txn', { kind: 'expense', amount, category, account: pick(a.account, ACCOUNTS, 'westpac'), merchant: String(a.merchant ?? '').slice(0, 60), note: String(a.note ?? '').slice(0, 100), ...at(a.time), source: 'ai' }, validDate(a.date));
     const ms = monthSummary();
     const cap = Number(budgets()[category]) || 0;
     return { result: { ok: true, category_spent_this_month: Math.round(spentIn(ms.list, category)), category_budget: cap, left_this_month: Math.round(ms.left) }, card: { icon: CATEGORIES[category].icon, area: CATEGORIES[category].area, title: `−${money(amount)} ${e.merchant}`.trim(), sub: `${CATEGORIES[category].label}${cap ? ` · ${money(Math.max(0, cap - spentIn(ms.list, category)), false)} left` : ''}`, ids: [e.id] } };

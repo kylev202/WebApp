@@ -1,5 +1,6 @@
 // Tiny IndexedDB layer. Everything is loaded into memory on start (one person's data
 // stays small), and every write goes straight to IndexedDB on the device.
+import { dayKey, nowHHMM } from './util.js';
 
 const DB_NAME = 'loop';
 const DB_VERSION = 1;
@@ -57,8 +58,15 @@ export async function putEntry(entry) {
   return entry;
 }
 
+// Logs the day view can place on its timeline. `ts` is when the record was written,
+// which is not the same thing: a meal added at 9pm for a date last week happened
+// at neither time. So a clock time is stamped only when the entry is for today,
+// and callers that know better (or know nothing) pass their own `time`, null included.
+const TIMED = new Set(['meal', 'water', 'weight', 'txn', 'habit']);
+
 export function addEntry(type, fields, date) {
-  return putEntry({ id: crypto.randomUUID(), type, date, ts: Date.now(), ...fields });
+  const stamp = TIMED.has(type) && date === dayKey() ? { time: nowHHMM() } : {};
+  return putEntry({ id: crypto.randomUUID(), type, date, ts: Date.now(), ...stamp, ...fields });
 }
 
 export function updateEntry(id, fields) {

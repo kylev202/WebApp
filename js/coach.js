@@ -1,10 +1,10 @@
 // v7 Coaching: morning briefing, evening review, weekly report, badges, reminder guide.
 import { state, addEntry, setKV } from './store.js';
-import { esc, dayKey, addDays, weekStart, monthKey, shortDate, initial, fmt, fmt1, fmtHours, money, plural, avgLogged, time12 } from './util.js';
+import { esc, dayKey, addDays, weekStart, monthKey, monthDays, shortDate, initial, fmt, fmt1, fmtHours, money, plural, avgLogged, time12, toMin, fromMin, minNow, clamp, dayLabel } from './util.js';
 import { icon, tile } from './icons.js';
 import { sheets, actions, forms, afterRender, render, refreshSheet, toast, haptic, confetti, closeBtn } from './core.js';
 import { lineChart } from './charts.js';
-import { goals, habits, kcalOn, proteinOn, waterOn, sleepOn, weights, habitDone, streak, anyLogOn, weeklyRate, bulkStatus } from './data.js';
+import { of, goals, habits, kcalOn, proteinOn, waterOn, sleepOn, weights, habitDone, streak, anyLogOn, weeklyRate, bulkStatus } from './data.js';
 import { workouts, nextDay, suggestion, exById, routine } from './gym.js';
 import { agendaFor, tasks, assessments, invoices } from './plan.js';
 import { bills, monthSummary, spentIn, budgets, goalsList, txns } from './money.js';
@@ -61,6 +61,74 @@ function morningCard() {
   aiNote(key, 'Write my morning briefing for today in 2–3 short, warm sentences: sleep, what’s on (classes, shifts, deadlines), today’s workout with a target weight if known, and food targets for my bulk. No greeting line, no lists.');
   const ai = state.kv.notes?.[key];
   return `<section class="card glass brief">${tile('sun', 'school')}<div class="grow"><div class="meta">Morning briefing${ai ? ` · ${icon('sparkle')}` : ''}</div><p>${ai ? fmtAI(ai) : briefingText()}</p></div></section>`;
+}
+
+// ---------- checkpoint nudges (the day view) ----------
+// Three moments chosen around a 10am-to-midnight day: mid-afternoon, early evening,
+// and late enough to still act on it before bed. Each one is costed once and cached
+// like the briefing, so opening the app twenty times is still one Gemini call.
+export const CHECKPOINTS = ['14:00', '18:00', '22:30'];
+const WAKE = 10 * 60, BED = 24 * 60;
+const STUDYISH = ['study', 'revision', 'reading', 'coding'];
+
+// Everything already claimed on the day, so a gap is really a gap.
+function busyOn(date) {
+  const iv = [];
+  agendaFor(date).forEach(it => { if (it.time) iv.push([toMin(it.time), it.end ? toMin(it.end) : toMin(it.time) + 45]); });
+  of('block', date).forEach(b => iv.push([toMin(b.start), b.end ? toMin(b.end) : BED]));
+  return iv.sort((a, b) => a[0] - b[0]);
+}
+
+function nextGap(date, from) {
+  let t = from;
+  for (const [a, b] of busyOn(date)) {
+    if (b <= t) continue;
+    if (a - t >= 90) return [t, a];
+    t = Math.max(t, b);
+  }
+  return BED - t >= 90 ? [t, BED] : null;
+}
+
+// Plain facts first: whatever the AI is or isn't up to, these are true and free.
+function dayFacts(date, cp) {
+  const g = goals(), out = [];
+  const hoursLeft = Math.max(0, BED - cp) / 60;
+  const pace = clamp((cp - WAKE) / (BED - WAKE), 0, 1);
+  const protein = proteinOn(date), kcal = kcalOn(date), water = waterOn(date);
+
+  if (!of('meal', date).length) out.push(`Nothing eaten logged yet, and about ${fmt1(hoursLeft)} h of the day left.`);
+  else if (protein < g.protein * pace * 0.8) out.push(`Protein is ${fmt(protein)} of ${g.protein} g with about ${fmt1(hoursLeft)} h left.`);
+  if (kcal && kcal < g.kcal * pace * 0.7) out.push(`Calories at ${fmt(kcal)}; the bulk still wants ${fmt(g.kcal - kcal)}.`);
+  if (water < Math.floor(g.water * pace) - 1) out.push(`Water is ${water} of ${g.water} glasses.`);
+
+  const studied = of('block', date).some(b => STUDYISH.includes(b.kind) && b.done !== false);
+  const soon = assessments().filter(a => !a.done && a.due >= date && a.due <= addDays(date, 2));
+  if (soon.length && !studied) out.push(`${soon[0].title} is due ${dayLabel(soon[0].due).toLowerCase()} and nothing has been logged against it.`);
+  const gap = nextGap(date, Math.max(cp, minNow()));
+  const until = m => (m >= BED ? 'midnight' : time12(fromMin(m)));
+  if (gap) out.push(`Clear from ${time12(fromMin(gap[0]))} to ${until(gap[1])}${soon.length && !studied ? ', which is the obvious study window' : ''}.`);
+
+  if (cp >= 18 * 60 && !workouts().find(w => w.date === date) && nextDay()) out.push(`No workout logged and ${nextDay().name} is next up.`);
+
+  const spent = spentIn(txns().filter(x => x.date === date));
+  const daily = Object.values(budgets()).reduce((t, v) => t + (Number(v) || 0), 0) / monthDays(monthKey(date));
+  if (daily && spent > daily * 1.5) out.push(`Spent ${money(spent, false)} today against a ${money(daily, false)} daily pace.`);
+  return out;
+}
+
+// Only checkpoints the clock has already passed, and only on the live day: the
+// framing ("hours left") is meaningless once the day is over.
+export function nudgesFor(date) {
+  if (date !== dayKey()) return [];
+  const now = minNow();
+  return CHECKPOINTS.filter(cp => toMin(cp) <= now).map(cp => {
+    const facts = dayFacts(date, toMin(cp));
+    if (!facts.length) return null;
+    const key = `nudge:${date}:${cp}`;
+    aiNote(key, `It is ${time12(cp)} and my day runs to about midnight. Where my day stands:\n- ${facts.join('\n- ')}\nWrite me one checkpoint nudge, two short sentences at most: the one thing worth doing with the rest of the day. No greeting, no lists.`);
+    const ai = state.kv.notes?.[key];
+    return { at: cp, facts, ai: !!ai, html: ai ? fmtAI(ai) : facts.map(esc).join(' ') };
+  }).filter(Boolean);
 }
 
 // ---------- evening review ----------

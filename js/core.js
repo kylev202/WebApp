@@ -9,6 +9,7 @@ export const actions = {};  // data-act -> (el, event) => void
 export const forms = {};    // data-form -> (FormData, form) => void
 export const previews = {}; // data-form -> (form) => void, live updates while typing
 export const afterRender = []; // hooks run after each render (timers, focus...)
+export const views = {};    // alternate renderings a screen can switch to (today -> day timeline)
 export const TITLES = { today: 'Today', health: 'Health', ask: 'Ask', plan: 'Plan', money: 'Money', settings: 'Settings', workout: 'Workout', routine: 'Routine' };
 // Routes that hide the tab bar (full-screen flows).
 export const FULLSCREEN = new Set(['workout', 'routine']);

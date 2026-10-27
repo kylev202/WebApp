@@ -21,6 +21,23 @@ export const goals = () => {
   }
   return g;
 };
+// Timed activities you do, as opposed to appointments you attend. Study is split
+// several ways because "did I study?" and "did the freelance build move?" are
+// different questions, and months later you want to ask them separately.
+export const BLOCK_KINDS = {
+  study: { label: 'Study', icon: 'book', color: 'school' },
+  revision: { label: 'Revision', icon: 'exam', color: 'school' },
+  reading: { label: 'Reading', icon: 'brain', color: 'sleep' },
+  coding: { label: 'Coding', icon: 'code', color: 'work' },
+  admin: { label: 'Admin', icon: 'list', color: 'money' },
+  chores: { label: 'Chores', icon: 'home', color: 'diet' },
+  social: { label: 'Social', icon: 'users', color: 'move' },
+  rest: { label: 'Rest', icon: 'leaf', color: 'diet' },
+};
+export const kindOf = k => BLOCK_KINDS[k] ?? BLOCK_KINDS.study;
+export const blocks = () => of('block');
+export const runningBlock = () => blocks().find(b => !b.end);
+
 // Older habits stored an emoji; give them an icon.
 export const habits = () => (state.kv.habits ?? DEFAULT_HABITS).map(h => ({ icon: DEFAULT_HABITS.find(d => d.id === h.id)?.icon ?? 'star', ...h }));
 
@@ -56,7 +73,7 @@ export const waterOn = d => sum(of('water', d), 'amount');
 export const sleepOn = d => sum(of('sleep', d), 'hours');
 export const weights = () => of('weight').sort((a, b) => a.date.localeCompare(b.date) || a.ts - b.ts);
 export const habitDone = (id, d) => index().habitDays.has(`${id}\n${d}`);
-const LOG_TYPES = new Set(['meal', 'water', 'sleep', 'weight', 'habit', 'workout']);
+const LOG_TYPES = new Set(['meal', 'water', 'sleep', 'weight', 'habit', 'workout', 'block']);
 export const anyLogOn = d => index().loggedDays.has(d);
 
 // Consecutive days ending today (or yesterday, if today isn't done yet).

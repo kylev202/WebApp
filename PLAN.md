@@ -4,7 +4,7 @@
 
 A personal app to manage every part of my life — diet, gym, sleep, university, work, money, habits — in one place, with an AI assistant that does the logging and coaching. Built for **one user (me)**, used mainly on **iPhone**.
 
-_Last updated: Oct 25, 2026_
+_Last updated: Oct 27, 2026_
 
 ---
 
@@ -27,6 +27,7 @@ _Last updated: Oct 25, 2026_
 | v3 AI assistant (Gemini function calling, voice, photo, undo) | ✅ Done |
 | v6 Connections (CSV import, relay worker, Apple Pay + Siri inbox, Canvas, Google Calendar) | ✅ Done |
 | v7 Coaching (briefing, evening review, weekly report, badges, reminders guide) | ✅ Done |
+| v8 Day view (timeline, blocks, drag, checkpoint nudges) | ✅ Done |
 | Next: set up relay, Gemini key, Canvas token, Google Client ID on the phone | ⏳ Your setup |
 
 Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
@@ -51,6 +52,29 @@ Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Scr
 | Canvas address | To add later in Settings |
 | Currency | **AUD (A$)** |
 | Diet goal | **Bulking** — calorie surplus (≈3,000 kcal/day placeholder), high protein (≈160 g); AI can suggest exact targets from body weight |
+
+---
+
+## 2b. Day View — decisions (Oct 2026)
+
+The weekly dashboard answers "how is the month going". It can't answer "it's 3pm,
+where did my day go". The Day view is the same data at arm's length: one day, one
+timeline, close enough to act on.
+
+| Topic | Decision | Why |
+|---|---|---|
+| Where it lives | A **`Summary / Day` toggle on Today**, defaulting to Summary on every open | No sixth tab on a 390 px screen; the summary is what you want first and last thing, which is when the app is usually opened cold |
+| Day runs | **10am to midnight**; grid spans 9am–1am, extending for anything outside it | My actual day. Quiet hours collapse to a thin band so an empty afternoon costs a few pixels |
+| Before 4am | The view opens on **yesterday** | At 1am you're finishing the day before, not starting a new one. Nothing is re-dated — only which day the view opens on |
+| Timing of logs | A `time` field stamped **at the moment you log it**, then **drag to correct** (15-min snap) | Zero friction in the moment. `ts` stays untouched as the record's write time, so dragging never rewrites the audit trail |
+| Backdated / imported | Land in a **"No time yet"** strip, not on the grid | A bank CSV row has no clock time; guessing one would make the timeline lie |
+| Old history | **Not backfilled.** Past days show only what already had real times | Placing months of entries at their write time would have been wrong more often than right |
+| Plan vs record | **Both.** Scheduled and planned above "now", logged reality below | Planned blocks are hatched; ones you tick fill solid |
+| A plan you didn't do | **Stays as an outlined ghost** | The gap is the signal — it's what makes plan-vs-actual worth having, and what the evening review reads |
+| Blocks | New `block` entry type, kinds: study, revision, reading, coding, admin, chores, social, rest | "Did I study?" and "did the freelance build move?" are different questions |
+| Noise control | Water and habits are **chips at the foot**, never dots on the spine | Otherwise the day reads as confetti |
+| Coach | **Checkpoint nudges at 2pm, 6pm, 10:30pm**, pinned at their hour, in-app only | Cached once per checkpoint per day like the briefing, so the free Gemini tier lasts. No web push — reminders stay on Shortcuts |
+| Per day | A one-line **"How the day went"** note | The only thing the coach had no input of |
 
 ---
 

@@ -57,3 +57,8 @@ export const num = v => {
 export const plural = (n, word, many = `${word}s`) => `${fmt(n)} ${n === 1 ? word : many}`;
 export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 export const by = f => (a, b) => (f(a) < f(b) ? -1 : f(a) > f(b) ? 1 : 0);
+
+// Timeline helpers: minutes from midnight ↔ "HH:MM", snapped to a 15-minute grid.
+export const fromMin = m => { const x = ((Math.round(m) % 1440) + 1440) % 1440; return `${pad(Math.floor(x / 60))}:${pad(x % 60)}`; };
+export const snapMin = (m, step = 15) => Math.round(m / step) * step;
+export const minNow = () => toMin(nowHHMM());
