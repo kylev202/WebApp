@@ -37,8 +37,16 @@ async function relayFetch(path, { method = 'GET', body, headers = {} } = {}) {
   } catch {
     throw new Error('Can’t reach your relay. Open Settings → Connections → Your relay and tap Save and test.');
   }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? `Relay error ${res.status}`);
+  const text = await res.text().catch(() => '');
+  let data = {};
+  try { data = JSON.parse(text) ?? {}; } catch {}
+  // The relay answers { error }; Canvas errors passed through look like { errors: [{ message }] },
+  // or plain text such as "403 Forbidden (Rate Limit Exceeded)".
+  if (!res.ok) {
+    const err = new Error(data.error ?? data.errors?.[0]?.message ?? data.message ?? (text.trim().slice(0, 120) || `Relay error ${res.status}`));
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -86,9 +94,19 @@ async function quickParse(text, date) {
 }
 
 // ---------- Canvas ----------
-const canvasGet = path => {
+// A fallback unit code like "BIO (S1)" must not be read as regex syntax.
+const reEscape = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Canvas throttles with a 403 "Rate Limit Exceeded": wait and try again rather than give up.
+const canvasGet = async path => {
   const c = canvas();
-  return relayFetch(`/canvas/${path}`, { headers: { 'X-Canvas-Domain': c.domain, 'X-Canvas-Token': c.token } });
+  for (let tries = 0; ; tries++) {
+    try {
+      return await relayFetch(`/canvas/${path}`, { headers: { 'X-Canvas-Domain': c.domain, 'X-Canvas-Token': c.token } });
+    } catch (err) {
+      if (err.status !== 403 || !/rate limit/i.test(err.message) || tries >= 3) throw err;
+      await new Promise(r => setTimeout(r, 1500 * 2 ** tries));
+    }
+  }
 };
 
 export async function syncCanvas() {
@@ -97,15 +115,21 @@ export async function syncCanvas() {
   toast('Syncing Canvas…', { icon: 'repeat', ms: 6000 });
   try {
     const list = await canvasGet('courses?enrollment_state=active&per_page=50');
+    if (!Array.isArray(list)) throw new Error('Canvas didn’t send a course list');
     let added = 0, updated = 0;
+    const skipped = [];
+    let why = null;
     const colors = ['school', 'work', 'diet', 'sleep', 'move', 'money'];
     for (const [ci, cc] of list.filter(x => x.name && !x.access_restricted_by_date).entries()) {
       const code = (String(cc.course_code ?? cc.name).toUpperCase().match(/[A-Z]{3,5}\d{3,5}[A-Z]?/) ?? [String(cc.course_code ?? '').slice(0, 10).toUpperCase()])[0];
       let course = courses().find(x => x.canvasId === cc.id) ?? courses().find(x => x.code === code);
-      const name = String(cc.name).replace(new RegExp(`^${code}\\s*[-:–]?\\s*`, 'i'), '').slice(0, 60) || code;
+      const name = String(cc.name).replace(new RegExp(`^${reEscape(code)}\\s*[-:–]?\\s*`, 'i'), '').slice(0, 60) || code;
       if (!course) course = await addEntry('course', { code, name, credits: 6, color: colors[ci % colors.length], canvasId: cc.id }, dayKey());
       else if (!course.canvasId) await updateEntry(course.id, { canvasId: cc.id });
-      const groups = await canvasGet(`courses/${cc.id}/assignment_groups?include[]=assignments&include[]=submission&per_page=50`);
+      // Some units (orientation, library, closed-off ones) refuse this call: skip them, keep syncing the rest.
+      let groups;
+      try { groups = await canvasGet(`courses/${cc.id}/assignment_groups?include[]=assignments&include[]=submission&per_page=50`); } catch (err) { why ??= err.message; groups = null; }
+      if (!Array.isArray(groups)) { skipped.push(code); continue; }
       for (const g of groups) {
         const each = g.assignments?.length ? Number(g.group_weight || 0) / g.assignments.length : 0;
         for (const a of g.assignments ?? []) {
@@ -125,7 +149,7 @@ export async function syncCanvas() {
     }
     await setKV('canvas', { ...canvas(), lastSync: Date.now() });
     haptic();
-    toast(`Canvas synced: ${added} new, ${updated} updated`, { icon: 'school' });
+    toast(`Canvas synced: ${added} new, ${updated} updated${skipped.length ? ` · skipped ${skipped.join(', ')}${why ? ` (${why})` : ''}` : ''}`, { icon: 'school', ms: skipped.length ? 6000 : undefined });
   } catch (err) {
     toast(`Canvas: ${err.message}`, { icon: 'alert', ms: 4000 });
   }
