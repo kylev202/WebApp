@@ -95,6 +95,16 @@ h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; margin-top: 2px
 .grid-line { stroke: rgba(0,0,0,.05); stroke-width: 1; }
 .goal-line { stroke: rgba(0,0,0,.2); stroke-width: 1.2; stroke-dasharray: 4 4; }
 .ln { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ln-fill { opacity: .1; stroke: none; }
+.chart-y { position: absolute; right: 0; font-size: 9.5px; font-weight: 600; color: var(--text-3); background: rgba(255,255,255,.72); border-radius: 4px; padding: 0 3px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.chart-y.top { top: 6.5%; transform: translateY(-50%); }
+.chart-y.mid { top: 50%; transform: translateY(-50%); }
+.bars { display: flex; align-items: flex-end; gap: 1.5px; height: 26px; margin-top: 10px; }
+.bars .bar { flex: 1; min-width: 0; height: var(--h); min-height: 0; border-radius: 2px 2px 1px 1px; background: var(--c); opacity: .45; }
+.bars .bar.on { opacity: .95; }
+.track .fill.soft { opacity: .45; }
+.dot.dash-dot { width: 10px; height: 0; border-top: 2px dashed rgba(0,0,0,.35); border-radius: 0; }
+.note.sub { color: var(--text-3); margin-top: 4px; }
 .pt { position: absolute; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--c); box-shadow: 0 0 0 2px #fff; }
 .pt.live { width: 9px; height: 9px; background: #fff; box-shadow: inset 0 0 0 2px var(--c), 0 0 0 2px #fff; }
 .pt.live::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--c); opacity: 0; animation: ping 2.4s ease-out infinite; }

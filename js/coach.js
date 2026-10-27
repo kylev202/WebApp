@@ -3,7 +3,7 @@ import { state, addEntry, updateEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, weekStart, monthKey, monthDays, shortDate, initial, fmt, fmt1, fmtHours, money, plural, avgLogged, time12, toMin, fromMin, minNow, clamp, dayLabel } from './util.js';
 import { icon, tile } from './icons.js';
 import { sheets, actions, forms, afterRender, render, refreshSheet, toast, haptic, confetti, closeBtn } from './core.js';
-import { targets, targetsSection, targetLines, TARGET_METRICS } from './targets.js';
+import { targets, targetsSection, targetLines, TARGET_METRICS, PICKABLE } from './targets.js';
 import { lineChart } from './charts.js';
 import { of, goals, habits, kcalOn, proteinOn, waterOn, sleepOn, weights, habitDone, streak, anyLogOn, weeklyRate, bulkStatus, BLOCK_KINDS, kindOf } from './data.js';
 import { workouts, nextDay, suggestion, exById, routine } from './gym.js';
@@ -366,7 +366,7 @@ const PROPOSE_TOOLS = [
   { name: 'propose_daily_goals', description: 'Suggest changing my daily targets. Only send the ones that should change.', parameters: { type: 'object', properties: { kcal: { type: 'number', description: 'Calories' }, protein: { type: 'number', description: 'Protein g' }, water: { type: 'number', description: 'Glasses' }, sleep: { type: 'number', description: 'Hours' }, why: { type: 'string', description: 'One sentence, the evidence for it' } }, required: ['why'] } },
   { name: 'propose_block', description: 'Suggest a block of time I should put aside (study, revision, reading, coding, admin, chores, social, rest).', parameters: { type: 'object', properties: { kind: { type: 'string', description: `One of: ${Object.keys(BLOCK_KINDS).join(', ')}` }, title: { type: 'string', description: 'What specifically' }, date: { type: 'string', description: 'YYYY-MM-DD' }, start: { type: 'string', description: 'HH:MM' }, end: { type: 'string', description: 'HH:MM' }, why: { type: 'string', description: 'One sentence, the evidence for it' } }, required: ['kind', 'date', 'start', 'why'] } },
   { name: 'propose_task', description: 'Suggest a to-do I should add.', parameters: { type: 'object', properties: { title: { type: 'string', description: 'The task' }, due: { type: 'string', description: 'YYYY-MM-DD, optional' }, why: { type: 'string', description: 'One sentence, the evidence for it' } }, required: ['title', 'why'] } },
-  { name: 'propose_target', description: 'Suggest a long-term target to set or change.', parameters: { type: 'object', properties: { metric: { type: 'string', description: `One of: ${Object.keys(TARGET_METRICS).join(', ')}` }, to: { type: 'number', description: 'The number to reach, or to sustain each week' }, due: { type: 'string', description: 'YYYY-MM-DD, optional for weekly ones' }, why: { type: 'string', description: 'One sentence, the evidence for it' } }, required: ['metric', 'to', 'why'] } },
+  { name: 'propose_target', description: 'Suggest a long-term target to set or change.', parameters: { type: 'object', properties: { metric: { type: 'string', description: `One of: ${PICKABLE().map(([k]) => k).join(', ')}` }, to: { type: 'number', description: 'The number to reach, or to sustain each week (each month for spend)' }, due: { type: 'string', description: 'YYYY-MM-DD, optional for weekly ones' }, why: { type: 'string', description: 'One sentence, the evidence for it' } }, required: ['metric', 'to', 'why'] } },
 ];
 
 const isDate = d => /^\d{4}-\d{2}-\d{2}$/.test(d ?? '');
@@ -401,11 +401,11 @@ function validate(name, a) {
     return { kind: 'task', payload: { title, due: isDate(a.due) ? a.due : null }, why, title: `Add task: ${title}` };
   }
   if (name === 'propose_target') {
-    const metric = Object.keys(TARGET_METRICS).includes(a.metric) ? a.metric : null;
+    const metric = PICKABLE().some(([k]) => k === a.metric) ? a.metric : null;
     const to = posNum(a.to);
     if (!metric || !to) return null;
     const m = TARGET_METRICS[metric];
-    return { kind: 'target', payload: { metric, to, due: isDate(a.due) ? a.due : null }, why, title: `Target: ${m.label} ${m.kind === 'rate' ? `${fmt1(to)} a week` : fmt1(to)}` };
+    return { kind: 'target', payload: { metric, to, due: isDate(a.due) ? a.due : null }, why, title: `Target: ${m.label} ${m.kind === 'rate' ? `${fmt1(to)} a ${m.per ?? 'week'}` : fmt1(to)}` };
   }
   return null;
 }

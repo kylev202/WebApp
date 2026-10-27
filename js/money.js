@@ -3,7 +3,7 @@ import { state, addEntry, updateEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, toDate, monthKey, monthDays, dayLabel, shortDate, money, moneyShort, num, plural, daysBetween } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, sheets, actions, forms, previews, ui, render, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo, chips, dateField, readDate } from './core.js';
-import { lineChart } from './charts.js';
+import { lineChart, barRow, niceMax } from './charts.js';
 import { of, byId } from './data.js';
 import { todaySections } from './today.js';
 
@@ -92,29 +92,59 @@ function moneyOverview(m) {
   const n = monthDays(m);
   const isNow = m === monthKey();
   const todayN = isNow ? toDate(dayKey()).getDate() : n;
-  const cum = [];
+  // Cumulative spend to date, plus what each single day cost. Days after today are
+  // null so the line stops at today instead of flat-lining across the rest of the month.
+  const daily = [], cum = [];
   let run = 0;
   for (let d = 1; d <= n; d++) {
     const key = `${m}-${String(d).padStart(2, '0')}`;
-    run += spentIn(s.list.filter(t => t.date === key));
+    const onDay = spentIn(s.list.filter(t => t.date === key));
+    run += onDay;
+    daily.push(d <= todayN ? onDay : null);
     cum.push(d <= todayN ? run : null);
   }
-  const pace = Array.from({ length: n }, (_, i) => (s.budgetTotal * (i + 1)) / n);
-  const onTrack = !s.budgetTotal || run <= pace[todayN - 1] * 1.02;
+  const hasBudget = s.budgetTotal > 0;
+  // Pace is only meaningful against a budget; with none there is nothing to pace against.
+  const pace = hasBudget ? Array.from({ length: n }, (_, i) => (s.budgetTotal * (i + 1)) / n) : null;
+  const onTrack = !hasBudget || run <= pace[todayN - 1] * 1.02;
+  const top = niceMax(Math.max(s.budgetTotal, run) * 1.06);
+  const perDay = run / Math.max(1, todayN);
+  const projected = perDay * n;
+  const daysLeft = Math.max(0, n - todayN);
+  const busiest = daily.reduce((b, v, i) => (v != null && v > (daily[b] ?? 0) ? i : b), -1);
   const b = budgets();
   const cats = Object.keys(CATEGORIES).filter(k => Number(b[k]) > 0 || spentIn(s.list, k) > 0);
+  const topCat = Math.max(0, ...cats.map(k => spentIn(s.list, k)));
   const upcoming = bills().filter(x => x.next <= addDays(dayKey(), 14));
+  const headline = hasBudget
+    ? `<div class="label-sm">${s.left >= 0 ? 'Left to spend' : 'Over budget'}</div><div class="big-xl">${money(Math.abs(s.left), false)}<small>of ${money(s.budgetTotal, false)}</small></div>`
+    : `<div class="label-sm">Spent this month</div><div class="big-xl">${money(s.spent, false)}<small>no budget set</small></div>`;
+  const tag = hasBudget
+    ? `<span class="tag ${onTrack ? 'ok' : 'hot'}">${onTrack ? 'On track' : 'Spending fast'}</span>`
+    : `<button class="pill-btn" data-act="sheet" data-sheet="budgets">${icon('plus')} Set a budget</button>`;
   return `
   ${monthNav(m)}
   <section class="card glass">
-    <div class="money-top"><div><div class="label-sm">${s.left >= 0 ? 'Left to spend' : 'Over budget'}</div><div class="big-xl">${money(Math.abs(s.left), false)}<small>of ${money(s.budgetTotal, false)}</small></div></div>
-      <span class="tag ${onTrack ? 'ok' : 'hot'}">${onTrack ? 'On track' : 'Spending fast'}</span></div>
-    ${lineChart({ series: [{ values: pace, color: 'var(--text)', dash: true, straight: true }, { values: cum, color: 'var(--money)' }], labels: Array.from({ length: n }, (_, i) => (i === 0 ? '1' : (i + 1) % 7 === 1 ? String(i + 1) : i === n - 1 ? String(n) : '')), live: isNow, max: Math.max(s.budgetTotal, run) * 1.05 || 100, empty: 'No spending yet' })}
-    <div class="legend-inline"><span><i class="dot" style="background:var(--money)"></i>Spent ${money(s.spent, false)}</span><span><i class="dot" style="background:rgba(0,0,0,.25)"></i>Budget pace</span></div>
+    <div class="money-top"><div>${headline}</div>${tag}</div>
+    ${lineChart({
+      series: [
+        ...(pace ? [{ values: pace, color: 'var(--text)', dash: true, straight: true }] : []),
+        // Cumulative money only ever goes up: straight segments, never a curve that
+        // smooths past the real total between two days.
+        { values: cum, color: 'var(--money)', straight: true, fill: true },
+      ],
+      labels: Array.from({ length: n }, (_, i) => (i === 0 ? '1' : (i + 1) % 7 === 1 ? String(i + 1) : i === n - 1 ? String(n) : '')),
+      live: isNow, max: top || 100, yAxis: v => money(v, false),
+      empty: 'No spending yet this month',
+    })}
+    <div class="legend-inline"><span><i class="dot" style="background:var(--money)"></i>Spent ${money(s.spent, false)}</span>${hasBudget ? `<span><i class="dot dash-dot"></i>Budget pace ${money(pace[todayN - 1], false)}</span>` : ''}</div>
+    ${run ? `${barRow({ values: daily, color: 'var(--money)', now: isNow ? todayN - 1 : -1, titles: daily.map((v, i) => (v == null ? '' : `${shortDate(`${m}-${String(i + 1).padStart(2, '0')}`)}: ${money(v)}`)) })}
+    <p class="note" style="margin:6px 0 0">Each bar is one day${busiest >= 0 && daily[busiest] ? ` · biggest ${money(daily[busiest], false)} on ${shortDate(`${m}-${String(busiest + 1).padStart(2, '0')}`)}` : ''}</p>` : ''}
+    <p class="note" style="margin:8px 0 0">${money(perDay, false)}/day so far${isNow ? ` · on pace for ${money(projected, false)}` : ''}${hasBudget && isNow ? (s.left > 0 ? ` · ${money(s.left / Math.max(1, daysLeft || 1), false)}/day left` : ` · ${money(-s.left, false)} over`) : ''}</p>
     <div class="flow">
       <div style="background:var(--diet-bg)"><div class="k" style="color:var(--diet-ink)">Income</div><div class="n">${money(s.income, false)}</div></div>
       <div style="background:var(--move-bg)"><div class="k" style="color:var(--move-ink)">Spent</div><div class="n">${money(s.spent, false)}</div></div>
-      <div style="background:var(--sleep-bg)"><div class="k" style="color:var(--sleep-ink)">Saved</div><div class="n">${money(s.income - s.spent, false)}</div></div>
+      <div style="background:var(--sleep-bg)"><div class="k" style="color:var(--sleep-ink)">${s.income - s.spent >= 0 ? 'Saved' : 'Shortfall'}</div><div class="n">${money(s.income - s.spent, false)}</div></div>
     </div>
   </section>
   <div class="row2"><button class="btn soft" data-act="sheet" data-sheet="txn" data-kind="expense">${icon('card')} Expense</button><button class="btn soft" data-act="sheet" data-sheet="txn" data-kind="income">${icon('coins')} Income</button></div>
@@ -122,10 +152,13 @@ function moneyOverview(m) {
   <section class="card glass"><div class="budget">${cats.map(k => {
     const spent = spentIn(s.list, k), cap = Number(b[k]) || 0, c = CATEGORIES[k];
     const over = cap && spent > cap;
+    // Without a cap there's nothing to fill, so the bar compares the category
+    // against the one you spent most on rather than pretending to be full.
+    const width = cap ? Math.min(100, (spent / cap) * 100) : topCat ? (spent / topCat) * 100 : 0;
     return `<div class="bud">${tile(c.icon, c.area)}<div class="bud-main">
       <div class="top"><span class="name">${c.label}</span><span class="nums ${over ? 'late' : ''}"><b>${money(spent, false)}</b>${cap ? ` / ${money(cap, false)}` : ''}</span></div>
-      <div class="track"><div class="fill" style="width:${cap ? Math.min(100, (spent / cap) * 100) : spent ? 100 : 0}%;background:var(--${over ? 'move' : c.area})"></div></div>
-      ${cap ? `<div class="left ${over ? 'late' : ''}">${over ? `${money(spent - cap, false)} over` : `${money(cap - spent, false)} left`}</div>` : ''}</div></div>`;
+      <div class="track"><div class="fill${cap ? '' : ' soft'}" style="width:${width.toFixed(1)}%;background:var(--${over ? 'move' : c.area})"></div></div>
+      ${cap ? `<div class="left ${over ? 'late' : ''}">${over ? `${money(spent - cap, false)} over` : `${money(cap - spent, false)} left`}</div>` : `<div class="left">${s.spent ? `${Math.round((spent / s.spent) * 100)}% of this month` : 'no budget set'}</div>`}</div></div>`;
   }).join('') || '<div class="empty">Set budgets to track each category.</div>'}</div></section>
   ${upcoming.length ? `<div class="section-label">Bills due soon <a data-act="moneyTab" data-tab="bills">All</a></div><section class="card glass"><div class="list">${upcoming.map(billRow).join('')}</div></section>` : ''}
   ${s.list.length ? `<div class="section-label">Recent <a data-act="moneyTab" data-tab="activity">All</a></div><section class="card glass"><div class="list">${s.list.slice(0, 5).map(txnRow).join('')}</div></section>` : ''}`;
@@ -190,10 +223,11 @@ todaySections.push({
     const s = monthSummary();
     const due = bills().filter(x => x.next <= addDays(dayKey(), 3));
     if (!s.list.length && !due.length && !state.kv.budgets) return '';
+    const capped = s.budgetTotal > 0;
     return `<section class="card glass money-card tap" data-act="nav" data-to="money">${tile('wallet', 'money', 'lg')}
-      <div class="grow"><div class="label-sm">Money · ${toDate(dayKey()).toLocaleDateString('en-AU', { month: 'long' })}</div><div class="t">${money(Math.abs(s.left), false)} ${s.left >= 0 ? 'left' : 'over budget'}</div>
-      <div class="d">${due.length ? `${due.map(x => esc(x.name)).join(', ')} due soon` : `Spent ${money(s.spent, false)} of ${money(s.budgetTotal, false)}`}</div></div>
-      <div class="mini-track"><i style="height:${s.budgetTotal ? Math.min(100, (s.spent / s.budgetTotal) * 100) : 0}%"></i></div></section>`;
+      <div class="grow"><div class="label-sm">Money · ${toDate(dayKey()).toLocaleDateString('en-AU', { month: 'long' })}</div><div class="t">${capped ? `${money(Math.abs(s.left), false)} ${s.left >= 0 ? 'left' : 'over budget'}` : `${money(s.spent, false)} spent`}</div>
+      <div class="d">${due.length ? `${due.map(x => esc(x.name)).join(', ')} due soon` : capped ? `Spent ${money(s.spent, false)} of ${money(s.budgetTotal, false)}` : 'No budget set yet'}</div></div>
+      <div class="mini-track"><i style="height:${capped ? Math.min(100, (s.spent / s.budgetTotal) * 100) : 0}%"></i></div></section>`;
   },
 });
 

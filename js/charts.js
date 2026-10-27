@@ -28,12 +28,23 @@ function segments(points) {
   return out;
 }
 
+// Round a maximum up to a readable number, so the top gridline is worth printing
+// (A$600, not A$551.20). The steps are close together on purpose: jumping 550 up to
+// 1000 would leave the line crawling along the bottom of its own chart.
+const STEPS = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+export function niceMax(v) {
+  if (!(v > 0)) return 0;
+  const mag = 10 ** Math.floor(Math.log10(v));
+  return STEPS.find(r => v / mag <= r + 1e-9) * mag;
+}
+
 /**
- * series: [{ values: (number|null)[], color, dash?, straight? }]
+ * series: [{ values: (number|null)[], color, dash?, straight?, fill? }]
  * labels: string[] (same length as values; '' to hide)
  * goal: optional value drawn as a dashed line
+ * yAxis: optional v => string, printed against the top and middle gridlines
  */
-export function lineChart({ series, labels, min = 0, max, goal, empty = 'No data yet', live = false }) {
+export function lineChart({ series, labels, min = 0, max, goal, empty = 'No data yet', live = false, yAxis }) {
   const n = labels.length;
   const all = series.flatMap(s => s.values).filter(v => v != null);
   if (!all.length) return `<div class="empty">${empty}</div>`;
@@ -41,13 +52,16 @@ export function lineChart({ series, labels, min = 0, max, goal, empty = 'No data
   const x = i => (n === 1 ? W / 2 : PAD + (i * (W - PAD * 2)) / (n - 1));
   const y = v => PAD + (1 - (Math.min(Math.max(v, min), hi) - min) / (hi - min || 1)) * (H - PAD * 2);
 
-  let svg = [PAD, H / 2, H - PAD].map(gy => `<line class="grid-line" x1="0" x2="${W}" y1="${gy}" y2="${gy}"/>`).join('');
-  if (goal != null) svg += `<line class="goal-line" x1="0" x2="${W}" y1="${y(goal)}" y2="${y(goal)}"/>`;
-  let dots = '';
+  const grid = [PAD, H / 2, H - PAD].map(gy => `<line class="grid-line" x1="0" x2="${W}" y1="${gy}" y2="${gy}"/>`).join('')
+    + (goal != null ? `<line class="goal-line" x1="0" x2="${W}" y1="${y(goal)}" y2="${y(goal)}"/>` : '');
+  let areas = '', lines = '', dots = '';
   series.forEach(s => {
     const pts = s.values.map((v, i) => (v == null ? null : [x(i), y(v)]));
     segments(pts).forEach(seg => {
-      if (seg.length > 1) svg += `<path class="ln${s.dash ? ' dash' : ''}" stroke="${s.color}" d="${s.straight ? `M${seg.join('L')}` : smoothPath(seg)}"/>`;
+      if (seg.length < 2) return;
+      const d = s.straight ? `M${seg.join('L')}` : smoothPath(seg);
+      if (s.fill) areas += `<path class="ln-fill" fill="${s.color}" d="${d}L${seg.at(-1)[0]},${H - PAD}L${seg[0][0]},${H - PAD}Z"/>`;
+      lines += `<path class="ln${s.dash ? ' dash' : ''}" stroke="${s.color}" d="${d}"/>`;
     });
     // Dot on the latest value (and on any lone point so it's still visible).
     // With `live`, today's point is hollow: the day isn't finished yet.
@@ -59,8 +73,23 @@ export function lineChart({ series, labels, min = 0, max, goal, empty = 'No data
     });
   });
 
-  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${svg}</svg>${dots}</div>
+  const axis = yAxis ? `<span class="chart-y top">${yAxis(hi)}</span><span class="chart-y mid">${yAxis(min + (hi - min) / 2)}</span>` : '';
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${grid}${areas}${lines}</svg>${dots}${axis}</div>
     <div class="chart-days">${labels.map(l => `<span>${l}</span>`).join('')}</div>`;
+}
+
+/**
+ * A strip of one bar per day, on its own scale: the line above says how the month
+ * adds up, these say what each single day actually cost.
+ * values: (number|null)[] — null for days that haven't happened yet.
+ */
+export function barRow({ values, color, max, now = -1, titles = [] }) {
+  const hi = max ?? Math.max(0, ...values.filter(v => v != null));
+  if (!hi) return '';
+  return `<div class="bars">${values.map((v, i) => {
+    const h = v ? Math.max(9, (v / hi) * 100) : 0;
+    return `<i class="bar${i === now ? ' on' : ''}" style="--h:${h.toFixed(1)}%;--c:${color}"${titles[i] ? ` title="${titles[i]}"` : ''}></i>`;
+  }).join('')}</div>`;
 }
 
 export function sparkline(values, color) {
