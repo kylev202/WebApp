@@ -6,6 +6,7 @@ import { screens, sheets, actions, forms, previews, afterRender, ui, go, render,
 import { lineChart, sparkline } from './charts.js';
 import { of, byId, habits, habitDone } from './data.js';
 import { EXERCISES, MUSCLES, TEMPLATES, PLATES, PLATE_COLORS } from './gym-data.js';
+import { burst } from './fx.js';
 
 // ---------- data ----------
 export const allExercises = () => [...EXERCISES, ...(state.kv.customExercises ?? [])];
@@ -452,6 +453,7 @@ Object.assign(actions, {
       if (s.kg === '') s.kg = String(kg);
       if (s.reps === '') s.reps = String(reps);
       s.done = true;
+      burst(el, { color: 'var(--diet)' });
       aw.restTotal = gymSettings().rest * 1000;
       aw.restEnd = Date.now() + aw.restTotal;
       const best = bestBefore(x.exId, aw.start);
@@ -465,7 +467,7 @@ Object.assign(actions, {
     }
     haptic();
     await saveActive(aw, true);
-    ui.pulse = null;
+    ui.pulse = s.done ? `.set-check[data-ex="${el.dataset.ex}"][data-set="${el.dataset.set}"]` : null;
     render();
   },
   async addSet(el) {

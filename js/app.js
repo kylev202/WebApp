@@ -60,7 +60,7 @@ document.addEventListener('keydown', e => {
 // Compact blurred title bar once the large title scrolls away.
 const topbar = document.getElementById('topbar');
 window.addEventListener('scroll', () => topbar.classList.toggle('show', window.scrollY > 48), { passive: true });
-window.addEventListener('resize', moveTabIndicator);
+window.addEventListener('resize', () => moveTabIndicator(true));
 
 function route() {
   ui.route = location.hash.slice(1) || 'today';

@@ -27,8 +27,8 @@ function cardHtml(m, c, i) {
 
 function messageHtml(m, prev) {
   const sep = !prev || prev.ts < m.ts - 30 * 60000 ? `<div class="day-sep">${dayLabel(dayKey(new Date(m.ts)))} ${timeOf(m.ts)}</div>` : '';
-  if (m.role === 'user') return `${sep}<div class="msg-me">${m.photo ? `<span class="photo-tag">${icon('camera')}Photo</span>` : ''}${esc(m.text)}</div>`;
-  return `${sep}<div class="msg-ai">${tile('sparkle', 'sleep')}<div class="bubble glass ${m.error ? 'err' : ''}">${m.text ? `<p>${format(m.text)}</p>` : ''}${(m.cards ?? []).map((c, i) => cardHtml(m, c, i)).join('')}</div></div>`;
+  if (m.role === 'user') return `${sep}<div class="msg-me" data-mid="${m.id}">${m.photo ? `<span class="photo-tag">${icon('camera')}Photo</span>` : ''}${esc(m.text)}</div>`;
+  return `${sep}<div class="msg-ai" data-mid="${m.id}">${tile('sparkle', 'sleep')}<div class="bubble glass ${m.error ? 'err' : ''}">${m.text ? `<p>${format(m.text)}</p>` : ''}${(m.cards ?? []).map((c, i) => cardHtml(m, c, i)).join('')}</div></div>`;
 }
 
 // Light formatting: **bold**, line breaks and "- " bullets.
@@ -44,7 +44,7 @@ function renderAsk() {
         <p class="note center">Tell me what you ate, lifted, spent or need to do. I'll log it and keep you on track.</p>
         <div class="suggest">${SUGGESTIONS.map(([ic, area, text]) => `<button class="sugg" data-act="askSend" data-q="${esc(text)}">${tile(ic, area)}<span>${esc(text)}</span></button>`).join('')}</div>
       </section>`}
-    ${busy ? `<div class="msg-ai">${tile('sparkle', 'sleep')}<div class="bubble glass typing"><i></i><i></i><i></i></div></div>` : ''}
+    ${busy ? `<div class="msg-ai" data-mid="typing">${tile('sparkle', 'sleep')}<div class="bubble glass typing"><i></i><i></i><i></i></div></div>` : ''}
   </div>
   <form class="composer" data-form="ask">
     <div class="quick">${CHIPS.map(([ic, label, fill]) => `<button type="button" class="qchip" data-act="${fill == null ? 'quick' : 'askFill'}" data-q="${esc(fill ?? '')}">${icon(ic)}${label}</button>`).join('')}</div>
@@ -77,6 +77,23 @@ screens.ask = renderAsk;
 afterRender.push(route => {
   if (route !== 'ask') return;
   window.scrollTo(0, document.documentElement.scrollHeight);
+});
+
+// The chat redraws whole on every render. Only messages that weren't on screen
+// last time inflate like bubbles; opening Ask shows the history without a pop each.
+const shown = new Set();
+let lastRoute = null;
+afterRender.push(route => {
+  const fresh = route === 'ask' && lastRoute === 'ask';
+  lastRoute = route;
+  if (route !== 'ask') return;
+  const msgs = document.querySelectorAll('.chat [data-mid]');
+  if (![...msgs].some(m => m.dataset.mid === 'typing')) shown.delete('typing');
+  msgs.forEach(m => {
+    if (shown.has(m.dataset.mid)) return;
+    shown.add(m.dataset.mid);
+    if (fresh) m.classList.add('fx-new');
+  });
 });
 
 // ---------- talking to Gemini ----------

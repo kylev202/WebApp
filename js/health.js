@@ -4,6 +4,7 @@ import { esc, dayKey, lastDays, toDate, shortDate, longDate, dayLabel, fmt, fmtH
 import { icon, tile } from './icons.js';
 import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sheetForm, dateField, readDate } from './core.js';
 import { lineChart } from './charts.js';
+import { burst, fizz } from './fx.js';
 import { goals, of, byId, kcalOn, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, sleepHours, recentMeals } from './data.js';
 import { gymTab } from './gym.js';
 
@@ -227,10 +228,13 @@ export async function deleteWithUndo(id) {
   toast(`${what} deleted`, { icon: 'trash', action: { label: 'Undo', run: async () => { await putEntry(entry); render(); } } });
 }
 
-export async function setWater(target) {
+// from: the button that was tapped, so a glass added fizzes out of it.
+export async function setWater(target, from) {
   const t = dayKey();
   let current = waterOn(t);
   target = Math.max(0, target);
+  const was = current;
+  if (target > was) burst(from, { color: 'var(--work)', count: 8 + 2 * Math.min(4, target - was) });
   while (current < target) { await addEntry('water', { amount: 1 }, t); current++; }
   while (current > target) {
     const last = of('water', t).at(-1);
@@ -239,19 +243,23 @@ export async function setWater(target) {
     current--;
   }
   haptic();
-  ui.pulse = '[data-pulse="water"]';
+  // The number wobbles and each glass just filled sloshes up from the bottom.
+  ui.pulse = ['[data-pulse="water"]', ...Array.from({ length: Math.max(0, target - was) }, (_, i) => `.drop[data-n="${was + i + 1}"]`)].join(', ');
   render();
-  if (target === goals().water) toast('Water goal reached', { icon: 'drop' });
+  if (target === goals().water) {
+    toast('Water goal reached', { icon: 'drop' });
+    if (target > was) fizz({ color: ['var(--work)', 'var(--money)', 'var(--sleep)'] });
+  }
 }
 
 Object.assign(actions, {
   async water(el) {
-    await setWater(waterOn(dayKey()) + Number(el.dataset.n));
+    await setWater(waterOn(dayKey()) + Number(el.dataset.n), el);
     if (el.dataset.close) { closeSheet(); toast('+1 glass of water', { icon: 'drop' }); }
   },
   waterSet: el => {
     const n = Number(el.dataset.n);
-    return setWater(n === waterOn(dayKey()) ? n - 1 : n);
+    return setWater(n === waterOn(dayKey()) ? n - 1 : n, el);
   },
   del: el => deleteWithUndo(el.dataset.id),
   async delFromSheet(el) {
