@@ -85,9 +85,9 @@ export function streak(test) {
   return n;
 }
 
-// Weight trend over the last 4 weeks (least squares), in kg per week.
-export function weeklyRate() {
-  const ws = weights().filter(w => w.date >= addDays(dayKey(), -28));
+// Weight trend over the 4 weeks up to `end` (least squares), in kg per week.
+export function weeklyRate(end = dayKey()) {
+  const ws = weights().filter(w => w.date >= addDays(end, -28) && w.date <= end);
   if (ws.length < 2) return null;
   const xs = ws.map(w => (toDate(w.date) - toDate(ws[0].date)) / 864e5);
   if (xs.at(-1) < 6) return null;
@@ -102,6 +102,14 @@ export function bulkStatus(rate, kg) {
   if (rate < lo) return { text: 'Gaining slowly: eat a little more', color: 'var(--school-ink)' };
   if (rate > hi) return { text: 'Faster than a lean bulk', color: 'var(--move-ink)' };
   return { text: 'On track for a lean bulk', color: 'var(--diet-ink)' };
+}
+
+// Mifflin–St Jeor resting energy, times activity: what a day costs before any surplus.
+export function maintenanceKcal({ sex, age, height, activity }, weight) {
+  const factor = Number(activity);
+  if (!(age > 10 && height > 100 && weight > 30 && factor > 1)) return null;
+  const bmr = 10 * weight + 6.25 * height - 5 * age + (sex === 'female' ? -161 : 5);
+  return bmr * factor;
 }
 
 // Bulking split: protein from goals, fat ~25% of calories, carbs fill the rest.
