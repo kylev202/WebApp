@@ -35,6 +35,7 @@ export const dayLabel = key => {
   if (key === addDays(today, 1)) return 'Tomorrow';
   return toDate(key).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
 };
+export const longDate = (d = new Date()) => d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' });
 export const shortDate = key => toDate(key).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
 export const monthName = key => toDate(key).toLocaleDateString('en-AU', { month: 'long' });
 export const weekday = key => toDate(key).toLocaleDateString('en-AU', { weekday: 'short' });

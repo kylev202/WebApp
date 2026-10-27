@@ -2,7 +2,7 @@
 import { state, openStore } from './store.js';
 import { dayKey } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, actions, forms, previews, ui, render, openSheet, closeSheet, go, header, haptic, moveTabIndicator } from './core.js';
+import { screens, actions, forms, previews, ui, render, openSheet, closeSheet, go, header, haptic, moveTabIndicator, reduceMotion } from './core.js';
 import './health.js';
 import './gym.js';
 import './today.js';
@@ -22,7 +22,11 @@ screens.plan ??= soon('Plan', 'calendar', 'school', 'Your calendar, uni units, c
 screens.money ??= soon('Money', 'wallet', 'money', 'Budgets, spending, income, bills and savings goals arrive in a later version.');
 
 Object.assign(actions, {
-  nav: el => go(el.dataset.to),
+  // Tapping the tab you're already on scrolls back to the top, like iOS.
+  nav: el => {
+    if (el.dataset.to !== ui.route) return go(el.dataset.to);
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+  },
   quick: () => { haptic(); openSheet('quick'); },
   sheet: el => openSheet(el.dataset.sheet, { ...el.dataset }),
   close: () => closeSheet(),
@@ -39,6 +43,14 @@ document.addEventListener('submit', e => {
   if (!f) return;
   e.preventDefault();
   forms[f.dataset.form]?.(new FormData(f), f);
+});
+// Keyboard: Escape closes a sheet; Enter or Space taps a card or row that isn't a real button.
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && ui.sheet) { closeSheet(); return; }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-act][role="button"]:not(button)')) {
+    e.preventDefault();
+    e.target.click();
+  }
 });
 ['input', 'change'].forEach(type => document.addEventListener(type, e => {
   const f = e.target.closest?.('form[data-form]');

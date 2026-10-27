@@ -2,21 +2,22 @@
 [hidden] { display: none !important; }
 :root {
   --text: #2c2c2e;
-  --text-2: rgba(44,44,46,.6);
-  --text-3: rgba(44,44,46,.38);
+  /* Secondary text and inks are tuned to WCAG AA (4.5:1) on their backgrounds; tertiary text to 3:1. */
+  --text-2: rgba(44,44,46,.66);
+  --text-3: rgba(44,44,46,.52);
   --glass: rgba(255,255,255,.62);
   --stroke: rgba(255,255,255,.85);
-  --diet: #8fd3a8;   --diet-bg: #eaf7ef;   --diet-ink: #3f8f5e;
-  --move: #f4a7b5;   --move-bg: #fdeef1;   --move-ink: #b9576b;
+  --diet: #8fd3a8;   --diet-bg: #eaf7ef;   --diet-ink: #367b51;
+  --move: #f4a7b5;   --move-bg: #fdeef1;   --move-ink: #aa5062;
   --sleep: #b4b2ef;  --sleep-bg: #efeefc;  --sleep-ink: #6462b8;
-  --school: #f7cd96; --school-bg: #fdf4e8; --school-ink: #b07a2e;
-  --work: #a9cdf2;   --work-bg: #ecf4fd;   --work-ink: #4a7fb5;
-  --money: #93d8d3;  --money-bg: #e8f7f6;  --money-ink: #2f8a83;
+  --school: #f7cd96; --school-bg: #fdf4e8; --school-ink: #946627;
+  --work: #a9cdf2;   --work-bg: #ecf4fd;   --work-ink: #4271a1;
+  --money: #93d8d3;  --money-bg: #e8f7f6;  --money-ink: #297973;
   --radius: 22px;
   color-scheme: light;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; /* no double-tap zoom when tapping + quickly */ }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
   color: var(--text);
@@ -856,3 +857,49 @@ textarea.input-x { font: inherit; resize: vertical; line-height: 1.45; }
 .trend { margin: 4px 0 0; padding-left: 16px; }
 .tag.plain { text-transform: none; }
 .trend li { font-size: 12px; color: var(--text-2); line-height: 1.5; margin-top: 3px; }
+
+/* ---------- v4.6: UX polish ---------- */
+/* Feel native: no text selection or callout on long-press, and every control responds to a press. */
+button, [data-act], .tab, .pk > span { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.pill-btn, .chip-btn, .x-btn, .icon-btn, .qchip, .cal-today, .toast-act, .undo, .cbtn, .set-check { transition: transform .15s, opacity .15s, background .2s; }
+.pill-btn:active, .chip-btn:active, .x-btn:active, .icon-btn:active, .qchip:active, .cal-today:active, .toast-act:active, .undo:active, .cbtn:active { transform: scale(.92); }
+.sugg:active, .menu-row:active, .pick-row:active, .tpl:active { transform: scale(.98); }
+.sugg, .menu-row, .pick-row { transition: transform .15s; }
+.section-label a:active, button.sub-note:active, .tab:active { opacity: .55; }
+
+/* Bigger tap areas without changing the look: small buttons reach ~44px, links get padding. */
+.x-btn { position: relative; }
+.x-btn::after { content: ""; position: absolute; inset: -9px; }
+.cal-nav .x-btn::after, .r-move .x-btn::after { inset: -9px -2px; } /* neighbours sit close; don't steal each other's taps */
+.section-label a { padding: 10px 6px; margin: -10px -6px; }
+button.sub-note { padding: 8px 6px; margin: -8px -6px; }
+.cal-today { padding: 7px 12px; }
+
+/* Water: drops and −/+ big enough to hit with a thumb */
+.drop { height: 20px; border-radius: 6px; }
+.mini { height: 36px; border-radius: 12px; }
+
+/* Habits line up in even columns however many there are */
+.habits { display: grid; grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap: 10px 6px; }
+.habit { min-width: 0; font-size: 11px; text-align: center; line-height: 1.2; }
+
+/* Slightly larger small print */
+.tab { font-size: 10px; }
+.sub-note { font-size: 11px; }
+.tag { font-size: 10.5px; }
+.tag.ok { background: var(--diet-bg); color: var(--diet-ink); }
+
+/* Keyboard focus is visible (inputs keep their own focus ring) */
+:focus-visible { outline: 2px solid var(--sleep-ink); outline-offset: 2px; border-radius: 10px; }
+.input-x:focus-visible, .set-in:focus-visible, .r-num:focus-visible, .input-bar input:focus-visible, .amount-box input:focus-visible { outline: none; }
+
+/* The page behind an open sheet stays put */
+body.sheet-open { overflow: hidden; }
+
+/* Long toasts shorten instead of running off the screen */
+.toast { max-width: calc(100% - 32px); }
+.toast-msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.toast-i, .toast-act { flex: none; }
+
+/* Ask: Send looks idle until there's something to send */
+.composer:not(:has(.photo-preview)) .input-bar:has(#ask-q:placeholder-shown) .cbtn.send { opacity: .3; }

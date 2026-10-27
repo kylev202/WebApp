@@ -108,7 +108,7 @@ function moneyOverview(m) {
   ${monthNav(m)}
   <section class="card glass">
     <div class="money-top"><div><div class="label-sm">${s.left >= 0 ? 'Left to spend' : 'Over budget'}</div><div class="big-xl">${money(Math.abs(s.left), false)}<small>of ${money(s.budgetTotal, false)}</small></div></div>
-      <span class="tag ${onTrack ? 'st-paid' : 'hot'}">${onTrack ? 'On track' : 'Spending fast'}</span></div>
+      <span class="tag ${onTrack ? 'ok' : 'hot'}">${onTrack ? 'On track' : 'Spending fast'}</span></div>
     ${lineChart({ series: [{ values: pace, color: 'var(--text)', dash: true, straight: true }, { values: cum, color: 'var(--money)' }], labels: Array.from({ length: n }, (_, i) => (i === 0 ? '1' : (i + 1) % 7 === 1 ? String(i + 1) : i === n - 1 ? String(n) : '')), live: isNow, max: Math.max(s.budgetTotal, run) * 1.05 || 100, empty: 'No spending yet' })}
     <div class="legend-inline"><span><i class="dot" style="background:var(--money)"></i>Spent ${money(s.spent, false)}</span><span><i class="dot" style="background:rgba(0,0,0,.25)"></i>Budget pace</span></div>
     <div class="flow">

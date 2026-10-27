@@ -34,6 +34,8 @@ The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups a
 
 - **Coaching (new):** a **morning briefing** on Today (sleep, classes, shifts, deadlines, today's lift target, bulk targets, bills), an **evening review** (today's wins plus your top 3 for tomorrow, saved as tasks), and a **week in review** report every Sunday. With the AI connected, the briefing and reviews are written by Gemini (once per day/week, to save the free tier). **17 badges** for training, nutrition, sleep, money and uni. A **reminders guide** for iPhone Shortcuts notifications.
 
+- **Polish:** Today puts today's numbers and habits first and the weekly chart lower down; bigger tap targets (close/delete buttons, water, section links); clearer text and tag colours (WCAG AA); press feedback and no double-tap zoom; tap the active tab to scroll to top; the page behind a sheet no longer scrolls; keyboard and VoiceOver can reach every card.
+
 The app icon is drawn by [`design/icon.html`](design/icon.html): an infinity "loop" ribbon flowing through each life area's colour.
 
 ## Run it locally

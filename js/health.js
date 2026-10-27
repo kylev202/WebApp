@@ -1,6 +1,6 @@
 // Health: diet, sleep and body tabs (gym lives in gym.js), plus their logging sheets.
 import { state, addEntry, updateEntry, putEntry, removeEntry, setKV } from './store.js';
-import { esc, dayKey, lastDays, toDate, shortDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num } from './util.js';
+import { esc, dayKey, lastDays, toDate, shortDate, longDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sheetForm, dateField, readDate } from './core.js';
 import { lineChart } from './charts.js';
@@ -20,7 +20,7 @@ export function mealRow(m) {
 function renderHealth() {
   const tab = ui.tab.health ?? 'gym';
   const body = { gym: gymTab, diet: healthDiet, sleep: healthSleep, body: healthBody }[tab]();
-  return `${header('Health', 'Gym · Diet · Sleep · Body')}${seg('health', [['gym', 'Gym'], ['diet', 'Diet'], ['sleep', 'Sleep'], ['body', 'Body']], tab)}${body}`;
+  return `${header('Health', longDate())}${seg('health', [['gym', 'Gym'], ['diet', 'Diet'], ['sleep', 'Sleep'], ['body', 'Body']], tab)}${body}`;
 }
 screens.health = renderHealth;
 

@@ -45,8 +45,13 @@ export function render({ enter = false } = {}) {
     html = brokenScreen(route, err);
   }
   main.innerHTML = `<div class="screen">${html}</div>`;
+  makeFocusable(main);
   document.body.classList.toggle('fullscreen', FULLSCREEN.has(route));
-  document.querySelectorAll('.tab[data-to]').forEach(t => t.classList.toggle('active', t.dataset.to === route));
+  document.querySelectorAll('.tab[data-to]').forEach(t => {
+    t.classList.toggle('active', t.dataset.to === route);
+    if (t.dataset.to === route) t.setAttribute('aria-current', 'page');
+    else t.removeAttribute('aria-current');
+  });
   document.getElementById('topbar-title').textContent = TITLES[route] ?? '';
   moveTabIndicator();
   if (ui.pulse) {
@@ -55,6 +60,15 @@ export function render({ enter = false } = {}) {
   }
   // An after-render hook that throws must not take the screen down with it.
   afterRender.forEach(fn => { try { fn(route); } catch (err) { console.error('Loop: after-render hook failed', err); } });
+}
+
+// Tappable cards and rows are divs; give them a button role and a tab stop so
+// VoiceOver and a keyboard can reach them (app.js turns Enter/Space into a tap).
+function makeFocusable(root) {
+  root.querySelectorAll('[data-act]:not(button, a[href], input, select, textarea, label, .sheet-bg)').forEach(el => {
+    el.tabIndex = 0;
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+  });
 }
 
 // Liquid pill that slides under the active tab.
@@ -75,7 +89,19 @@ export function openSheet(name, params = {}) {
   sheetEl.innerHTML = `<div class="sheet-wrap"><div class="sheet-bg" data-act="close"></div><div class="sheet glass" role="dialog" aria-modal="true"><div class="grabber"></div>${sheets[name](params)}</div></div>`;
   const form = sheetEl.querySelector('form[data-form]');
   if (form) previews[form.dataset.form]?.(form);
-  enableSheetDrag(sheetEl.querySelector('.sheet'));
+  const sheet = sheetEl.querySelector('.sheet');
+  labelSheet(sheet);
+  makeFocusable(sheet);
+  enableSheetDrag(sheet);
+  document.body.classList.add('sheet-open');
+}
+
+// Screen readers announce the sheet by its title.
+function labelSheet(sheet) {
+  const h2 = sheet.querySelector('h2');
+  if (!h2) return;
+  h2.id = 'sheet-title';
+  sheet.setAttribute('aria-labelledby', 'sheet-title');
 }
 
 // Re-draw the open sheet in place (after an action inside it).
@@ -84,6 +110,8 @@ export function refreshSheet() {
   if (!ui.sheet || !body) return;
   const scroll = body.scrollTop;
   body.innerHTML = `<div class="grabber"></div>${sheets[ui.sheet](ui.params)}`;
+  labelSheet(body);
+  makeFocusable(body);
   body.scrollTop = scroll;
 }
 
@@ -91,6 +119,7 @@ export function closeSheet(immediate = false) {
   if (!ui.sheet) return;
   if (ui.sheet === 'welcome') setKV('onboarded', true);
   ui.sheet = null;
+  document.body.classList.remove('sheet-open');
   const wrap = sheetEl.firstElementChild;
   if (!wrap || immediate || reduceMotion) { sheetEl.innerHTML = ''; return; }
   wrap.classList.add('closing');
@@ -143,7 +172,7 @@ export function haptic() {
 
 let toastRun = null, toastTimer = null;
 export function toast(msg, { icon: ic = 'check', action, ms } = {}) {
-  toastEl.innerHTML = `<span class="toast-i">${icon(ic)}</span><span>${esc(msg)}</span>${action ? `<button class="toast-act" data-act="toastAction">${esc(action.label)}</button>` : ''}`;
+  toastEl.innerHTML = `<span class="toast-i">${icon(ic)}</span><span class="toast-msg">${esc(msg)}</span>${action ? `<button class="toast-act" data-act="toastAction">${esc(action.label)}</button>` : ''}`;
   toastEl.classList.toggle('has-action', !!action);
   toastRun = action?.run ?? null;
   toastEl.classList.add('show');
