@@ -56,6 +56,63 @@ function nextDate(date, cycle) {
   return dayKey(target);
 }
 
+// ---------- balances ----------
+// Spending accounts you tap a card against, and the ones you don't.
+export const SPEND_ACCOUNTS = ['westpac', 'revolut', 'cash'];
+export const CARD_ACCOUNTS = ['westpac', 'revolut'];
+
+// What every logged transaction has done to each account since the day you started
+// logging. Income lands, expenses leave, a transfer does both.
+export function movements() {
+  const out = Object.fromEntries(Object.keys(ACCOUNTS).map(k => [k, 0]));
+  for (const t of of('txn')) {
+    const amt = Number(t.amount) || 0;
+    const from = t.account ?? 'westpac';
+    out[from] = (out[from] ?? 0) + (t.kind === 'income' ? amt : -amt);
+    if (t.kind === 'transfer' && t.toAccount) out[t.toAccount] = (out[t.toAccount] ?? 0) + amt;
+  }
+  return out;
+}
+
+// Transactions can't know what was in an account before Loop did, so each account
+// carries an opening figure. The sheet asks what's in there right now and stores the
+// difference, which means the balances stay right as you keep logging.
+export function balances() {
+  const open = state.kv.balances ?? {};
+  const mv = movements();
+  return Object.fromEntries(Object.keys(ACCOUNTS).map(k => [k, Number(open[k] || 0) + (mv[k] ?? 0)]));
+}
+export const netWorth = () => Object.values(balances()).reduce((a, b) => a + b, 0);
+export const hasBalances = () => !!state.kv.balances;
+
+// One pass over the month instead of one per day, per category and per account:
+// the overview needs all three, and re-filtering the same list for each was the
+// slowest thing on the screen.
+export function monthStats(m = monthKey()) {
+  const n = monthDays(m);
+  const list = monthTxns(m);
+  const days = Array.from({ length: n }, () => ({ spend: 0, income: 0 }));
+  const byCat = {}, byAccount = {};
+  let spent = 0, income = 0;
+  for (const t of list) {
+    const amt = Number(t.amount) || 0;
+    const d = days[Number(t.date.slice(8, 10)) - 1];
+    if (t.kind === 'expense') {
+      spent += amt;
+      if (d) d.spend += amt;
+      byCat[t.category] = (byCat[t.category] ?? 0) + amt;
+      const a = t.account ?? 'westpac';
+      byAccount[a] = (byAccount[a] ?? 0) + amt;
+    } else if (t.kind === 'income') {
+      income += amt;
+      if (d) d.income += amt;
+    }
+  }
+  const b = budgets();
+  const budgetTotal = Object.values(b).reduce((s, v) => s + Number(v || 0), 0);
+  return { m, n, list, days, byCat, byAccount, b, spent, income, budgetTotal, left: budgetTotal - spent };
+}
+
 export function monthSummary(m = monthKey()) {
   const list = monthTxns(m);
   const b = budgets();
@@ -87,48 +144,104 @@ screens.money = renderMoney;
 
 const monthNav = m => `<div class="month-nav"><button class="x-btn" data-act="month" data-d="-1" aria-label="Previous month">${icon('back')}</button><b>${monthLabel(m)}</b><button class="x-btn" data-act="month" data-d="1" aria-label="Next month" ${m >= monthKey() ? 'disabled' : ''}>${icon('chevron')}</button></div>`;
 
+// What you have, where it sits. Spending accounts first, savings last, because
+// the first question is what's spendable.
+function balanceCard() {
+  // Before the accounts are set up all Loop knows is net movement, which is not
+  // what anyone means by "money I have" — so it asks instead of guessing.
+  if (!hasBalances()) {
+    return `<section class="card glass">
+      <div class="money-top"><div><div class="label-sm">Money you have</div><div class="big-md" style="color:var(--text-3)">Not set up yet</div></div>
+        <button class="pill-btn" data-act="sheet" data-sheet="balances">${icon('plus')} Set up</button></div>
+      <p class="note" style="margin:8px 0 0">Enter what’s in Westpac, Revolut, cash and savings once. Every expense, pay and transfer you log keeps the total current from then on.</p>
+    </section>`;
+  }
+  const bal = balances();
+  const total = Object.values(bal).reduce((a, b) => a + b, 0);
+  const spendable = SPEND_ACCOUNTS.reduce((t, k) => t + bal[k], 0);
+  return `<section class="card glass">
+    <div class="money-top"><div><div class="label-sm">Money you have</div>
+      <div class="big-xl">${money(total, false)}${bal.savings ? `<small>${money(spendable, false)} spendable</small>` : ''}</div></div>
+      <button class="pill-btn" data-act="sheet" data-sheet="balances">${icon('edit')} Update</button></div>
+    <div class="bal-grid">${[...SPEND_ACCOUNTS, 'savings'].map(k => {
+      const a = ACCOUNTS[k];
+      return `<div class="bal${bal[k] < 0 ? ' neg' : ''}">${tile(a.icon, k === 'cash' ? 'diet' : k === 'savings' ? 'sleep' : 'money')}
+        <div><div class="k">${a.label}</div><div class="n">${money(bal[k], false)}</div></div></div>`;
+    }).join('')}</div>
+    <p class="note" style="margin:8px 0 0">Carried on from the balances you entered, through everything you have logged since.</p>
+  </section>`;
+}
+
+// Card or cash: the same A$40 feels different depending on which one it left from,
+// and only one of them shows up on a statement.
+function splitCard(st) {
+  const spent = st.spent;
+  if (!spent) return '';
+  const card = CARD_ACCOUNTS.reduce((t, k) => t + (st.byAccount[k] ?? 0), 0);
+  const cash = st.byAccount.cash ?? 0;
+  const rows = Object.keys(ACCOUNTS).filter(k => st.byAccount[k]);
+  const pct = v => (v / spent) * 100;
+  return `<div class="section-label">Card vs cash</div>
+  <section class="card glass">
+    <div class="two-up">
+      <div style="background:var(--money-bg)"><div class="k" style="color:var(--money-ink)">${icon('card')} Card</div><div class="n">${money(card, false)}</div><div class="s">${Math.round(pct(card))}% of spending</div></div>
+      <div style="background:var(--diet-bg)"><div class="k" style="color:var(--diet-ink)">${icon('coins')} Cash</div><div class="n">${money(cash, false)}</div><div class="s">${Math.round(pct(cash))}% of spending</div></div>
+    </div>
+    <div class="split-bar">${rows.map(k => `<i style="width:${pct(st.byAccount[k]).toFixed(1)}%;background:var(--${k === 'cash' ? 'diet' : k === 'revolut' ? 'school' : 'money'})" title="${ACCOUNTS[k].label}"></i>`).join('')}</div>
+    <div class="list tight">${rows.map(k => `<div class="row plain">${tile(ACCOUNTS[k].icon, k === 'cash' ? 'diet' : k === 'revolut' ? 'school' : 'money')}
+      <div class="grow"><div class="t">${ACCOUNTS[k].label}</div><div class="d">${Math.round(pct(st.byAccount[k]))}% of this month</div></div>
+      <div class="amt">${money(st.byAccount[k], false)}</div></div>`).join('')}</div>
+  </section>`;
+}
+
 function moneyOverview(m) {
-  const s = monthSummary(m);
-  const n = monthDays(m);
+  const st = monthStats(m);
+  const { n, b } = st;
   const isNow = m === monthKey();
   const todayN = isNow ? toDate(dayKey()).getDate() : n;
-  // Cumulative spend to date, plus what each single day cost. Days after today are
-  // null so the line stops at today instead of flat-lining across the rest of the month.
-  const daily = [], cum = [];
-  let run = 0;
-  for (let d = 1; d <= n; d++) {
-    const key = `${m}-${String(d).padStart(2, '0')}`;
-    const onDay = spentIn(s.list.filter(t => t.date === key));
-    run += onDay;
-    daily.push(d <= todayN ? onDay : null);
-    cum.push(d <= todayN ? run : null);
+  // Cumulative spend and income to date. Days after today are null so both lines
+  // stop at today instead of flat-lining across the rest of the month.
+  const daily = [], cum = [], cumIn = [];
+  let run = 0, runIn = 0;
+  for (let d = 0; d < n; d++) {
+    run += st.days[d].spend;
+    runIn += st.days[d].income;
+    const past = d < todayN;
+    daily.push(past ? st.days[d].spend : null);
+    cum.push(past ? run : null);
+    cumIn.push(past ? runIn : null);
   }
-  const hasBudget = s.budgetTotal > 0;
+  const hasBudget = st.budgetTotal > 0;
   // Pace is only meaningful against a budget; with none there is nothing to pace against.
-  const pace = hasBudget ? Array.from({ length: n }, (_, i) => (s.budgetTotal * (i + 1)) / n) : null;
+  const pace = hasBudget ? Array.from({ length: n }, (_, i) => (st.budgetTotal * (i + 1)) / n) : null;
   const onTrack = !hasBudget || run <= pace[todayN - 1] * 1.02;
-  const top = niceMax(Math.max(s.budgetTotal, run) * 1.06);
+  const top = niceMax(Math.max(st.budgetTotal, run, runIn) * 1.06);
   const perDay = run / Math.max(1, todayN);
   const projected = perDay * n;
   const daysLeft = Math.max(0, n - todayN);
-  const busiest = daily.reduce((b, v, i) => (v != null && v > (daily[b] ?? 0) ? i : b), -1);
-  const b = budgets();
-  const cats = Object.keys(CATEGORIES).filter(k => Number(b[k]) > 0 || spentIn(s.list, k) > 0);
-  const topCat = Math.max(0, ...cats.map(k => spentIn(s.list, k)));
+  const busiest = daily.reduce((bi, v, i) => (v != null && v > (daily[bi] ?? 0) ? i : bi), -1);
+  const cats = Object.keys(CATEGORIES).filter(k => Number(b[k]) > 0 || st.byCat[k]);
+  const topCat = Math.max(0, ...cats.map(k => st.byCat[k] ?? 0));
   const upcoming = bills().filter(x => x.next <= addDays(dayKey(), 14));
   const headline = hasBudget
-    ? `<div class="label-sm">${s.left >= 0 ? 'Left to spend' : 'Over budget'}</div><div class="big-xl">${money(Math.abs(s.left), false)}<small>of ${money(s.budgetTotal, false)}</small></div>`
-    : `<div class="label-sm">Spent this month</div><div class="big-xl">${money(s.spent, false)}<small>no budget set</small></div>`;
+    ? `<div class="label-sm">${st.left >= 0 ? 'Left to spend' : 'Over budget'}</div><div class="big-xl">${money(Math.abs(st.left), false)}<small>of ${money(st.budgetTotal, false)}</small></div>`
+    : `<div class="label-sm">Spent this month</div><div class="big-xl">${money(st.spent, false)}<small>no budget set</small></div>`;
   const tag = hasBudget
     ? `<span class="tag ${onTrack ? 'ok' : 'hot'}">${onTrack ? 'On track' : 'Spending fast'}</span>`
     : `<button class="pill-btn" data-act="sheet" data-sheet="budgets">${icon('plus')} Set a budget</button>`;
   return `
   ${monthNav(m)}
+  ${balanceCard()}
+  <div class="row2"><button class="btn soft" data-act="sheet" data-sheet="txn" data-kind="expense">${icon('card')} Expense</button><button class="btn soft" data-act="sheet" data-sheet="txn" data-kind="income">${icon('coins')} Income</button></div>
   <section class="card glass">
     <div class="money-top"><div>${headline}</div>${tag}</div>
     ${lineChart({
       series: [
         ...(pace ? [{ values: pace, color: 'var(--text)', dash: true, straight: true }] : []),
+        // Money in and money out on one scale: while the green line sits above the
+        // other, the month is paying for itself.
+        // Deeper green than the pastel spend line: at 2px the two were too close to tell apart.
+        ...(st.income ? [{ values: cumIn, color: 'var(--diet-ink)', straight: true }] : []),
         // Cumulative money only ever goes up: straight segments, never a curve that
         // smooths past the real total between two days.
         { values: cum, color: 'var(--money)', straight: true, fill: true },
@@ -137,20 +250,20 @@ function moneyOverview(m) {
       live: isNow, max: top || 100, yAxis: v => money(v, false),
       empty: 'No spending yet this month',
     })}
-    <div class="legend-inline"><span><i class="dot" style="background:var(--money)"></i>Spent ${money(s.spent, false)}</span>${hasBudget ? `<span><i class="dot dash-dot"></i>Budget pace ${money(pace[todayN - 1], false)}</span>` : ''}</div>
+    <div class="legend-inline"><span><i class="dot" style="background:var(--money)"></i>Spent ${money(st.spent, false)}</span>${st.income ? `<span><i class="dot" style="background:var(--diet-ink)"></i>In ${money(st.income, false)}</span>` : ''}${hasBudget ? `<span><i class="dot dash-dot"></i>Pace ${money(pace[todayN - 1], false)}</span>` : ''}</div>
     ${run ? `${barRow({ values: daily, color: 'var(--money)', now: isNow ? todayN - 1 : -1, titles: daily.map((v, i) => (v == null ? '' : `${shortDate(`${m}-${String(i + 1).padStart(2, '0')}`)}: ${money(v)}`)) })}
     <p class="note" style="margin:6px 0 0">Each bar is one day${busiest >= 0 && daily[busiest] ? ` · biggest ${money(daily[busiest], false)} on ${shortDate(`${m}-${String(busiest + 1).padStart(2, '0')}`)}` : ''}</p>` : ''}
-    <p class="note" style="margin:8px 0 0">${money(perDay, false)}/day so far${isNow ? ` · on pace for ${money(projected, false)}` : ''}${hasBudget && isNow ? (s.left > 0 ? ` · ${money(s.left / Math.max(1, daysLeft || 1), false)}/day left` : ` · ${money(-s.left, false)} over`) : ''}</p>
+    <p class="note" style="margin:8px 0 0">${money(perDay, false)}/day so far${isNow ? ` · on pace for ${money(projected, false)}` : ''}${hasBudget && isNow ? (st.left > 0 ? ` · ${money(st.left / Math.max(1, daysLeft || 1), false)}/day left` : ` · ${money(-st.left, false)} over`) : ''}</p>
     <div class="flow">
-      <div style="background:var(--diet-bg)"><div class="k" style="color:var(--diet-ink)">Income</div><div class="n">${money(s.income, false)}</div></div>
-      <div style="background:var(--move-bg)"><div class="k" style="color:var(--move-ink)">Spent</div><div class="n">${money(s.spent, false)}</div></div>
-      <div style="background:var(--sleep-bg)"><div class="k" style="color:var(--sleep-ink)">${s.income - s.spent >= 0 ? 'Saved' : 'Shortfall'}</div><div class="n">${money(s.income - s.spent, false)}</div></div>
+      <div style="background:var(--diet-bg)"><div class="k" style="color:var(--diet-ink)">In</div><div class="n">${money(st.income, false)}</div></div>
+      <div style="background:var(--move-bg)"><div class="k" style="color:var(--move-ink)">Out</div><div class="n">${money(st.spent, false)}</div></div>
+      <div style="background:var(--sleep-bg)"><div class="k" style="color:var(--sleep-ink)">${st.income - st.spent >= 0 ? 'Kept' : 'Shortfall'}</div><div class="n">${money(st.income - st.spent, false)}</div></div>
     </div>
   </section>
-  <div class="row2"><button class="btn soft" data-act="sheet" data-sheet="txn" data-kind="expense">${icon('card')} Expense</button><button class="btn soft" data-act="sheet" data-sheet="txn" data-kind="income">${icon('coins')} Income</button></div>
+  ${splitCard(st)}
   <div class="section-label">Budgets <a data-act="sheet" data-sheet="budgets">Edit</a></div>
   <section class="card glass"><div class="budget">${cats.map(k => {
-    const spent = spentIn(s.list, k), cap = Number(b[k]) || 0, c = CATEGORIES[k];
+    const spent = st.byCat[k] ?? 0, cap = Number(b[k]) || 0, c = CATEGORIES[k];
     const over = cap && spent > cap;
     // Without a cap there's nothing to fill, so the bar compares the category
     // against the one you spent most on rather than pretending to be full.
@@ -158,19 +271,25 @@ function moneyOverview(m) {
     return `<div class="bud">${tile(c.icon, c.area)}<div class="bud-main">
       <div class="top"><span class="name">${c.label}</span><span class="nums ${over ? 'late' : ''}"><b>${money(spent, false)}</b>${cap ? ` / ${money(cap, false)}` : ''}</span></div>
       <div class="track"><div class="fill${cap ? '' : ' soft'}" style="width:${width.toFixed(1)}%;background:var(--${over ? 'move' : c.area})"></div></div>
-      ${cap ? `<div class="left ${over ? 'late' : ''}">${over ? `${money(spent - cap, false)} over` : `${money(cap - spent, false)} left`}</div>` : `<div class="left">${s.spent ? `${Math.round((spent / s.spent) * 100)}% of this month` : 'no budget set'}</div>`}</div></div>`;
+      ${cap ? `<div class="left ${over ? 'late' : ''}">${over ? `${money(spent - cap, false)} over` : `${money(cap - spent, false)} left`}</div>` : `<div class="left">${st.spent ? `${Math.round((spent / st.spent) * 100)}% of this month` : 'no budget set'}</div>`}</div></div>`;
   }).join('') || '<div class="empty">Set budgets to track each category.</div>'}</div></section>
   ${upcoming.length ? `<div class="section-label">Bills due soon <a data-act="moneyTab" data-tab="bills">All</a></div><section class="card glass"><div class="list">${upcoming.map(billRow).join('')}</div></section>` : ''}
-  ${s.list.length ? `<div class="section-label">Recent <a data-act="moneyTab" data-tab="activity">All</a></div><section class="card glass"><div class="list">${s.list.slice(0, 5).map(txnRow).join('')}</div></section>` : ''}`;
+  ${st.list.length ? `<div class="section-label">Recent <a data-act="moneyTab" data-tab="activity">All</a></div><section class="card glass"><div class="list">${st.list.slice(0, 5).map(txnRow).join('')}</div></section>` : ''}`;
 }
 
 function moneyActivity(m) {
   const filter = ui.acct ?? 'all';
   const list = monthTxns(m).filter(t => filter === 'all' || t.account === filter || t.toAccount === filter);
   const days = [...new Set(list.map(t => t.date))];
+  const bal = balances();
+  const out = spentIn(list), inn = incomeIn(list);
   return `${monthNav(m)}
   <div class="chips-filter">${[['all', 'All'], ...Object.entries(ACCOUNTS).filter(([k]) => k !== 'savings').map(([k, a]) => [k, a.label])].map(([k, l]) => `<button class="chip-btn ${filter === k ? 'on' : 'soft'}" data-act="acct" data-a="${k}">${l}</button>`).join('')}
     ${actions.importCsv ? `<button class="chip-btn soft" data-act="importCsv">${icon('upload')} Import CSV</button>` : ''}</div>
+  <section class="card glass"><div class="money-top"><div><div class="label-sm">${filter === 'all' ? 'Across all accounts' : `${ACCOUNTS[filter].label} balance`}</div>
+    <div class="big-md">${hasBalances() ? money(filter === 'all' ? netWorth() : bal[filter], false) : '—'}</div></div>
+    <div class="io"><span class="in">+${money(inn, false)}</span><span class="out">−${money(out, false)}</span></div></div>
+    <p class="note" style="margin:6px 0 0">${plural(list.length, 'transaction')} this month${filter === 'all' ? '' : ` through ${ACCOUNTS[filter].label}`}.</p></section>
   ${days.length ? days.map(d => {
     const dl = list.filter(t => t.date === d);
     const net = dl.reduce((s, t) => s + (t.kind === 'income' ? 1 : t.kind === 'expense' ? -1 : 0) * Number(t.amount), 0);
@@ -224,8 +343,9 @@ todaySections.push({
     const due = bills().filter(x => x.next <= addDays(dayKey(), 3));
     if (!s.list.length && !due.length && !state.kv.budgets) return '';
     const capped = s.budgetTotal > 0;
+    const on = hasBalances() ? netWorth() : null;
     return `<section class="card glass money-card tap" data-act="nav" data-to="money">${tile('wallet', 'money', 'lg')}
-      <div class="grow"><div class="label-sm">Money · ${toDate(dayKey()).toLocaleDateString('en-AU', { month: 'long' })}</div><div class="t">${capped ? `${money(Math.abs(s.left), false)} ${s.left >= 0 ? 'left' : 'over budget'}` : `${money(s.spent, false)} spent`}</div>
+      <div class="grow"><div class="label-sm">Money · ${toDate(dayKey()).toLocaleDateString('en-AU', { month: 'long' })}${on != null ? ` · ${money(on, false)} on hand` : ''}</div><div class="t">${capped ? `${money(Math.abs(s.left), false)} ${s.left >= 0 ? 'left' : 'over budget'}` : `${money(s.spent, false)} spent`}</div>
       <div class="d">${due.length ? `${due.map(x => esc(x.name)).join(', ')} due soon` : capped ? `Spent ${money(s.spent, false)} of ${money(s.budgetTotal, false)}` : 'No budget set yet'}</div></div>
       <div class="mini-track"><i style="height:${capped ? Math.min(100, (s.spent / s.budgetTotal) * 100) : 0}%"></i></div></section>`;
   },
@@ -267,6 +387,18 @@ sheets.budgets = () => {
 previews.budgets = form => {
   const total = [...form.querySelectorAll('input')].reduce((s, i) => s + num(i.value), 0);
   document.getElementById('budget-total').textContent = `Total ${money(total, false)} a month`;
+};
+
+sheets.balances = () => {
+  const bal = balances();
+  return `<h2>Account balances ${closeBtn}</h2><form data-form="balances">
+    <p class="note">What’s actually in each account right now. Loop moves them itself from then on — every expense, pay and transfer you log.</p>
+    <div class="budget-grid">${Object.entries(ACCOUNTS).map(([k, a]) => `<label class="bud-in">${tile(a.icon, k === 'cash' ? 'diet' : k === 'savings' ? 'sleep' : 'money')}<span>${a.label}</span><input class="input-x" name="${k}" inputmode="decimal" value="${Math.round(bal[k] * 100) / 100}"></label>`).join('')}</div>
+    <div class="sleep-preview" id="balance-total"></div><button class="btn">Save balances</button></form>`;
+};
+previews.balances = form => {
+  const total = [...form.querySelectorAll('input')].reduce((t, i) => t + num(i.value), 0);
+  document.getElementById('balance-total').textContent = `${money(total, false)} in total`;
 };
 
 sheets.bill = ({ id }) => {
@@ -345,6 +477,18 @@ Object.assign(forms, {
     haptic();
     closeSheet();
     toast('Budgets saved', { icon: 'wallet' });
+    render();
+  },
+  // The sheet takes today's balance; what's stored is the opening figure, so the
+  // number you typed still comes out right once the logged movements are applied.
+  async balances(f) {
+    const mv = movements();
+    const open = {};
+    for (const k of Object.keys(ACCOUNTS)) open[k] = Math.round((num(f.get(k)) - (mv[k] ?? 0)) * 100) / 100;
+    await setKV('balances', open);
+    haptic();
+    closeSheet();
+    toast(`${money(netWorth(), false)} across your accounts`, { icon: 'wallet' });
     render();
   },
   async bill(f) {

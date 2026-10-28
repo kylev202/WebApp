@@ -5,7 +5,7 @@ import { dayKey, addDays, lastDays, monthKey, nowHHMM, toMin, fromMin, fmt, fmt1
 import { goals, habits, of, kcalOn, proteinOn, waterOn, sleepOn, weights, weeklyRate, habitDone, sleepHours, BLOCK_KINDS, kindOf, runningBlock } from './data.js';
 import { routine, nextDay, workouts, exById, exByName, addCustomExercise, recordWorkout } from './gym.js';
 import { courses, assessments, tasks, shifts, jobs, jobOf, shiftHours, shiftPay, projects, invoices, invoiceStatus, courseResult, band, AREAS } from './plan.js';
-import { CATEGORIES, INCOME, ACCOUNTS, monthSummary, bills, budgets, spentIn, goalsList } from './money.js';
+import { CATEGORIES, INCOME, ACCOUNTS, monthSummary, bills, budgets, spentIn, goalsList, balances, netWorth, hasBalances, monthStats } from './money.js';
 import { targetLines } from './targets.js';
 
 const API = 'https://generativelanguage.googleapis.com/v1beta';
@@ -108,6 +108,9 @@ export function snapshot() {
     money: {
       month: monthKey(),
       spent: Math.round(ms.spent), income: Math.round(ms.income), budget_total: Math.round(ms.budgetTotal), left: Math.round(ms.left),
+      // What's actually in the accounts, and how this month's spending was paid for.
+      on_hand: hasBalances() ? { total: Math.round(netWorth()), by_account: Object.fromEntries(Object.entries(balances()).map(([k, v]) => [k, Math.round(v)])) } : null,
+      spent_by_account: Object.fromEntries(Object.entries(monthStats().byAccount).map(([k, v]) => [k, Math.round(v)])),
       by_category: Object.keys(CATEGORIES).map(k => ({ k, spent: Math.round(spentIn(ms.list, k)), budget: Number(b[k]) || 0 })).filter(x => x.spent || x.budget),
       bills_due_14d: bills().filter(x => x.next <= addDays(t, 14)).map(x => `${x.name} ${money(Number(x.amount))} ${x.next}`),
       savings: goalsList().map(g => `${g.name} ${money(Number(g.saved), false)}/${money(Number(g.target), false)}`),

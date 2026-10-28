@@ -560,6 +560,28 @@ button.sub-note { color: var(--sleep-ink); font-weight: 600; }
 .flow .k { font-size: 10.5px; font-weight: 600; }
 .flow .n { font-size: 15px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .legend-inline { display: flex; gap: 12px; margin-top: 8px; font-size: 10.5px; color: var(--text-2); font-weight: 500; }
+.legend-inline { flex-wrap: wrap; row-gap: 4px; }
+/* What's in each account, and how a month's spending split across them. */
+.bal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+.bal { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 14px; background: rgba(0,0,0,.025); }
+.bal .tile { width: 26px; height: 26px; border-radius: 9px; flex: none; }
+.bal .tile .i { width: 15px; height: 15px; }
+.bal .k { font-size: 10.5px; color: var(--text-2); font-weight: 600; }
+.bal .n { font-size: 14.5px; font-weight: 650; margin-top: 1px; font-variant-numeric: tabular-nums; }
+.bal.neg .n { color: var(--move-ink); }
+.two-up { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.two-up > div { padding: 10px 11px; border-radius: 15px; }
+.two-up .k { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; }
+.two-up .k .i { width: 14px; height: 14px; }
+.two-up .n { font-size: 19px; font-weight: 700; letter-spacing: -.02em; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.two-up .s { font-size: 10.5px; color: var(--text-3); font-weight: 500; margin-top: 1px; }
+.split-bar { display: flex; gap: 2px; height: 9px; margin-top: 12px; }
+.split-bar i { border-radius: 3px; min-width: 3px; }
+.list.tight { margin-top: 4px; }
+.row.plain { cursor: default; }
+.io { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.io .in { color: var(--diet-ink); }
+.io .out { color: var(--move-ink); }
 .legend-inline span { display: flex; align-items: center; gap: 5px; }
 .budget { display: flex; flex-direction: column; gap: 12px; }
 .bud .top { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 600; }
