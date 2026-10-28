@@ -43,6 +43,8 @@ The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups a
   - **Training:** today's workout (sets per muscle, volume, PRs) or the next routine day with a Start button, the week's training days, 7-day sets, **muscle recovery** (which groups have had 48 hours since they were last trained), and whether what's next works a muscle that's still recovering.
   - **Day log:** sleep, meals, workouts and weigh-ins in time order; tap any entry to edit it. Step back with ‹ › to read any past day the same way.
 
+- **Health analytics (new):** the Sleep, Body and Gym tabs are now reports. **Sleep:** 7-night average, sleep debt, bedtime and wake regularity, a 0–100 sleep score with its breakdown, a 14-night strip, a 30-night trend, weekday pattern and social jetlag. **Body:** a 7-day trend weight that filters out water swings, 7/30/90-day change, rate of gain against the lean-bulk band, 4- and 12-week fits, energy balance (scale vs food log), projected weight and BMI. **Gym:** training load (7 days against your 28-day average), weekly volume, sets per muscle against a 10–20 guide, strength change over four weeks and plateau warnings.
+
 - **Polish:** Today puts today's numbers and habits first and the weekly chart lower down; bigger tap targets (close/delete buttons, water, section links); clearer text and tag colours (WCAG AA); press feedback and no double-tap zoom; tap the active tab to scroll to top; the page behind a sheet no longer scrolls; keyboard and VoiceOver can reach every card.
 
 The app icon is drawn by [`design/icon.html`](design/icon.html): an infinity "loop" ribbon flowing through each life area's colour.

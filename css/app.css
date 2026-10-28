@@ -1172,3 +1172,36 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .hv-muscle { padding: 7px 9px; border-radius: 12px; background: var(--lv-bg); min-width: 0; }
 .hv-muscle .t { font-size: 12px; font-weight: 650; }
 .hv-muscle .s { font-size: 10px; }
+
+/* Health analytics: Sleep, Body and Gym reports. */
+.an-hero { background: linear-gradient(150deg, rgba(239,238,252,.92), rgba(253,238,241,.82) 60%, rgba(234,247,239,.8)); }
+.an-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.an-stats4 { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }
+.an-stats3 { margin-top: 14px; }
+.an-stats4 .stat .l, .an-stats3 .stat .l { font-size: 10.5px; }
+.an-stats4 .stat .v { font-size: 14px; }
+.an-stats4 .stat .v span, .an-stats3 .stat .v span { display: block; margin-top: 1px; }
+.an-gap { margin-top: 18px; }
+.an-score { display: flex; align-items: center; gap: 16px; margin: 4px 0 6px; }
+.an-score .note { margin: 0; flex: 1; }
+.an-meter { grid-template-columns: 62px 1fr auto; }
+.an-dense { grid-template-columns: repeat(var(--n, 7), minmax(0, 1fr)); gap: 3px; margin-top: 12px; }
+.an-dense .hv-bar { max-width: 20px; border-radius: 6px; }
+.an-dense .hv-bar i { border-radius: 6px; }
+.an-dense .hv-night { font-size: 9px; }
+.an-gauge { position: relative; height: 10px; border-radius: 5px; background: rgba(0,0,0,.06); margin: 16px 0 6px; }
+.an-gauge .band { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--diet); opacity: .45; }
+.an-gauge .zero { position: absolute; top: -3px; bottom: -3px; width: 1.5px; background: rgba(0,0,0,.3); }
+.an-gauge .mark { position: absolute; top: -5px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: var(--text); box-shadow: 0 0 0 2px #fff; }
+.an-scale { position: relative; height: 14px; font-size: 10px; font-weight: 600; color: var(--text-3); display: flex; justify-content: space-between; }
+.an-scale span[style] { position: absolute; transform: translateX(-50%); }
+.an-scale .band-l { color: var(--diet-ink); white-space: nowrap; }
+.an-band { position: relative; }
+.an-band::before { content: ""; position: absolute; left: var(--lo); width: calc(var(--hi) - var(--lo)); top: -2px; bottom: -2px; border-radius: 4px; background: var(--diet-bg); box-shadow: inset 0 0 0 1px rgba(0,0,0,.05); }
+.an-band .fill { position: relative; z-index: 1; }
+.an-muscles .macro { align-items: center; }
+.an-muscles b small, .lvt { font-size: 10px; font-weight: 600; color: var(--lv); margin-left: 4px; }
+.an-lift { text-align: right; min-width: 64px; }
+.an-delta { font-size: 11px; font-weight: 650; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.an-delta.up { color: var(--diet-ink); }
+.an-delta.down { color: var(--move-ink); }

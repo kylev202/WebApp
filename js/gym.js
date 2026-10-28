@@ -221,7 +221,7 @@ function renderWorkout() {
 
 const muscleIcon = m => ({ chest: 'dumbbell', back: 'dumbbell', shoulders: 'dumbbell', legs: 'run', arms: 'muscle', core: 'target' }[m] ?? 'dumbbell');
 
-export function gymTab() {
+export function gymTab(insights = '') {
   const r = routine();
   const aw = active();
   const chooser = `<section class="card glass"><div class="head"><div class="title">${tile('dumbbell', 'move')}Choose a routine</div></div>
@@ -245,7 +245,7 @@ export function gymTab() {
     <div class="day-pick">${r.days.filter(d => d.id !== next.id).map(d => `<button class="chip-btn soft" data-act="startWorkout" data-day="${d.id}">${esc(d.name)}</button>`).join('')}<button class="chip-btn soft" data-act="startEmpty">Empty</button></div>
   </section>`}`}
 
-  <section class="card glass">
+  ${insights || `  <section class="card glass">
     <div class="head"><div class="title">This week</div><span class="sub-note">sets per week</span></div>
     <div class="stats two"><div class="stat"><div class="l">Workouts</div><div class="v">${thisWeek}<span>${r ? ` / ${r.perWeek}` : ''}</span></div></div>
       <div class="stat"><div class="l">Sets</div><div class="v">${setsPerWeek.at(-1)}<span> this week</span></div></div></div>
@@ -255,7 +255,7 @@ export function gymTab() {
   ${lifts.length ? `<div class="section-label">Strength <span>estimated 1-rep max</span></div>
   <section class="card glass"><div class="list">${lifts.map(l => `<div class="row tap" data-act="sheet" data-sheet="exDetail" data-id="${l.exId}" role="button">
     <div class="grow"><div class="t">${esc(l.name)}</div><div class="d">Best ${l.bestText}</div></div>
-    <div class="lift-spark">${sparkline(l.trend, 'var(--move)')}</div><div class="amt">${fmt1(l.now)}${l.bw ? ' reps' : ' kg'}</div></div>`).join('')}</div></section>` : ''}
+    <div class="lift-spark">${sparkline(l.trend, 'var(--move)')}</div><div class="amt">${fmt1(l.now)}${l.bw ? ' reps' : ' kg'}</div></div>`).join('')}</div></section>` : ''}`}
 
   ${ws.length ? `<div class="section-label">Recent workouts</div>
   <section class="card glass"><div class="list">${ws.slice(0, 8).map(w => `<div class="row tap" data-act="sheet" data-sheet="wkDetail" data-id="${w.id}" role="button">

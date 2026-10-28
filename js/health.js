@@ -7,6 +7,7 @@ import { lineChart } from './charts.js';
 import { goals, of, byId, kcalOn, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, maintenanceKcal, sleepHours, recentMeals } from './data.js';
 import { gymTab } from './gym.js';
 import { overviewTab, overviewHeader } from './overview.js';
+import { sleepAnalytics, bodyAnalytics, gymAnalytics } from './analytics.js';
 
 const C = { diet: 'var(--diet)', move: 'var(--move)', sleep: 'var(--sleep)', work: 'var(--work)' };
 const sparseLabels = days => days.map((d, i) => (i === days.length - 1 ? 'Today' : i % 3 === 1 ? toDate(d).getDate() : ''));
@@ -20,7 +21,7 @@ export function mealRow(m) {
 
 function renderHealth() {
   const tab = ui.tab.health ?? 'overview';
-  const body = { overview: overviewTab, gym: gymTab, diet: healthDiet, sleep: healthSleep, body: healthBody }[tab]();
+  const body = { overview: overviewTab, gym: () => gymTab(gymAnalytics()), diet: healthDiet, sleep: healthSleep, body: healthBody }[tab]();
   const top = tab === 'overview' ? overviewHeader() : header('Health', longDate());
   return `${top}${seg('health', [['overview', 'Overview'], ['gym', 'Gym'], ['diet', 'Diet'], ['sleep', 'Sleep'], ['body', 'Body']], tab)}${body}`;
 }
@@ -59,16 +60,8 @@ function macroBar(label, value, goal, color) {
 }
 
 function healthSleep() {
-  const g = goals();
-  const days14 = lastDays(14);
   const recent = of('sleep').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14);
-  const a = avgLogged(lastDays(7).map(sleepOn));
-  return `
-  <section class="card glass">
-    <div class="money-top"><div><div class="label-sm">7-day average</div><div class="big-xl">${a ? fmtHours(a) : '–'}<small>goal ${g.sleep}h</small></div></div>
-      <button class="pill-btn" data-act="sheet" data-sheet="sleep">${icon('plus')} Sleep</button></div>
-    ${lineChart({ series: [{ values: days14.map(d => sleepOn(d) || null), color: C.sleep }], labels: sparseLabels(days14), max: Math.max(g.sleep + 2, ...days14.map(sleepOn)), goal: g.sleep, empty: 'Log a night of sleep to start your chart.' })}
-  </section>
+  return `${sleepAnalytics()}
   ${recent.length ? `<div class="section-label">Nights</div><section class="card glass"><div class="list">${recent.map(s => `
     <div class="row tap" data-act="sheet" data-sheet="sleep" data-id="${s.id}" role="button"><div class="bar" style="background:var(--sleep)"></div><div class="grow"><div class="t">${dayLabel(s.date)}</div><div class="d">${esc(s.bed)} → ${esc(s.wake)}</div></div>
     <div class="amt">${fmtHours(s.hours)}</div><button class="x-btn" data-act="del" data-id="${s.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>` : ''}`;
@@ -76,21 +69,8 @@ function healthSleep() {
 
 function healthBody() {
   const ws = weights();
-  const recent = ws.slice(-60);
-  const latest = ws.at(-1);
-  const rate = weeklyRate();
-  const status = rate != null && latest ? bulkStatus(rate, latest.kg) : null;
   return `
-  <section class="card glass">
-    <div class="money-top"><div><div class="label-sm">Body weight</div><div class="big-xl">${latest ? latest.kg : '–'}<small>kg</small></div></div>
-      <button class="pill-btn" data-act="sheet" data-sheet="weight">${icon('plus')} Weigh-in</button></div>
-    ${lineChart({ series: [{ values: recent.map(w => w.kg), color: C.move }], labels: recent.map((w, i) => (i === 0 || i === recent.length - 1 ? shortDate(w.date) : '')), min: Math.min(...recent.map(w => w.kg)) - 1, max: Math.max(...recent.map(w => w.kg)) + 1, empty: 'Weigh in to track your bulk.' })}
-  </section>
-  ${latest ? `<section class="card glass rate">
-    <div class="head"><div class="title">${tile('chart', 'move')}Trend · last 4 weeks</div></div>
-    <div class="big-md">${rate != null ? `${rate >= 0 ? '+' : '−'}${Math.abs(rate).toFixed(2)} kg/week` : '–'}</div>
-    <p class="note" style="margin:6px 0 0">${status ? `<b style="color:${status.color}">${status.text}.</b> ` : 'Weigh in at least weekly for 2 weeks to see your trend. '}Lean bulk target: ${(latest.kg * 0.0025).toFixed(2)}–${(latest.kg * 0.005).toFixed(2)} kg/week.</p>
-  </section>` : ''}
+  ${bodyAnalytics()}
   ${ws.length ? `<div class="section-label">Weigh-ins</div><section class="card glass"><div class="list">${ws.slice().reverse().slice(0, 20).map(w => `
     <div class="row tap" data-act="sheet" data-sheet="weight" data-id="${w.id}" role="button"><div class="bar" style="background:var(--move)"></div><div class="grow"><div class="t">${dayLabel(w.date)}</div></div>
     <div class="amt">${w.kg} kg</div><button class="x-btn" data-act="del" data-id="${w.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>` : ''}`;
