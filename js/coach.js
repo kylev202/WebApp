@@ -241,6 +241,14 @@ function weeklyCard() {
     <div class="grow"><div class="label-sm">Week in review</div><div class="t">${plural(s.workouts.length, 'workout')} · ${s.prs.length ? plural(s.prs.length, 'PR') : `${s.proteinDays}/7 protein days`}</div><div class="d">${shortDate(w0)} – ${shortDate(addDays(w0, 6))} · tap for your report</div></div><div class="chev">${icon('chevron')}</div></section>`;
 }
 
+// The checkpoint notes sit above everything else on Today and the Day view.
+export function coachNotes(nudges) {
+  return nudges.length ? `<div class="section-label">Coach</div>
+  <section class="card glass"><div class="list">${nudges.map(n => `<div class="row">
+    ${tile(n.ai ? 'sparkle' : 'bell', 'sleep')}<div class="grow"><div class="t">${time12(n.at)}</div><div class="d">${n.html}</div></div></div>`).join('')}</div></section>` : '';
+}
+todaySections.unshift({ pos: 'top', render: () => coachNotes(nudgesFor(dayKey())) });
+
 todaySections.push({
   pos: 'top',
   render() {

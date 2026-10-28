@@ -10,7 +10,7 @@ import { agendaFor, AREAS } from './plan.js';
 import { workouts } from './gym.js';
 import { CATEGORIES } from './money.js';
 import { viewToggle } from './today.js';
-import { nudgesFor } from './coach.js';
+import { nudgesFor, coachNotes } from './coach.js';
 
 // The day you're living, not the date on the clock: before 4am you're still
 // finishing the night before, and that's the day you'd want to look at.
@@ -188,6 +188,8 @@ function renderDay() {
     ${allDay.map(a => `<span class="day-chip tap" style="--cb:var(--${a.area}-bg);--ci:var(--${a.area}-ink)" data-act="sheet" data-sheet="${a.sheet}" data-id="${esc(a.id ?? '')}" role="button">${icon(a.icon)}${esc(a.title)}</span>`).join('')}
   </div>
 
+  ${coachNotes(nudges)}
+
   <section class="card glass tl-card">
     <div class="head"><div class="title">${tile('clock', 'school')}Timeline</div>
       ${live ? `<button class="pill-btn hot" data-act="stopBlock">${icon('stop')} Stop ${esc(live.title || kindOf(live.kind).label)}</button>`
@@ -212,10 +214,6 @@ function renderDay() {
     ${tile(u.icon, u.color)}<div class="grow tap" data-act="sheet" data-sheet="${u.sheet}" data-id="${esc(u.id)}" role="button"><div class="t">${esc(u.title)}</div><div class="d">${esc(u.sub)}</div></div>
     <button class="pill-btn" data-act="sheet" data-sheet="placeTime" data-id="${esc(u.id)}">Place</button></div>`).join('')}</div>
   <p class="note">Logged for this day without a clock time — imported, or added after the fact.</p></section>` : ''}
-
-  ${nudges.length ? `<div class="section-label">Coach</div>
-  <section class="card glass"><div class="list">${nudges.map(n => `<div class="row">
-    ${tile(n.ai ? 'sparkle' : 'bell', 'sleep')}<div class="grow"><div class="t">${time12(n.at)}</div><div class="d">${n.html}</div></div></div>`).join('')}</div></section>` : ''}
 
   <div class="section-label">How the day went</div>
   <section class="card glass tap" data-act="sheet" data-sheet="dayNote" data-date="${date}" role="button">
