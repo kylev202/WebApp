@@ -4,37 +4,10 @@
 import { state } from './store.js';
 import { esc, dayKey, addDays, daysBetween, weekStart, toDate, shortDate, initial, fmt, fmt1, fmtHours, time12, toMin, fromMin, mean, sum, plural, clamp } from './util.js';
 import { icon, tile } from './icons.js';
-import { lineChart, sparkline } from './charts.js';
+import { lineChart } from './charts.js';
 import { goals, of, sleepOn, weights, weeklyRate, maintenanceKcal, kcalOn } from './data.js';
-import { workouts, routine, exById, history, e1rm } from './gym.js';
-import { MUSCLES } from './gym-data.js';
 
-// ---------- shared pieces ----------
-const chip = ([level, text]) => `<span class="hv-chip lv-${level}">${text}</span>`;
-const note = (ic, area, html) => `<li style="--nc:var(--${area}-ink)">${icon(ic)}<span>${html}</span></li>`;
-const notes = items => (items.length ? `<ul class="hv-notes">${items.join('')}</ul>` : '');
-const signed = (n, d = 1) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(d)}`;
-const fmtMins = m => { m = Math.round(m); return m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${String(m % 60).padStart(2, '0')}m` : ''}` : `${m} min`; };
-const stat = (l, v, sub = '') => `<div class="stat"><div class="l">${l}</div><div class="v">${v}${sub ? `<span> ${sub}</span>` : ''}</div></div>`;
-const section = (title, aside = '') => `<div class="section-label">${title}${aside ? ` <span>${aside}</span>` : ''}</div>`;
-const meter = (label, pct, text, color) => `<div class="macro an-meter"><span>${label}</span><div class="track"><div class="fill" style="width:${clamp(pct, 0, 100)}%;background:${color}"></div></div><b>${text}</b></div>`;
-const sd = xs => (xs.length >= 3 ? Math.sqrt(mean(xs.map(x => (x - mean(xs)) ** 2))) : null);
-
-// Least-squares slope of kg against days, in kg per week, with how well a straight line fits.
-function slope(points) {
-  if (points.length < 3) return null;
-  const x0 = points[0].d;
-  const xs = points.map(p => p.d - x0), ys = points.map(p => p.y);
-  if (xs.at(-1) < 6) return null;
-  const mx = mean(xs), my = mean(ys);
-  const sxx = sum(xs.map(x => (x - mx) ** 2));
-  const sxy = sum(xs.map((x, i) => (x - mx) * (ys[i] - my)));
-  const b = sxy / sxx;
-  const ssTot = sum(ys.map(y => (y - my) ** 2));
-  const ssRes = sum(ys.map((y, i) => (y - (my + b * (xs[i] - mx))) ** 2));
-  return { perWeek: b * 7, r2: ssTot ? 1 - ssRes / ssTot : 0, n: points.length };
-}
-const dayNo = key => Math.round(toDate(key).getTime() / 864e5);
+import { chip, note, notes, signed, fmtMins, stat, section, meter, sd, slope, dayNo } from './an-ui.js';
 
 // ============================================================
 // SLEEP
@@ -308,116 +281,4 @@ export function bodyAnalytics() {
     </div>
     ${notes(insights)}
   </section>`;
-}
-
-// ============================================================
-// GYM
-// ============================================================
-const volumeOf = w => w.exercises.reduce((t, x) => t + x.sets.reduce((s, y) => s + (Number(y.kg) || 0) * (Number(y.reps) || 0), 0), 0);
-const setsOf = w => w.exercises.reduce((t, x) => t + x.sets.length, 0);
-
-// Weekly hard-set range commonly used for muscle gain, per muscle group.
-const SETS_BAND = [10, 20];
-
-export function gymAnalytics() {
-  const all = workouts();
-  const r = routine();
-  const today = dayKey();
-  const w0 = weekStart();
-  if (!all.length) return '';
-
-  const weeks = Array.from({ length: 8 }, (_, i) => addDays(w0, (i - 7) * 7));
-  const inWeek = w => all.filter(x => x.date >= w && x.date <= addDays(w, 6));
-  const weekStats = weeks.map(w => { const ws = inWeek(w); return { w, n: ws.length, sets: sum(ws.map(setsOf)), vol: sum(ws.map(volumeOf)) }; });
-  const cur = weekStats.at(-1);
-  const prior4 = weekStats.slice(3, 7);
-
-  // Acute:chronic workload — the last 7 days of volume against your own 28-day average.
-  const volIn = (from, to) => sum(all.filter(x => x.date >= from && x.date <= to).map(volumeOf));
-  const acute = volIn(addDays(today, -6), today);
-  const chronic = volIn(addDays(today, -27), today) / 4;
-  const acwr = chronic > 0 ? acute / chronic : null;
-  const acwrLvl = acwr == null ? ['none', 'Need 4 weeks'] : acwr < 0.8 ? ['ok', 'Below usual'] : acwr <= 1.3 ? ['good', 'Sweet spot'] : acwr <= 1.5 ? ['ok', 'Ramping up'] : ['low', 'Spike'];
-
-  // Hard sets per muscle over the last 7 days.
-  const recent = all.filter(x => x.date > addDays(today, -7));
-  const perMuscle = Object.fromEntries(Object.keys(MUSCLES).map(m => [m, 0]));
-  recent.forEach(w => w.exercises.forEach(x => { const m = exById(x.exId).muscle; if (m in perMuscle) perMuscle[m] += x.sets.length; }));
-  const muscleRows = Object.entries(perMuscle).map(([m, n]) => ({ m, name: MUSCLES[m], n, lvl: n >= SETS_BAND[0] ? (n <= SETS_BAND[1] ? ['good', 'In range'] : ['ok', 'High']) : n >= 6 ? ['ok', 'Light'] : ['low', n ? 'Low' : 'None'] }));
-  const lowest = muscleRows.filter(x => x.m !== 'core').sort((a, b) => a.n - b.n)[0];
-
-  // Strength: estimated 1RM now against four weeks ago, for the lifts you do most.
-  const count = {};
-  all.forEach(w => w.exercises.forEach(x => { count[x.exId] = (count[x.exId] ?? 0) + 1; }));
-  const lifts = Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([exId]) => {
-    const h = history(exId); // newest first
-    const ex = exById(exId);
-    const base = h.find(x => x.date <= addDays(today, -28));
-    const pct = base && base.best ? ((h[0].best - base.best) / base.best) * 100 : null;
-    const stalled = h.length >= 4 && Math.max(...h.slice(0, 3).map(x => x.best)) <= Math.max(...h.slice(3).map(x => x.best)) + 1e-9;
-    const bestSet = h.flatMap(x => x.sets).reduce((b, s) => ((Number(s.kg) || 0) > (Number(b.kg) || 0) ? s : b));
-    return { exId, name: ex.name, bw: ex.bw && !(bestSet.kg > 0), now: h[0].best, pct, stalled, trend: h.slice(0, 12).reverse().map(x => x.best), top: `${fmt1(Number(bestSet.kg) || 0)} kg × ${bestSet.reps}` };
-  });
-
-  const done4 = weekStats.slice(4, 8);
-  const hit = r?.perWeek ? done4.filter(x => x.n >= r.perWeek).length : null;
-  const adherence = r?.perWeek ? Math.round((sum(done4.map(x => Math.min(x.n, r.perWeek))) / (r.perWeek * 4)) * 100) : null;
-  const sessions = all.filter(x => x.date > addDays(today, -28));
-  const avgLen = sessions.length ? mean(sessions.map(x => (x.end - x.start) / 6e4)) : null;
-  const prs30 = sum(all.filter(x => x.date > addDays(today, -30)).map(x => x.prs?.length ?? 0));
-  const prior4avg = mean(prior4.map(x => x.vol));
-  const volDelta = prior4avg ? ((cur.vol - prior4avg) / prior4avg) * 100 : null;
-
-  const insights = [];
-  if (acwr != null) insights.push(note('bolt', 'move', acwr > 1.5
-    ? `Your last 7 days carry <b>${acwr.toFixed(2)}×</b> your usual weekly volume. Jumps this big are where overuse injuries happen; hold or trim next week.`
-    : acwr > 1.3 ? `Training load is <b>${acwr.toFixed(2)}×</b> your 4-week average: productive but near the upper limit. Keep sleep and protein high.`
-    : acwr < 0.8 ? `Training load is <b>${acwr.toFixed(2)}×</b> your 4-week average. Fine for a deload; otherwise add a set or a session.`
-    : `Training load is <b>${acwr.toFixed(2)}×</b> your 4-week average, inside the 0.8–1.3 range where you adapt with least injury risk.`));
-  if (lowest && lowest.n < SETS_BAND[0]) insights.push(note('muscle', 'move', `<b>${lowest.name}</b> got ${plural(lowest.n, 'hard set')} this week. Around ${SETS_BAND[0]}–${SETS_BAND[1]} sets per muscle a week builds most; ${SETS_BAND[0] - lowest.n} more would bring it in range.`));
-  const top = muscleRows.filter(x => x.n > SETS_BAND[1]);
-  if (top.length) insights.push(note('info', 'move', `${top.map(x => x.name).join(' and ')} ${top.length > 1 ? 'are' : 'is'} above ${SETS_BAND[1]} sets this week; returns taper off and recovery cost climbs.`));
-  const stalled = lifts.filter(l => l.stalled);
-  if (stalled.length) insights.push(note('target', 'school', `No new best on <b>${esc(stalled.map(l => l.name).join(', '))}</b> in 3 sessions. Try a deload week, add reps before weight, or check sleep and calories.`));
-  if (adherence != null) insights.push(note('calendar', 'sleep', `You hit your ${r.perWeek} sessions in <b>${hit} of the last 4 weeks</b> (${adherence}% of planned sessions).`));
-  const gainers = lifts.filter(l => l.pct != null && l.pct > 0);
-  if (lifts.length >= 2 && lifts.some(l => l.pct != null)) insights.push(note('trophy', 'school', gainers.length
-    ? `<b>${gainers.length} of ${lifts.filter(l => l.pct != null).length}</b> tracked lifts are stronger than four weeks ago.`
-    : 'No tracked lift is above where it was four weeks ago.'));
-
-  const label = w => shortDate(w);
-  return `
-  <section class="card glass hv-hero an-hero">
-    <div class="hv-top"><div><div class="label-sm">Training load · 7 days vs 28-day average</div>
-      <div class="big-xl">${acwr != null ? acwr.toFixed(2) : '–'}<small>${acwr != null ? '× usual volume' : 'needs 4 weeks of data'}</small></div></div>
-      ${chip(acwrLvl)}</div>
-    <div class="stats an-stats4">
-      ${stat('Sessions', `${cur.n}`, r?.perWeek ? `/ ${r.perWeek}` : 'this week')}
-      ${stat('Hard sets', `${cur.sets}`, 'this week')}
-      ${stat('Volume', cur.vol >= 1000 ? `${fmt1(cur.vol / 1000)}` : `${fmt(cur.vol)}`, cur.vol >= 1000 ? 't' : 'kg')}
-      ${stat('vs 4-wk avg', volDelta != null ? `${volDelta >= 0 ? '+' : '−'}${Math.abs(Math.round(volDelta))}%` : '–')}
-    </div>
-  </section>
-
-  <section class="card glass">
-    <div class="head"><div class="title">Weekly volume</div><div class="sub-note">tonnes lifted · 8 weeks</div></div>
-    ${lineChart({ series: [{ values: weekStats.map(x => x.vol / 1000 || null), color: 'var(--move)', fill: true }], labels: weeks.map((w, i) => (i === 7 ? 'Now' : i % 2 === 0 ? label(w) : '')), min: 0, live: true, yAxis: v => `${fmt1(v)} t`, empty: 'Your weekly volume appears after your first workout.' })}
-    <div class="stats an-stats3 an-gap">
-      ${stat('Adherence', adherence != null ? `${adherence}%` : '–', '4 weeks')}
-      ${stat('Avg session', avgLen != null ? fmtMins(avgLen) : '–')}
-      ${stat('PRs', `${prs30}`, '30 days')}
-    </div>
-  </section>
-
-  <section class="card glass">
-    <div class="head"><div class="title">${tile('muscle', 'move')}Sets per muscle</div><div class="sub-note">last 7 days · aim ${SETS_BAND[0]}–${SETS_BAND[1]}</div></div>
-    <div class="macro-bars an-muscles">${muscleRows.map(x => `<div class="macro an-meter lv-${x.lvl[0]}"><span>${x.name}</span><div class="track an-band" style="--lo:${(SETS_BAND[0] / 24) * 100}%;--hi:${(SETS_BAND[1] / 24) * 100}%"><div class="fill" style="width:${clamp((x.n / 24) * 100, 0, 100)}%;background:var(--lv)"></div></div><b>${x.n} <small class="lvt">${x.lvl[1]}</small></b></div>`).join('')}</div>
-    ${notes(insights)}
-  </section>
-
-  ${lifts.length ? `${section('Strength', 'est. 1-rep max · vs 4 weeks ago')}
-  <section class="card glass"><div class="list">${lifts.map(l => `<div class="row tap" data-act="sheet" data-sheet="exDetail" data-id="${l.exId}" role="button">
-    <div class="grow"><div class="t">${esc(l.name)}</div><div class="d">Best ${l.top}${l.stalled ? ' · <span class="late">plateau</span>' : ''}</div></div>
-    <div class="lift-spark">${sparkline(l.trend, 'var(--move)')}</div>
-    <div class="an-lift"><div class="amt">${fmt1(l.now)}${l.bw ? ' reps' : ' kg'}</div>${l.pct != null ? `<div class="an-delta ${l.pct >= 0 ? 'up' : 'down'}">${l.pct >= 0 ? '▲' : '▼'} ${Math.abs(l.pct).toFixed(1)}%</div>` : '<div class="an-delta">new</div>'}</div></div>`).join('')}</div></section>` : ''}`;
 }

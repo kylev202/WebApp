@@ -7,7 +7,8 @@ import { lineChart } from './charts.js';
 import { goals, of, byId, kcalOn, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, maintenanceKcal, sleepHours, recentMeals } from './data.js';
 import { gymTab } from './gym.js';
 import { overviewTab, overviewHeader } from './overview.js';
-import { sleepAnalytics, bodyAnalytics, gymAnalytics } from './analytics.js';
+import { sleepAnalytics, bodyAnalytics } from './analytics.js';
+import { gymAnalytics } from './gym-analytics.js';
 
 const C = { diet: 'var(--diet)', move: 'var(--move)', sleep: 'var(--sleep)', work: 'var(--work)' };
 const sparseLabels = days => days.map((d, i) => (i === days.length - 1 ? 'Today' : i % 3 === 1 ? toDate(d).getDate() : ''));

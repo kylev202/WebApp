@@ -1205,3 +1205,46 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .an-delta { font-size: 11px; font-weight: 650; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .an-delta.up { color: var(--diet-ink); }
 .an-delta.down { color: var(--move-ink); }
+
+/* Gym analytics: strength ladders, volume map, balance pairs, weekly bars. */
+.an-foot { margin: 10px 0 0; }
+.an-stds { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.an-std-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; }
+.an-std-h .t { font-weight: 650; }
+.an-std-h b { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.an-std-h b small { font-size: 10.5px; font-weight: 600; color: var(--text-3); margin-left: 3px; }
+.an-std-bar { position: relative; height: 9px; border-radius: 5px; background: rgba(0,0,0,.05); margin: 6px 0 4px; overflow: hidden; }
+.an-std-bar .fill { height: 100%; border-radius: 5px; background: var(--lv); }
+.an-std-bar .tick { position: absolute; top: 0; bottom: 0; width: 1.5px; background: rgba(255,255,255,.95); }
+.an-std-bar .tick.on { background: rgba(255,255,255,.75); }
+.an-std-f { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 600; color: var(--text-3); }
+.an-std-f span:first-child { color: var(--lv); }
+.an-lifts .row .d .an-pr { color: var(--diet-ink); font-weight: 650; }
+.an-heat { margin-top: 12px; font-variant-numeric: tabular-nums; }
+.an-heat-row { display: grid; grid-template-columns: 62px repeat(var(--cols), minmax(0, 1fr)) 30px; gap: 3px; align-items: center; margin-bottom: 3px; }
+.an-heat-row > span { font-size: 11px; font-weight: 600; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
+.an-heat-row > i { height: 26px; border-radius: 7px; display: grid; place-items: center; font-style: normal; font-size: 10.5px; font-weight: 650; color: var(--text); }
+.an-heat-row > em { font-style: normal; font-size: 10.5px; font-weight: 650; color: var(--text-2); text-align: right; }
+.an-heat-row.head > b, .an-heat-row.head > em { font-size: 9.5px; font-weight: 600; color: var(--text-3); text-align: center; }
+.an-heat-row.head > em { text-align: right; }
+.an-pair { margin-top: 14px; }
+.an-pair:first-child { margin-top: 4px; }
+.an-pair-h { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.an-pair-h b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.an-pair-bar { position: relative; height: 9px; border-radius: 5px; background: var(--school-bg); margin: 5px 0 4px; overflow: hidden; }
+.an-pair-bar .a { position: absolute; left: 0; top: 0; bottom: 0; background: var(--move); border-radius: 5px 0 0 5px; }
+.an-pair-bar .ideal { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: var(--text); opacity: .45; }
+.an-pair-f { font-size: 11px; font-weight: 650; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.an-pair-f span { font-weight: 500; color: var(--text-3); }
+.an-pair.off .an-pair-f { color: var(--move-ink); }
+.an-wbars { display: flex; align-items: flex-end; gap: 4px; height: 84px; margin-top: 10px; }
+.an-wbar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 4px; }
+.an-wbar i { width: 100%; max-width: 20px; min-height: 3px; border-radius: 5px; background: #f6c3cd; }
+.an-wbar.cur i { background: var(--move); }
+.an-wbar span { font-size: 9px; font-weight: 600; color: var(--text-3); height: 10px; white-space: nowrap; }
+/* Softer chart tone for each status level; the ink stays for text. */
+.lv-none { --lvc: rgba(0,0,0,.12); }
+.lv-low { --lvc: var(--move); }
+.lv-ok { --lvc: var(--school); }
+.lv-good { --lvc: var(--diet); }
+.an-std-bar .fill { background: var(--lvc); }
