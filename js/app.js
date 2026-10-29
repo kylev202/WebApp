@@ -8,6 +8,7 @@ import './gym.js';
 import './today.js';
 import './settings.js';
 import './plan.js';
+import './study.js';
 import './money.js';
 import './ask.js';
 import './csv.js';

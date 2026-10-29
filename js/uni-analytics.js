@@ -33,8 +33,8 @@ function uniFacts() {
   // Only finished blocks, and only the kinds that are studying.
   const done = blocks().filter(b => b.end && !b.planned && STUDY_KINDS.includes(b.kind));
 
-  // A block belongs to a unit when you picked one, or when the unit's code or name
-  // turns up in what you called it.
+  // A block belongs to a unit when it is aimed at one of that unit's assessments,
+  // or when the unit's code or name turns up in what you called it.
   const belongs = c => {
     const code = norm(c.code), name = norm(c.name);
     return b => (b.courseId ? b.courseId === c.id
@@ -254,7 +254,7 @@ function hoursCard(f) {
     const named = sum(f.units.map(u => u.hours28)) / 4;
     ins.push(note('clock', 'school', `You logged <b>${fmtHours(sum(f.weeklyAll) / 8)}</b> of study a week over the last 8 weeks, ${fmtHours(named)} a week of it against a named unit. These are the blocks you remembered to log, so read them as a floor.`));
   }
-  if (f.unattributed > 2) ins.push(note('info', 'sleep', `<b>${fmtHours(f.unattributed)}</b> of study is not tied to any unit. Pick the unit on the block, or put the code in its name, and it lands in the right row here.`));
+  if (f.unattributed > 2) ins.push(note('info', 'sleep', `<b>${fmtHours(f.unattributed)}</b> of study is not tied to any unit. Point the block at what it is for, or put the unit code in its name, and it lands in the right row here.`));
   const starved = paired.filter(u => u.r.average != null).sort((a, b) => (a.hoursTotal / Math.max(1, a.r.totalWeight)) - (b.hoursTotal / Math.max(1, b.r.totalWeight)))[0];
   const fed = paired.sort((a, b) => b.hoursTotal - a.hoursTotal)[0];
   if (fed && starved && fed !== starved) {
@@ -279,7 +279,7 @@ function hoursCard(f) {
     <div class="macro-bars an-gap">${withHours.map(u => `<div class="macro an-meter lv-${bandLvl(u.r.average)}"><span>${esc(u.c.code)}</span>
       <div class="track"><div class="fill" style="width:${clamp((u.hours28 / maxH) * 100, 0, 100)}%;background:var(--lvc)"></div></div>
       <b>${fmt1(perWeek(u))} h<small class="lvt">${u.r.average != null ? fmt(u.r.average) : '–'}</small></b></div>`).join('')}</div>
-    <p class="note an-foot">Hours a week over the last 4 weeks, with the unit's current average beside it. A block counts toward a unit when you pick one or name its code.</p>
+    <p class="note an-foot">Hours a week over the last 4 weeks, with the unit's current average beside it. A block counts toward a unit when it is aimed at one of its assessments, or names its code.</p>
     <div class="stats an-stats3 an-gap">
       ${stat('Study', fmt1(sum(f.weeklyAll) / 8), 'h / week')}
       ${stat('Per unit', withHours.length ? fmt1(sum(withHours.map(perWeek)) / withHours.length) : '–', 'h / week')}
@@ -295,7 +295,8 @@ function aheadCard(f) {
   if (!f.upcoming.length) {
     return `${section('What is coming')}
     <section class="card glass">${head}
-      <div class="empty">${f.all.length ? 'Everything entered has been marked. Add the rest of the semester’s assessments and this card weighs up what is at stake.' : 'No assessments entered yet. Add them with their weights and Loop can tell you what each one is worth and what the rest has to score.'}</div></section>`;
+      <div class="empty">${f.all.length ? 'Everything entered has been marked. Add the rest of the semester’s assessments and this card weighs up what is at stake.' : 'No assessments entered yet. Add them with their weights and Loop can tell you what each one is worth and what the rest has to score.'}</div>
+      <button class="btn soft" data-act="toStudy">${icon('clock')} Countdown and study plan</button></section>`;
   }
   const next = f.upcoming.slice(0, 6);
   const w14 = sum(f.due14.map(a => Number(a.weight) || 0));
@@ -323,6 +324,7 @@ function aheadCard(f) {
         <div class="grow"><div class="t">${esc(a.title)}</div><div class="d">${esc(c.code)} · ${ASSESS_KINDS[a.kind] ?? 'Assessment'}${a.weight ? ` · ${a.weight}% of grade` : ''}</div></div>
         <span class="tag ${d <= 2 ? 'hot' : ''}">${d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : `${d} days`}</span></div>`;
     }).join('')}</div>
+    <button class="btn soft" style="margin-top:12px" data-act="toStudy">${icon('clock')} Countdown and study plan</button>
     ${notes(ins)}
   </section>`;
 }

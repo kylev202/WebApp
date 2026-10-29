@@ -1,17 +1,14 @@
 // Health: diet, sleep and body tabs (the overview lives in overview.js, gym in gym.js), plus their logging sheets.
 import { state, addEntry, updateEntry, putEntry, removeEntry, setKV } from './store.js';
-import { esc, dayKey, lastDays, toDate, shortDate, longDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num } from './util.js';
+import { esc, dayKey, lastDays, longDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sheetForm, dateField, readDate } from './core.js';
-import { lineChart } from './charts.js';
-import { goals, of, byId, kcalOn, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, maintenanceKcal, sleepHours, recentMeals } from './data.js';
+import { goals, of, byId, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, maintenanceKcal, sleepHours, recentMeals } from './data.js';
 import { gymTab } from './gym.js';
 import { overviewTab, overviewHeader } from './overview.js';
 import { sleepAnalytics, bodyAnalytics } from './analytics.js';
+import { dietAnalytics } from './diet-analytics.js';
 import { gymAnalytics } from './gym-analytics.js';
-
-const C = { diet: 'var(--diet)', move: 'var(--move)', sleep: 'var(--sleep)', work: 'var(--work)' };
-const sparseLabels = days => days.map((d, i) => (i === days.length - 1 ? 'Today' : i % 3 === 1 ? toDate(d).getDate() : ''));
 
 export function mealRow(m) {
   return `<div class="row tap" data-act="sheet" data-sheet="meal" data-id="${m.id}" role="button">
@@ -32,9 +29,9 @@ function healthDiet() {
   const g = goals();
   const t = dayKey();
   const meals = of('meal', t);
-  const days14 = lastDays(14);
   const [p, c, f] = ['protein', 'carbs', 'fat'].map(k => sum(meals, k));
   const targets = macroTargets(g);
+  // Today first, because that's what you came to log; the report reads the weeks behind it.
   return `
   <section class="card glass">
     <div class="money-top"><div><div class="label-sm">Eaten today</div><div class="big-xl">${fmt(sum(meals, 'kcal'))}<small>of ${fmt(g.kcal)} kcal</small></div></div>
@@ -45,10 +42,7 @@ function healthDiet() {
       ${macroBar('Fat', f, targets.fat, 'var(--diet)')}
     </div>
   </section>
-  <section class="card glass">
-    <div class="head"><div class="title">Calories · 14 days</div><div class="sub-note">dashed = goal</div></div>
-    ${lineChart({ series: [{ values: days14.map(d => kcalOn(d) || null), color: C.diet }], labels: sparseLabels(days14), goal: g.kcal, live: true, empty: 'Your calorie line appears after you log meals.' })}
-  </section>
+  ${dietAnalytics()}
   ${lastDays(7).reverse().map(d => {
     const ms = of('meal', d);
     if (!ms.length) return '';

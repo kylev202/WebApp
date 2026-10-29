@@ -10,6 +10,7 @@ import { workouts, nextDay, suggestion, exById, routine } from './gym.js';
 import { agendaFor, tasks, assessments, invoices } from './plan.js';
 import { bills, monthSummary, spentIn, budgets, goalsList, txns } from './money.js';
 import { hasAI, generate, systemPrompt } from './ai.js';
+import { freeGaps, openAssessments, progressOf, needHours } from './study.js';
 import { todaySections } from './today.js';
 import { settingsSections } from './settings.js';
 
@@ -85,23 +86,11 @@ export const CHECKPOINTS = ['14:00', '18:00', '22:30'];
 const WAKE = 10 * 60, BED = 24 * 60;
 const STUDYISH = ['study', 'revision', 'reading', 'coding'];
 
-// Everything already claimed on the day, so a gap is really a gap.
-function busyOn(date) {
-  const iv = [];
-  agendaFor(date).forEach(it => { if (it.time) iv.push([toMin(it.time), it.end ? toMin(it.end) : toMin(it.time) + 45]); });
-  of('block', date).forEach(b => iv.push([toMin(b.start), b.end ? toMin(b.end) : BED]));
-  return iv.sort((a, b) => a[0] - b[0]);
-}
-
-function nextGap(date, from) {
-  let t = from;
-  for (const [a, b] of busyOn(date)) {
-    if (b <= t) continue;
-    if (a - t >= 90) return [t, a];
-    t = Math.max(t, b);
-  }
-  return BED - t >= 90 ? [t, BED] : null;
-}
+// What counts as free is the study planner's answer (study.js), so the nudge, the
+// day view's slots and the plan can't disagree about the same afternoon. The
+// coach's own window is wider than the planner's: it will happily point at the
+// hour before bed.
+const nextGap = (date, from) => freeGaps(date, { min: 90, from: fromMin(WAKE), to: '24:00', after: from })[0] ?? null;
 
 // Plain facts first: whatever the AI is or isn't up to, these are true and free.
 function dayFacts(date, cp) {
@@ -118,6 +107,15 @@ function dayFacts(date, cp) {
   const studied = of('block', date).some(b => STUDYISH.includes(b.kind) && b.done !== false);
   const soon = assessments().filter(a => !a.done && a.due >= date && a.due <= addDays(date, 2));
   if (soon.length && !studied) out.push(`${soon[0].title} is due ${dayLabel(soon[0].due).toLowerCase()} and nothing has been logged against it.`);
+  // The study plan is a promise about today, so a checkpoint says whether it's
+  // been kept — and what's still ahead is encouragement, not a telling-off.
+  const booked = of('block', date).filter(b => b.assessId && b.planned && !b.done);
+  const missed = booked.filter(b => toMin(b.start) <= cp);
+  const ahead = booked.filter(b => toMin(b.start) > cp);
+  if (missed.length) out.push(`${plural(missed.length, 'study session')} planned for earlier today and not ticked off (${missed.map(b => time12(b.start)).join(', ')}).`);
+  if (ahead.length) out.push(`Study booked later today at ${ahead.map(b => time12(b.start)).join(', ')}.`);
+  const behind = openAssessments().map(a => ({ a, p: progressOf(a) })).find(x => x.a.due <= addDays(date, 10) && x.p.toPlan >= 1);
+  if (behind) out.push(`${behind.a.title}: ${fmt1(behind.p.done)} of ${fmt1(needHours(behind.a))} study hours done, and ${fmt1(behind.p.toPlan)} h of what's left has no slot in the diary.`);
   const gap = nextGap(date, Math.max(cp, minNow()));
   const until = m => (m >= BED ? 'midnight' : time12(fromMin(m)));
   if (gap) out.push(`Clear from ${time12(fromMin(gap[0]))} to ${until(gap[1])}${soon.length && !studied ? ', which is the obvious study window' : ''}.`);
