@@ -6,11 +6,12 @@ import { esc, dayKey, addDays, dayLabel, time12, toMin, fromMin, snapMin, minNow
 import { icon, tile } from './icons.js';
 import { views, sheets, actions, forms, ui, render, openSheet, closeSheet, toast, haptic, header, closeBtn, chips, dateField, readDate, toggle, removeWithUndo, afterRender } from './core.js';
 import { of, byId, goals, habits, habitDone, waterOn, BLOCK_KINDS, kindOf, blocks, runningBlock as running } from './data.js';
-import { agendaFor, AREAS } from './plan.js';
+import { agendaFor, AREAS, courseById } from './plan.js';
 import { workouts } from './gym.js';
 import { CATEGORIES } from './money.js';
 import { viewToggle } from './today.js';
 import { nudgesFor, coachNotes } from './coach.js';
+import { freeGaps, openAssessments, assessIcon, progressOf, needHours, studyPrefs } from './study.js';
 
 // The day you're living, not the date on the clock: before 4am you're still
 // finishing the night before, and that's the day you'd want to look at.
@@ -157,6 +158,28 @@ function dotEl(d, s) {
     <span class="tl-d-i">${icon(d.icon)}</span><span class="tl-d-t">${esc(d.title)}</span></div>`;
 }
 
+// The gaps between what's on the day, drawn as slots you can fill. These are the
+// hours the study planner works with, so the day view shows them rather than
+// leaving you to read them off the empty space.
+function freeSlots(date, s) {
+  if (date !== loopToday()) return [];
+  return freeGaps(date, { min: 45, after: Math.ceil((minNow() + 5) / 15) * 15 })
+    .filter(([a, b]) => b > s.lo && a < s.hi)
+    .map(([a, b]) => ({ a: Math.max(a, s.lo), b: Math.min(b, s.hi) }))
+    .filter(g => g.b - g.a >= 45);
+}
+
+function slotEl(g, s) {
+  const top = s.yOf(g.a), height = s.yOf(g.b) - top;
+  // The slot is however long the gap is; the block it opens is one session long,
+  // because a five-hour evening free is rarely five hours of one thing.
+  const until = Math.min(g.b, g.a + studyPrefs().session);
+  return `<div class="tl-free" style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px"
+    data-act="sheet" data-sheet="block" data-at="${fromMin(g.a)}" data-until="${fromMin(until)}" role="button"
+    aria-label="${shortDur(g.b - g.a)} free from ${time12(fromMin(g.a))}">
+    ${height > 26 ? `<span>${shortDur(g.b - g.a)} free</span>` : ''}</div>`;
+}
+
 function renderDay() {
   const date = viewDate();
   const today = date === loopToday();
@@ -199,7 +222,7 @@ function renderDay() {
       ${s.hours.map(h => `<div class="tl-h ${h.quiet ? 'quiet' : ''}" style="top:${h.y}px;height:${h.height}px"><span>${h.quiet ? '' : hourLabel(h.h)}</span></div>`).join('')}
       ${nudges.filter(n => toMin(n.at) >= s.lo && toMin(n.at) <= s.hi).map(n =>
         `<button class="tl-pin" style="top:${(s.yOf(toMin(n.at)) - 9).toFixed(1)}px" data-act="sheet" data-sheet="nudge" data-at="${n.at}" aria-label="Coach note at ${time12(n.at)}">${icon('sparkle')}</button>`).join('')}
-      <div class="tl-rail">${items.map(it => blockEl(it, s)).join('')}</div>
+      <div class="tl-rail">${freeSlots(date, s).map(g => slotEl(g, s)).join('')}${items.map(it => blockEl(it, s)).join('')}</div>
       <div class="tl-side">${dots.map(d => dotEl(d, s)).join('')}</div>
       ${today ? `<div class="tl-now" style="top:${s.yOf(minNow()).toFixed(1)}px"><span>${time12(nowHHMM()).replace(' ', '')}</span></div>` : ''}
     </div>` : `<div class="empty">Nothing on this day yet. Tap <b>Start</b>, or tell Ask what you're doing.</div>`}
@@ -243,6 +266,12 @@ Object.assign(actions, {
   async tickBlock(el) {
     await updateEntry(el.dataset.id, { done: true });
     haptic();
+    const b = byId(el.dataset.id);
+    const a = b?.assessId && byId(b.assessId);
+    if (a) {
+      const prog = progressOf(a);
+      toast(`${fmt1(prog.done)} of ${fmt1(needHours(a))} h on ${a.title}`, { icon: 'check' });
+    }
     render();
   },
 });
@@ -250,10 +279,16 @@ Object.assign(actions, {
 // ---------- sheets ----------
 const field = (label, inner) => `<div class="field"><label>${label}</label>${inner}</div>`;
 
-sheets.block = ({ id, start }) => {
+sheets.block = ({ id, start, at, until }) => {
   const b = id && byId(id);
   const now = start === 'now' && !b;
   const k = b?.kind ?? 'study';
+  // Tapping a free slot on the timeline arrives with its own hours, and is a plan
+  // rather than a record: it hasn't happened yet.
+  const start0 = b?.start ?? at ?? nowHHMM();
+  const end0 = b?.end ?? (b ? null : until) ?? fromMin(toMin(start0) + 60);
+  const ahead = b ? !!b.planned && !b.done : !!at && toMin(at) > minNow();
+  const open = openAssessments();
   return `<h2>${b ? 'Edit block' : now ? 'Start a block' : 'Add a block'} ${closeBtn}</h2>
   <form data-form="block" class="nice-form">
     <input type="hidden" name="id" value="${b ? b.id : ''}">
@@ -261,9 +296,10 @@ sheets.block = ({ id, start }) => {
     ${field('What are you doing?', chips('kind', Object.entries(BLOCK_KINDS).map(([v, x]) => [v, x.label, x.icon, x.color]), k, { cols: 4 }))}
     <div class="field"><label>Name <span class="opt">optional</span></label><input class="input-x" name="title" maxlength="60" placeholder="e.g. COMP2123 past papers" value="${esc(b?.title ?? '')}"></div>
     ${now ? `<p class="note">Starts now and runs until you stop it.</p>`
-      : `<div class="row2 times">${field('Starts', `<input class="input-x" type="time" name="start" value="${esc(b?.start ?? nowHHMM())}" required>`)}${field('Ends', `<input class="input-x" type="time" name="end" value="${esc(b?.end ?? fromMin(toMin(b?.start ?? nowHHMM()) + 60))}">`)}</div>
+      : `<div class="row2 times">${field('Starts', `<input class="input-x" type="time" name="start" value="${esc(start0)}" required>`)}${field('Ends', `<input class="input-x" type="time" name="end" value="${esc(end0)}">`)}</div>
       ${field('Day', dateField('date', b?.date ?? viewDate(), { past: true }))}
-      ${toggle('planned', 'Planning it, not done yet', b ? !!b.planned && !b.done : false)}`}
+      ${toggle('planned', 'Planning it, not done yet', ahead)}`}
+    ${open.length ? field('Towards <span class="opt">optional</span>', chips('assessId', [['', 'Nothing'], ...open.slice(0, 7).map(a => [a.id, `${courseById(a.courseId).code} ${a.title}`.slice(0, 26), assessIcon(a), courseById(a.courseId).color ?? 'school'])], b?.assessId ?? '', { cols: 2 })) : ''}
     <div class="field"><label>Note <span class="opt">optional</span></label><input class="input-x" name="note" maxlength="120" value="${esc(b?.note ?? '')}"></div>
     <div class="btn-row"><button class="btn">${b ? 'Save changes' : now ? 'Start' : 'Save block'}</button>${b ? `<button type="button" class="btn danger" data-act="delBlock" data-id="${b.id}">Delete</button>` : ''}</div>
   </form>`;
@@ -275,10 +311,13 @@ forms.block = async (f) => {
   const kind = f.get('kind') || 'study';
   const title = f.get('title').trim();
   const note = f.get('note').trim();
+  // Tagging a block to an assessment is what lets the countdown count the hour.
+  const assessId = f.get('assessId') || null;
+  const courseId = assessId ? byId(assessId)?.courseId ?? null : null;
   if (live) {
     const open = running();
     if (open) await updateEntry(open.id, { end: nowHHMM(), done: true });
-    await addEntry('block', { kind, title, note, start: nowHHMM(), end: null, planned: false, done: false, source: 'manual' }, dayKey());
+    await addEntry('block', { kind, title, note, start: nowHHMM(), end: null, planned: false, done: false, assessId, courseId, source: 'manual' }, dayKey());
     ui.tab.dayDate = loopToday();
     haptic();
     closeSheet();
@@ -289,7 +328,7 @@ forms.block = async (f) => {
   const end = f.get('end') || null;
   if (!start) return;
   const planned = !!f.get('planned');
-  const fields = { kind, title, note, start, end: end && toMin(end) > toMin(start) ? end : fromMin(toMin(start) + 60), planned, done: !planned };
+  const fields = { kind, title, note, start, end: end && toMin(end) > toMin(start) ? end : fromMin(toMin(start) + 60), planned, done: !planned, assessId, courseId };
   const date = readDate(f, 'date') || viewDate();
   if (id) await updateEntry(id, { ...fields, date });
   else await addEntry('block', { ...fields, source: 'manual' }, date);

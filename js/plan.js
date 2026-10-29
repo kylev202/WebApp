@@ -19,7 +19,7 @@ export const AREAS = {
 const COLORS = ['school', 'work', 'diet', 'sleep', 'move', 'money'];
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const CLASS_KINDS = ['Lecture', 'Tutorial', 'Lab', 'Workshop', 'Seminar'];
-const ASSESS_KINDS = { assignment: 'Assignment', exam: 'Exam', quiz: 'Quiz', presentation: 'Presentation', report: 'Report' };
+export const ASSESS_KINDS = { assignment: 'Assignment', exam: 'Exam', quiz: 'Quiz', presentation: 'Presentation', report: 'Report' };
 
 // Monday = 0.
 const dow = key => (toDate(key).getDay() + 6) % 7;
@@ -136,11 +136,17 @@ function taskRow(t) {
     <span class="dot" style="background:var(--${a.color})"></span></div>`;
 }
 
+// Tabs other modules add to Plan, between Uni and Work (study.js adds the exam
+// countdown and its planner).
+export const planTabs = []; // { key, label, render }
+
 function renderPlan() {
   const tab = ui.tab.plan ?? 'agenda';
-  const body = { agenda: planAgenda, uni: planUni, work: planWork, tasks: planTasks }[tab]();
+  const extra = planTabs.find(t => t.key === tab);
+  const body = extra ? extra.render() : ({ agenda: planAgenda, uni: planUni, work: planWork, tasks: planTasks }[tab] ?? planAgenda)();
+  const tabs = [['agenda', 'Agenda'], ['uni', 'Uni'], ...planTabs.map(t => [t.key, t.label]), ['work', 'Work'], ['tasks', 'Tasks']];
   return `${header('Plan', longDate(), `<button class="icon-btn glass" data-act="sheet" data-sheet="planAdd" aria-label="Add">${icon('plus')}</button>`)}
-    ${seg('plan', [['agenda', 'Agenda'], ['uni', 'Uni'], ['work', 'Work'], ['tasks', 'Tasks']], tab)}${body}`;
+    ${seg('plan', tabs, tab)}${body}`;
 }
 screens.plan = renderPlan;
 
@@ -212,7 +218,8 @@ function planUni() {
     return `<div class="row tap" data-act="sheet" data-sheet="assessment" data-id="${a.id}" role="button">${tile(a.kind === 'exam' ? 'exam' : 'pen', c.color ?? 'school')}
       <div class="grow"><div class="t">${esc(a.title)}</div><div class="d">${esc(c.code)}${a.weight ? ` · ${a.weight}%` : ''}</div></div>
       <span class="tag ${days <= 2 ? 'hot' : ''}">${days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}</span></div>`;
-  }).join('')}</div>` : '<div class="empty">No assessments due. Add them so Loop can plan your study.</div>'}</section>
+  }).join('')}</div>` : '<div class="empty">No assessments due. Add them so Loop can plan your study.</div>'}
+    <button class="btn soft" style="margin-top:12px" data-act="toStudy">${icon('clock')} Countdown and study plan</button></section>
   <div class="section-label">Courses <a data-act="sheet" data-sheet="course">Add</a></div>
   <section class="card glass">${cs.length ? `<div class="list">${cs.map(c => {
     const r = courseResult(c.id);
@@ -401,6 +408,7 @@ sheets.assessment = ({ id }) => {
     ${field('Type', chips('kind', Object.entries(ASSESS_KINDS).map(([k, l]) => [k, l, icons[k], 'school']), a?.kind ?? 'assignment', { cols: 3 }))}
     ${field('Due', dateField('due', a?.due ?? dayKey()))}
     <div class="row2">${field('Due time', inp('dueTime', a?.dueTime, 'type="time"'))}${field('Weight', `<div class="suffix">${inp('weight', a?.weight, 'inputmode="decimal" placeholder="20"')}<span>%</span></div>`)}</div>
+    ${field('Study hours <span class="opt">optional</span>', `<div class="suffix">${inp('hours', a?.hours, 'inputmode="decimal" placeholder="Left blank, estimated from the weight"')}<span>h</span></div>`)}
     <div class="row2">${field('Mark', `<div class="suffix">${inp('score', a?.score, 'inputmode="decimal" placeholder="After marking"')}<span>%</span></div>`)}<div class="field"><label>Status</label>${toggle('done', 'Submitted', a?.done)}</div></div>
     ${saveRow(a?.id, 'Add assessment')}</form>`;
 };
@@ -623,7 +631,7 @@ Object.assign(forms, {
   },
   async assessment(f) {
     const score = String(f.get('score')).trim();
-    await save('assessment', f, { courseId: f.get('courseId'), title: f.get('title').trim(), kind: f.get('kind'), weight: num(f.get('weight')), due: readDate(f, 'due') || dayKey(), dueTime: f.get('dueTime'), score: score === '' ? null : num(score), done: f.get('done') === 'on' || score !== '' });
+    await save('assessment', f, { courseId: f.get('courseId'), title: f.get('title').trim(), kind: f.get('kind'), weight: num(f.get('weight')), due: readDate(f, 'due') || dayKey(), dueTime: f.get('dueTime'), hours: num(f.get('hours')) || null, score: score === '' ? null : num(score), done: f.get('done') === 'on' || score !== '' });
     toast('Assessment saved', { icon: 'pen' });
   },
   async shift(f) {

@@ -1254,3 +1254,29 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .lv-ok { --lvc: var(--school); }
 .lv-good { --lvc: var(--diet); }
 .an-std-bar .fill { background: var(--lvc); }
+
+/* ---------- v10 Study: the exam countdown and its planner ---------- */
+.cd-n { display: flex; align-items: center; gap: 13px; margin: 2px 0 2px; }
+.cd-n b { font-size: 40px; font-weight: 700; letter-spacing: -.045em; line-height: .95; font-variant-numeric: tabular-nums; }
+.cd-n.word b { font-size: 26px; letter-spacing: -.03em; }
+.cd-n span { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 12.5px; font-weight: 650; color: var(--text-2); }
+.cd-n em { font-style: normal; font-size: 11px; font-weight: 500; color: var(--text-3); line-height: 1.35; }
+.cd-foot { font-size: 11.5px; color: var(--text-2); line-height: 1.45; margin-top: 8px; }
+/* Two readings on one bar: hours done, then hours only promised. */
+.track.two { display: flex; }
+.track.two .fill { flex: none; }
+
+/* What's actually free over the week, which is all the planner has to work with. */
+.free { display: flex; align-items: flex-end; gap: 6px; }
+.free .fd { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.free .fb { width: 100%; height: 52px; border-radius: 9px; background: rgba(0,0,0,.04); display: flex; align-items: flex-end; overflow: hidden; }
+.free .fb i { display: block; width: 100%; min-height: 2px; border-radius: 9px; background: var(--school); opacity: .45; }
+.free .fd.on .fb i { opacity: .8; }
+.free b { font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-2); white-space: nowrap; line-height: 1; }
+.free .fd.on b { color: var(--school-ink); }
+.free span { font-size: 10px; font-weight: 600; color: var(--text-3); }
+
+/* A free run of the day on the timeline: tap it to put something there. */
+.tl-free { position: absolute; left: 0; right: 0; border-radius: 10px; border: 1px dashed rgba(0,0,0,.11); background: rgba(255,255,255,.28); display: grid; place-items: center; }
+.tl-free span { font-size: 9.5px; font-weight: 600; color: var(--text-3); }
+.tl-free:active { background: rgba(255,255,255,.6); }
