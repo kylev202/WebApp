@@ -1242,6 +1242,12 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .an-wbar i { width: 100%; max-width: 20px; min-height: 3px; border-radius: 5px; background: #f6c3cd; }
 .an-wbar.cur i { background: var(--move); }
 .an-wbar span { font-size: 9px; font-weight: 600; color: var(--text-3); height: 10px; white-space: nowrap; }
+/* Night strips are sleep-coloured by default; the diet report borrows the shape. */
+.hv-nights.an-diet .hv-bar i { background: #c7e9d4; }
+.hv-nights.an-diet .hv-bar i.met { background: var(--diet); }
+.an-pair.an-diet .an-pair-bar .a { background: var(--diet); }
+/* A strip with nothing to measure against: meal timing has no goal line. */
+.hv-nights.an-plain .hv-bar::after { display: none; }
 /* Softer chart tone for each status level; the ink stays for text. */
 .lv-none { --lvc: rgba(0,0,0,.12); }
 .lv-low { --lvc: var(--move); }
