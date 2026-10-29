@@ -6,7 +6,7 @@ import { esc, dayKey, addDays, dayLabel, time12, toMin, fromMin, snapMin, minNow
 import { icon, tile } from './icons.js';
 import { views, sheets, actions, forms, ui, render, openSheet, closeSheet, toast, haptic, header, closeBtn, chips, dateField, readDate, toggle, removeWithUndo, afterRender } from './core.js';
 import { of, byId, goals, habits, habitDone, waterOn, BLOCK_KINDS, kindOf, blocks, runningBlock as running } from './data.js';
-import { agendaFor, AREAS } from './plan.js';
+import { agendaFor, AREAS, courses } from './plan.js';
 import { workouts } from './gym.js';
 import { CATEGORIES } from './money.js';
 import { viewToggle } from './today.js';
@@ -260,6 +260,8 @@ sheets.block = ({ id, start }) => {
     <input type="hidden" name="live" value="${now ? '1' : ''}">
     ${field('What are you doing?', chips('kind', Object.entries(BLOCK_KINDS).map(([v, x]) => [v, x.label, x.icon, x.color]), k, { cols: 4 }))}
     <div class="field"><label>Name <span class="opt">optional</span></label><input class="input-x" name="title" maxlength="60" placeholder="e.g. COMP2123 past papers" value="${esc(b?.title ?? '')}"></div>
+    ${courses().length ? field('Unit <span class="opt">optional · adds its hours to that unit</span>',
+      chips('courseId', [['', 'None', 'dots', 'sleep'], ...courses().map(c => [c.id, c.code, 'book', c.color ?? 'school'])], b?.courseId ?? '', { cols: 4 })) : ''}
     ${now ? `<p class="note">Starts now and runs until you stop it.</p>`
       : `<div class="row2 times">${field('Starts', `<input class="input-x" type="time" name="start" value="${esc(b?.start ?? nowHHMM())}" required>`)}${field('Ends', `<input class="input-x" type="time" name="end" value="${esc(b?.end ?? fromMin(toMin(b?.start ?? nowHHMM()) + 60))}">`)}</div>
       ${field('Day', dateField('date', b?.date ?? viewDate(), { past: true }))}
@@ -278,7 +280,7 @@ forms.block = async (f) => {
   if (live) {
     const open = running();
     if (open) await updateEntry(open.id, { end: nowHHMM(), done: true });
-    await addEntry('block', { kind, title, note, start: nowHHMM(), end: null, planned: false, done: false, source: 'manual' }, dayKey());
+    await addEntry('block', { kind, title, note, courseId: f.get('courseId') || null, start: nowHHMM(), end: null, planned: false, done: false, source: 'manual' }, dayKey());
     ui.tab.dayDate = loopToday();
     haptic();
     closeSheet();
@@ -289,7 +291,7 @@ forms.block = async (f) => {
   const end = f.get('end') || null;
   if (!start) return;
   const planned = !!f.get('planned');
-  const fields = { kind, title, note, start, end: end && toMin(end) > toMin(start) ? end : fromMin(toMin(start) + 60), planned, done: !planned };
+  const fields = { kind, title, note, courseId: f.get('courseId') || null, start, end: end && toMin(end) > toMin(start) ? end : fromMin(toMin(start) + 60), planned, done: !planned };
   const date = readDate(f, 'date') || viewDate();
   if (id) await updateEntry(id, { ...fields, date });
   else await addEntry('block', { ...fields, source: 'manual' }, date);

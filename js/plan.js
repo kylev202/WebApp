@@ -7,6 +7,7 @@ import { of, byId } from './data.js';
 import { lineChart } from './charts.js';
 import { todaySections } from './today.js';
 import { slideIn } from './fx.js';
+import { uniAnalytics } from './uni-analytics.js';
 
 export const AREAS = {
   uni: { label: 'Uni', color: 'school', icon: 'school' },
@@ -19,7 +20,7 @@ export const AREAS = {
 const COLORS = ['school', 'work', 'diet', 'sleep', 'move', 'money'];
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const CLASS_KINDS = ['Lecture', 'Tutorial', 'Lab', 'Workshop', 'Seminar'];
-const ASSESS_KINDS = { assignment: 'Assignment', exam: 'Exam', quiz: 'Quiz', presentation: 'Presentation', report: 'Report' };
+export const ASSESS_KINDS = { assignment: 'Assignment', exam: 'Exam', quiz: 'Quiz', presentation: 'Presentation', report: 'Report' };
 
 // Monday = 0.
 const dow = key => (toDate(key).getDay() + 6) % 7;
@@ -63,6 +64,7 @@ export const BANDS = [['HD', 85], ['D', 75], ['C', 65], ['P', 50], ['F', 0]];
 export const band = mark => BANDS.find(([, min]) => mark >= min)[0];
 const GPA_POINTS = { 7: { HD: 7, D: 6, C: 5, P: 4, F: 0 }, 4: { HD: 4, D: 3, C: 2, P: 1, F: 0 } };
 export const gpaScale = () => Number(state.kv.gpaScale ?? 7);
+export const gradePoints = mark => GPA_POINTS[gpaScale()][band(mark)];
 
 export function courseResult(courseId) {
   const list = assessments().filter(a => a.courseId === courseId);
@@ -195,31 +197,17 @@ function planAgenda() {
 }
 
 function planUni() {
-  const sum = uniSummary();
-  const upcoming = assessments().filter(a => !a.done && a.due >= dayKey()).slice(0, 6);
   const cs = courses();
   const byDay = DAYS.map((name, i) => ({ name, list: classes().filter(c => Number(c.day) === i).sort((a, b) => a.start.localeCompare(b.start)) })).filter(d => d.list.length);
   return `
-  <section class="card glass">
-    <div class="head"><div class="title">${tile('school', 'school')}Results</div><button class="sub-note" data-act="toggleScale">${gpaScale()}-point GPA ${icon('repeat')}</button></div>
-    ${sum ? `<div class="calc-result"><div><span>GPA</span><b>${sum.gpa.toFixed(2)}</b></div><div><span>WAM</span><b>${fmt1(sum.wam)}</b></div><div><span>Graded</span><b>${plural(sum.count, 'course')}</b></div></div>`
-      : '<p class="note" style="margin:0">Add courses and enter assessment marks to see your GPA and WAM.</p>'}
-    <button class="btn soft" style="margin-top:12px" data-act="${state.kv.canvas?.token ? 'canvasSync' : 'sheet'}" data-sheet="guideCanvas">${icon('repeat')} ${state.kv.canvas?.token ? 'Sync from Canvas' : 'Connect Canvas'}</button>
-  </section>
-  <div class="section-label">Upcoming assessments <a data-act="sheet" data-sheet="assessment">Add</a></div>
-  <section class="card glass">${upcoming.length ? `<div class="list">${upcoming.map(a => {
-    const c = courseById(a.courseId), days = daysBetween(dayKey(), a.due);
-    return `<div class="row tap" data-act="sheet" data-sheet="assessment" data-id="${a.id}" role="button">${tile(a.kind === 'exam' ? 'exam' : 'pen', c.color ?? 'school')}
-      <div class="grow"><div class="t">${esc(a.title)}</div><div class="d">${esc(c.code)}${a.weight ? ` · ${a.weight}%` : ''}</div></div>
-      <span class="tag ${days <= 2 ? 'hot' : ''}">${days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}</span></div>`;
-  }).join('')}</div>` : '<div class="empty">No assessments due. Add them so Loop can plan your study.</div>'}</section>
-  <div class="section-label">Courses <a data-act="sheet" data-sheet="course">Add</a></div>
+  ${uniAnalytics()}
+  <div class="section-label">Units <a data-act="sheet" data-sheet="course">Add</a></div>
   <section class="card glass">${cs.length ? `<div class="list">${cs.map(c => {
     const r = courseResult(c.id);
     return `<div class="row tap" data-act="sheet" data-sheet="courseDetail" data-id="${c.id}" role="button">${tile('book', c.color ?? 'school')}
       <div class="grow"><div class="t">${esc(c.code)} · ${esc(c.name)}</div><div class="d">${c.credits || 6} credit points · ${r.weightDone}% marked</div></div>
       ${r.average != null ? `<span class="tag" style="background:var(--${c.color}-bg);color:var(--${c.color}-ink)">${band(r.average)} ${fmt(r.average)}</span>` : '<span class="chev">' + icon('chevron') + '</span>'}</div>`;
-  }).join('')}</div>` : '<div class="empty">No courses yet. Add your units for this semester.</div>'}</section>
+  }).join('')}</div>` : '<div class="empty">No units yet. Add the ones you are taking this semester.</div>'}</section>
   <div class="section-label">Timetable <a data-act="sheet" data-sheet="cls">Add class</a></div>
   <section class="card glass">${byDay.length ? byDay.map(d => `<div class="tt-day"><div class="label-sm">${d.name}</div><div class="list">${d.list.map(c => {
     const course = courseById(c.courseId);

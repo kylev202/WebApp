@@ -6,6 +6,7 @@ import { screens, sheets, actions, forms, previews, ui, render, closeSheet, toas
 import { lineChart, barRow, niceMax } from './charts.js';
 import { of, byId } from './data.js';
 import { todaySections } from './today.js';
+import { moneyAnalytics } from './money-analytics.js';
 
 export const CATEGORIES = {
   groceries: { label: 'Groceries', icon: 'cart', area: 'diet' },
@@ -33,7 +34,7 @@ export const INCOME = {
 };
 export const ACCOUNTS = { westpac: { label: 'Westpac', icon: 'bank' }, revolut: { label: 'Revolut', icon: 'card' }, cash: { label: 'Cash', icon: 'coins' }, savings: { label: 'Savings', icon: 'piggy' } };
 const CYCLES = { weekly: ['Weekly', 7], fortnightly: ['Fortnightly', 14], monthly: ['Monthly', 0], quarterly: ['Quarterly', 0], yearly: ['Yearly', 0] };
-const PER_MONTH = { weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1, quarterly: 1 / 3, yearly: 1 / 12 };
+export const PER_MONTH = { weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1, quarterly: 1 / 3, yearly: 1 / 12 };
 
 export const catInfo = (kind, cat) => (kind === 'income' ? INCOME[cat] ?? INCOME.other_in : kind === 'transfer' ? { label: 'Transfer', icon: 'transfer', area: 'sleep' } : CATEGORIES[cat] ?? CATEGORIES.other);
 
@@ -136,9 +137,9 @@ function txnRow(t) {
 function renderMoney() {
   const tab = ui.tab.money ?? 'overview';
   const m = ui.month ?? monthKey();
-  const body = { overview: moneyOverview, activity: moneyActivity, bills: moneyBills, savings: moneySavings }[tab](m);
+  const body = { overview: moneyOverview, report: moneyAnalytics, activity: moneyActivity, bills: moneyBills, savings: moneySavings }[tab](m);
   return `${header('Money', `${monthLabel(m)} · AUD`, `<button class="icon-btn glass" data-act="sheet" data-sheet="txn" aria-label="Add transaction">${icon('plus')}</button>`)}
-    ${seg('money', [['overview', 'Overview'], ['activity', 'Activity'], ['bills', 'Bills'], ['savings', 'Savings']], tab)}${body}`;
+    ${seg('money', [['overview', 'Overview'], ['report', 'Report'], ['activity', 'Activity'], ['bills', 'Bills'], ['savings', 'Savings']], tab)}${body}`;
 }
 screens.money = renderMoney;
 
