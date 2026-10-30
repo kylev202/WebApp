@@ -8,7 +8,8 @@ import { icon, tile } from './icons.js';
 import { lineChart, sparkline } from './charts.js';
 import { weights } from './data.js';
 import { workouts, routine, exById, history, e1rm } from './gym.js';
-import { MUSCLES } from './gym-data.js';
+import { MUSCLES, REGIONS, REGION_PATTERN, exRegions } from './gym-data.js';
+import { bodyMap, toFills, addRegions } from './body.js';
 import { chip, note, notes, signed, fmtMins, stat, section, sd, slope, dayNo } from './an-ui.js';
 
 // ---------- training theory, in constants ----------
@@ -18,26 +19,20 @@ const MEV = 10, MAV = 18, MRV = 22;
 // Acute:chronic workload ratio — the window where adaptation is high and injury risk low.
 const ACWR_OK = [0.8, 1.3];
 
-// Movement pattern per exercise, for balance checks. Anything unknown (a custom
-// exercise) falls back to its muscle group.
-const PATTERN = {
-  bench: 'push', incline_bench: 'push', db_bench: 'push', incline_db: 'push', cable_fly: 'push',
-  pec_deck: 'push', chest_press: 'push', dips: 'push', pushup: 'push',
-  ohp: 'push', db_shoulder: 'push', lateral_raise: 'push', cable_lateral: 'push',
-  pushdown: 'push', skull: 'push', oh_ext: 'push', close_bench: 'push',
-  row: 'pull', db_row: 'pull', pullup: 'pull', chinup: 'pull', lat_pulldown: 'pull',
-  seated_row: 'pull', tbar_row: 'pull', face_pull: 'pull', rear_delt: 'pull', shrug: 'pull',
-  curl: 'pull', db_curl: 'pull', hammer: 'pull', preacher: 'pull',
-  squat: 'quad', front_squat: 'quad', hack_squat: 'quad', leg_press: 'quad',
-  lunge: 'quad', bulgarian: 'quad', leg_ext: 'quad',
-  deadlift: 'hinge', rdl: 'hinge', leg_curl: 'hinge', hip_thrust: 'hinge',
-  calf_raise: 'calf',
+// Movement pattern per exercise, read off the muscles it works, so a move added
+// to the library is classified without a second table to keep in step.
+const patternOf = exId => {
+  const tally = {};
+  exRegions(exById(exId)).pri.forEach(r => { const p = REGION_PATTERN[r]; if (p) tally[p] = (tally[p] ?? 0) + 1; });
+  return Object.entries(tally).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'core';
 };
-const BY_MUSCLE = { chest: 'push', shoulders: 'push', back: 'pull', arms: 'pull', legs: 'quad', core: 'core' };
-const patternOf = exId => { const ex = exById(exId); return PATTERN[exId] ?? BY_MUSCLE[ex.muscle] ?? 'core'; };
+
+// Weekly hard sets each muscle region wants before it grows — the MEV above,
+// scaled down for the small muscles that get plenty of work indirectly.
+const REGION_MEV = { ch: 10, df: 6, ds: 8, dr: 8, tr: 6, lt: 10, ub: 8, lb: 4, bi: 8, tx: 8, fa: 4, ab: 6, ob: 4, gl: 8, qu: 10, ha: 8, ca: 8 };
 
 // Vertical vs horizontal, for the pulling balance that keeps shoulders healthy.
-const VERTICAL = new Set(['pullup', 'chinup', 'lat_pulldown', 'ohp', 'db_shoulder']);
+const VERTICAL = new Set(['pullup', 'chinup', 'neutral_pullup', 'lat_pulldown', 'close_pulldown', 'neutral_pulldown', 'ohp', 'seated_ohp', 'push_press', 'db_shoulder', 'arnold', 'machine_shoulder']);
 
 // One-rep max as a multiple of body weight, at each level. Widely published
 // strength standards for men; women's thresholds run about 73% of these.
@@ -95,6 +90,11 @@ function gymFacts() {
       .map(x => sum(x.exercises.filter(e => exById(e.exId).muscle === m).map(e => e.sets.length)))));
     return { m, name: MUSCLES[m], sets: setsIn(7), avg4: setsIn(28) / 4, freq: days.size / 4, weekly };
   });
+
+  // The same sets again, but split across the muscle regions the body map draws.
+  const regionWeek = {}, region4 = {};
+  since(7).forEach(w => w.exercises.forEach(x => addRegions(regionWeek, exById(x.exId), x.sets.length)));
+  since(28).forEach(w => w.exercises.forEach(x => addRegions(region4, exById(x.exId), x.sets.length)));
 
   // Sets by movement pattern over 4 weeks: the balance checks below read from this.
   const pat = { push: 0, pull: 0, quad: 0, hinge: 0, calf: 0, core: 0 };
@@ -188,7 +188,7 @@ function gymFacts() {
   let streak = 0;
   for (let i = weekStats.length - 1; i >= 0; i--) { if (weekStats[i].n) streak++; else if (i < weekStats.length - 1) break; }
 
-  return { all, r, today, w0, bw, female, weeks, weekStats, acwr, perMuscle, pat, vert, reps, zones, loaded,
+  return { all, r, today, w0, bw, female, weeks, weekStats, acwr, perMuscle, regionWeek, region4, pat, vert, reps, zones, loaded,
     lifts, tracked, idx, idxNow, idxDelta, adherence, hitWeeks, avgLen, density, gap, prs30, streak, since };
 }
 
@@ -306,12 +306,20 @@ function overloadCard(f) {
   </section>`;
 }
 
-// Where the volume goes: this week per muscle, and six weeks of it as a heatmap.
+// Where the volume goes: a body map of this week, and six weeks of it as a heatmap.
 function volumeCard(f) {
   const lvlOf = n => (n >= MEV ? (n <= MAV ? ['good', 'Optimal'] : n <= MRV ? ['ok', 'High'] : ['low', 'Over MRV']) : n >= MEV * 0.6 ? ['ok', 'Light'] : ['low', n ? 'Below MEV' : 'None']);
   const rows = f.perMuscle.map(x => ({ ...x, lvl: lvlOf(x.sets) }));
   const heat = n => (n ? `rgba(244,167,181,${clamp(0.18 + (n / MRV) * 0.72, 0.18, 0.95)})` : 'rgba(0,0,0,.035)');
   const weekCols = f.weeks.slice(-6);
+
+  // The map reads each muscle against what that muscle needs, so a calf and a
+  // quad are judged on their own terms: half-lit is the weekly minimum, full is
+  // twice it.
+  const fills = Object.fromEntries(Object.keys(REGIONS).map(r => [r, (f.regionWeek[r] ?? 0) / (REGION_MEV[r] * 2)]));
+  const short = Object.keys(REGIONS).filter(r => (f.regionWeek[r] ?? 0) < REGION_MEV[r] * 0.6);
+  const fed = Object.keys(REGIONS).length - short.length;
+  const totalSets = sum(f.perMuscle.map(x => x.sets));
 
   const ins = [];
   const low = rows.filter(x => x.m !== 'core' && x.sets < MEV).sort((a, b) => a.sets - b.sets);
@@ -320,16 +328,24 @@ function volumeCard(f) {
   if (over.length) ins.push(note('info', 'move', `${over.map(x => x.name).join(' and ')} ${over.length > 1 ? 'are' : 'is'} past ${MRV} sets. Beyond your recoverable volume the extra sets cost recovery without adding growth.`));
   const rare = rows.filter(x => x.m !== 'core' && x.avg4 >= 6 && x.freq < 1.5);
   if (rare.length) ins.push(note('calendar', 'sleep', `<b>${rare.map(x => x.name).join(' and ')}</b> ${rare.length > 1 ? 'get' : 'gets'} trained about once a week. Splitting the same sets over two sessions builds more, because the growth signal only lasts a couple of days.`));
+  // A region nobody has touched in four weeks is worth naming even when its
+  // group looks healthy — a whole back day can still miss the rear delts.
+  const blind = Object.keys(REGIONS).filter(r => !(f.region4[r] > 0));
+  if (blind.length) ins.push(note('target', 'school', `Nothing has worked your <b>${blind.map(r => REGIONS[r].name.toLowerCase()).join(', ')}</b> in four weeks. Grey on the map is a muscle with no claim on your week.`));
   const trend6 = rows.map(x => ({ x, d: mean(x.weekly.slice(-3)) - mean(x.weekly.slice(0, 3)) }));
   const falling = trend6.filter(t => t.d <= -3).sort((a, b) => a.d - b.d)[0];
   if (falling) ins.push(note('chart', 'move', `${falling.x.name} volume has drifted down by about ${Math.round(-falling.d)} sets a week over six weeks. Often unintentional — check it is what you meant.`));
 
-  return `${section('Volume by muscle', 'hard sets · weekly')}
+  return `${section('Volume by muscle', 'hard sets · this week')}
   <section class="card glass">
-    <div class="head"><div class="title">${tile('muscle', 'move')}This week</div><div class="sub-note">MEV ${MEV} · MAV ${MAV} · MRV ${MRV}</div></div>
-    <div class="macro-bars an-muscles">${rows.map(x => `<div class="macro an-meter lv-${x.lvl[0]}"><span>${x.name}</span>
-      <div class="track an-band" style="--lo:${(MEV / 26) * 100}%;--hi:${(MRV / 26) * 100}%"><div class="fill" style="width:${clamp((x.sets / 26) * 100, 0, 100)}%;background:var(--lvc)"></div></div>
-      <b>${x.sets} <small class="lvt">${x.lvl[1]}</small></b></div>`).join('')}</div>
+    <div class="head"><div class="title">${tile('muscle', 'move')}Where the work landed</div><div class="sub-note">tap a muscle</div></div>
+    ${bodyMap(fills, { label: 'Hard sets per muscle this week', tap: true, cls: 'bm-big' })}
+    <div class="bm-scale"><span>untouched</span><i></i><span>well fed</span></div>
+    <div class="stats an-stats3 an-gap">
+      ${stat('Sets', `${fmt(totalSets)}`, 'this week')}
+      ${stat('Fed', `${fed}`, `of ${Object.keys(REGIONS).length} muscles`)}
+      ${stat('Short', `${short.length}`, 'under minimum')}
+    </div>
 
     <div class="head an-gap"><div class="title">Six-week map</div><div class="sub-note">sets · darker is more</div></div>
     <div class="an-heat" style="--cols:${weekCols.length}">

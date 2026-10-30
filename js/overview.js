@@ -8,8 +8,9 @@ import { icon, tile } from './icons.js';
 import { actions, ui, render, header } from './core.js';
 import { sparkline } from './charts.js';
 import { goals, of, sleepOn, waterOn, weights, weeklyRate, macroTargets, maintenanceKcal } from './data.js';
-import { workouts, nextDay, active, routine, exById } from './gym.js';
-import { MUSCLES } from './gym-data.js';
+import { workouts, nextDay, active, routine, exById, workoutLoad } from './gym.js';
+import { MUSCLES, exRegions } from './gym-data.js';
+import { bodyMap, bodyPair } from './body.js';
 
 // The waking day runs from when you got up (10am, the coach's usual start, when
 // sleep isn't logged) to midnight; "on pace" means on pace for that much of it.
@@ -318,6 +319,21 @@ function muscleStatus(f) {
   });
 }
 
+// The same 48-hour rule drawn on the body: the deeper the red, the more recently
+// that muscle was worked and the less it wants another hard session today.
+function recoveryFills(f) {
+  const out = {};
+  workouts().filter(w => w.date <= f.date && w.date > addDays(f.date, -2)).forEach(w => {
+    const heat = daysBetween(w.date, f.date) === 0 ? 1 : 0.55;
+    w.exercises.forEach(x => {
+      const r = exRegions(exById(x.exId));
+      r.pri.forEach(k => { out[k] = Math.max(out[k] ?? 0, heat); });
+      r.sec.forEach(k => { out[k] = Math.max(out[k] ?? 0, heat * 0.5); });
+    });
+  });
+  return out;
+}
+
 function trainingCard(f) {
   const r = routine();
   const all = workouts();
@@ -335,12 +351,10 @@ function trainingCard(f) {
   const notes = [];
   if (f.trained.length) {
     main = f.trained.map(w => {
-      const perMuscle = {};
-      w.exercises.forEach(x => { const m = exById(x.exId).muscle; perMuscle[m] = (perMuscle[m] ?? 0) + x.sets.length; });
       return `<div class="hv-wk tap" data-act="sheet" data-sheet="wkDetail" data-id="${w.id}" role="button">
         <div class="t">${esc(w.name)}${w.prs?.length ? ` <span class="pr-badge">${icon('trophy')}${w.prs.length} PR</span>` : ''}</div>
         <div class="d">${timeOf(w.start)} · ${fmtMins((w.end - w.start) / 6e4)} · ${plural(setsOf(w), 'set')} · ${fmt(volumeOf(w))} kg moved</div>
-        <div class="ex-chips">${Object.entries(perMuscle).sort((a, b) => b[1] - a[1]).map(([m, n]) => `<span>${MUSCLES[m] ?? m} <b>${n}</b></span>`).join('')}</div></div>`;
+        <div class="hv-wk-map">${bodyPair(workoutLoad(w), Math.max(1, ...Object.values(workoutLoad(w))))}</div></div>`;
     }).join('');
     const prs = [...new Set(f.trained.flatMap(w => w.prs ?? []))].map(id => exById(id).name);
     if (prs.length) notes.push(note('trophy', 'school', `New best on <b>${esc(prs.join(', '))}</b>.`));
@@ -376,7 +390,8 @@ function trainingCard(f) {
       <div class="stat"><div class="l">Previous</div><div class="v">${before ? `${daysAgo(daysBetween(before.date, f.date))}` : '–'}</div></div>
     </div>
     <div class="label-sm hv-sub">Muscle recovery</div>
-    <div class="hv-muscles">${muscles.map(x => `<div class="hv-muscle lv-${x.lvl[0]}"><div class="t">${x.name}</div><div class="s">${x.lvl[1]}</div></div>`).join('')}</div>
+    ${bodyMap(recoveryFills(f), { label: 'Muscles still recovering', tap: true, cls: 'bm-rec' })}
+    <p class="note center bm-key"><i class="bm-dot on"></i>worked today <i class="bm-dot half"></i>yesterday <i class="bm-dot off"></i>ready to go</p>
     ${notesList(notes)}
   </section>`;
 }

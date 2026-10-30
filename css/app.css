@@ -1305,3 +1305,89 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .tl-free { position: absolute; left: 0; right: 0; border-radius: 10px; border: 1px dashed rgba(0,0,0,.11); background: rgba(255,255,255,.28); display: grid; place-items: center; }
 .tl-free span { font-size: 9.5px; font-weight: 600; color: var(--text-3); }
 .tl-free:active { background: rgba(255,255,255,.6); }
+
+/* ---------- Anatomy body map ---------- */
+/* Every shape lives once in a hidden sprite; the figures are <use> references. */
+.bm-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.bm { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin: 2px 0 10px; }
+.bm-fig { height: 168px; width: auto; flex: none; }
+.bm-big .bm-fig { height: 200px; }
+.bm-rec .bm-fig { height: 148px; }
+.bm-hit { cursor: pointer; }
+.bm-hit:focus-visible { outline: 2px solid var(--move-ink); outline-offset: 1px; }
+.bm-thumb { display: inline-flex; gap: 2px; flex: none; line-height: 0; }
+.bm-thumb svg { height: 46px; width: auto; }
+.bm-one { display: inline-flex; flex: none; line-height: 0; }
+.bm-one svg { height: 36px; width: auto; }
+.bm-row svg { height: 34px; }
+.bm-next svg, .bm-week svg { height: 62px; }
+.bm-day svg { height: 54px; }
+.bm-scale { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 10px; font-weight: 600; color: var(--text-3); margin: -4px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+.bm-scale i { width: 110px; height: 6px; border-radius: 999px; background: linear-gradient(90deg, #d2d2dd, #fae1e7, #f4a7b5, #c14760); }
+.bm-key { display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; font-size: 11px; margin: 0; }
+.bm-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-left: 8px; flex: none; }
+.bm-key > .bm-dot:first-child { margin-left: 0; }
+.bm-dot.on { background: #c14760; }
+.bm-dot.half { background: #f4a7b5; }
+.bm-dot.off { background: #d2d2dd; }
+.wk-map { margin: 12px 0 0; }
+.hv-wk-map { margin-top: 8px; }
+.hv-wk-map .bm-thumb svg { height: 42px; }
+.next-up { display: flex; align-items: center; gap: 12px; }
+
+/* ---------- Supersets and per-exercise notes ---------- */
+.ss-group { position: relative; padding-left: 13px; display: flex; flex-direction: column; gap: 10px; }
+.ss-group::before { content: ''; position: absolute; left: 3px; top: 24px; bottom: 6px; width: 3px; border-radius: 999px; background: var(--move); opacity: .55; }
+.ss-group.tight { gap: 6px; margin: 2px 0 6px; }
+.ss-tag { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--move-ink); }
+.ss-tag .i { width: 12px; height: 12px; }
+.ex-note { display: flex; gap: 6px; align-items: flex-start; font-size: 11.5px; line-height: 1.4; color: var(--text-2); background: rgba(255,255,255,.62); border-radius: 11px; padding: 7px 9px; margin: 7px 0 0; }
+.ex-note .i { color: var(--school-ink); flex: none; width: 13px; height: 13px; margin-top: 1px; }
+
+/* ---------- Exercise detail ---------- */
+.ex-hero { display: flex; gap: 12px; align-items: flex-start; margin: 4px 0 12px; }
+.ex-hero .bm { margin: 0; flex: none; }
+.ex-hero .bm-fig { height: 136px; }
+.ex-cues { list-style: none; display: flex; flex-direction: column; gap: 7px; margin: 10px 0 9px; }
+.ex-cues li { display: flex; gap: 6px; font-size: 12px; line-height: 1.4; color: var(--text-2); }
+.ex-cues .i { color: var(--diet-ink); flex: none; width: 13px; height: 13px; margin-top: 2px; }
+.ex-hero .bm-key { justify-content: flex-start; color: var(--text-3); }
+
+/* ---------- Routine editor ---------- */
+.rt-week { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.rt-sum { display: flex; align-items: center; gap: 11px; margin-bottom: 10px; }
+.rt-sum-n { font-size: 14px; font-weight: 650; }
+.rt-presets { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; }
+.rt-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 10px; }
+.rt-ex { background: rgba(255,255,255,.58); border-radius: 15px; padding: 9px 10px; }
+.rt-ex-h { display: flex; align-items: center; gap: 9px; }
+.rt-ex-h .t { font-size: 13.5px; font-weight: 600; }
+.rt-ex-h .d { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.rt-nums { display: flex; align-items: center; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+.rt-unit, .rt-dash { font-size: 11px; color: var(--text-2); font-weight: 600; }
+.step { display: inline-flex; align-items: center; background: rgba(255,255,255,.92); border-radius: 11px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+.step b { min-width: 24px; text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.step-b { width: 30px; height: 32px; display: grid; place-items: center; font-size: 17px; font-weight: 600; color: var(--move-ink); border-radius: 11px; }
+.step-b:active { background: var(--move-bg); }
+
+/* ---------- Exercise picker ---------- */
+.pick-filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 9px; scrollbar-width: none; }
+.pick-filters::-webkit-scrollbar { display: none; }
+.pick-filters .chip-btn { flex: none; }
+.pick-row { gap: 9px; }
+.pick-row .t { display: block; font-size: 14px; font-weight: 600; }
+.pick-row .d { display: block; font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.pick-row .grow { min-width: 0; }
+
+/* Keep the sets × reps line on one row even inside a superset's indent. */
+.rt-nums { gap: 4px; }
+.step b { min-width: 21px; font-size: 13.5px; }
+.step-b { width: 27px; height: 31px; font-size: 16px; }
+.rt-week .bm { margin: 0; flex: none; }
+.rt-week .bm-fig { height: 72px; }
+.wk-card .bm-thumb svg { height: 40px; }
+
+/* Only the transparent hit shapes answer a tap; the painted body underneath
+   must not swallow it. */
+.bm-fig use { pointer-events: none; }
+.bm-fig use.bm-hit { pointer-events: auto; }

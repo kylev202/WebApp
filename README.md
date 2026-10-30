@@ -6,11 +6,14 @@ The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups a
 
 ## What's in v4
 
-- **Gym (new):** pick a routine (Push/Pull/Legs, Upper/Lower or Full body) and edit every day, exercise, set and rep range. Start the next day from Today, log each set (kg × reps) with last session shown beside it, and tick sets off.
+- **Gym (new):** pick a routine (Push/Pull/Legs, Upper/Lower, Full body or a body-part split) and edit every day, exercise, set and rep range. Start the next day from Today, log each set (kg × reps) with last session shown beside it, and tick sets off.
   - **Smart weights:** double progression. Beat last time by a rep; when every set hits the top of the range, Loop tells you to add weight.
   - **PRs:** heavier weight or higher estimated 1-rep max triggers a trophy and confetti.
   - **Rest timer** starts on each ticked set and chimes when it's time to go again.
   - **Plate calculator**, exercise history with strength line charts, weekly sets chart, custom exercises. Finishing a workout ticks the Gym habit.
+  - **The body map (new):** every exercise, every routine day, every finished session and the weekly report show a front-and-back anatomy figure instead of a muscle's name — grey body, the muscles doing the work deep red, the ones helping out light. It is drawn from a library of **127 exercises**, each mapped to **17 muscle regions** (front and side and rear delts, lats, traps, upper and lower back, biceps, triceps, forearms, abs, obliques, glutes, quads, hamstrings, calves) with primary and secondary muscles and a couple of form cues. Tap any muscle on a map to see how many sets a week it gets, where they come from and what else would hit it.
+  - **Routine editor (new):** +/− steppers for sets and the rep range, one-tap **Strength / Hypertrophy / Pump** presets for a whole day, reorder and duplicate days, swap an exercise in place (keeping its sets, reps, rest and note), a **rest override** and a **note** per exercise, and **supersets** — paired moves show a linked rail in the editor and in the live logger. Each day shows its own body map, hard-set count and an estimated length.
+  - **Exercise picker (new):** instant search across names, gear and muscles ("lats" finds the pulldowns), muscle and equipment filter chips, your most-used moves first, and a small anatomy figure on every row.
 - **Custom icon set:** every emoji is replaced with Loop's own pastel duotone icons, including a habit icon picker.
 - **Today:** workout card, weekly line chart, Diet, Sleep, Water and Weight cards, habits with streaks, today's food with Repeat yesterday.
 - **Health:** Gym, Diet (today's macros + a full nutrition report), Sleep, Body (weight trend + bulk rate).
