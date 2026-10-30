@@ -11,18 +11,21 @@ const W = 100, H = 220;
 // The silhouette everything is drawn inside: head, neck, torso, hips, arms, legs.
 // Muscles sit inside it with a hair of space around them, so the figure still
 // reads as a body when nothing is lit up.
+const HEAD = [{ e: '50 17 9.6 11.6', c: 1 }];
+// Hands, kneecaps and feet: drawn, but never a muscle you can train.
+const JOINTS = [
+  { e: '18.5 157 6.2 8.6' },
+  { e: '39.5 164 8.4 7' },
+  { d: 'M30.5 202h17c1 3 1 8-.5 10.5H32c-3-1-3.5-5.5-1.5-10.5z' },
+];
 const BASE = [
-  { e: '50 17 9.6 11.6', c: 1 },
   { d: 'M45.4 23h9.2v12h-9.2z', c: 1 },
   { d: 'M50 31.5c11 0 19 5.5 22.5 15 4 11.5 3.5 26.5-.5 40.5-2.5 9-4 19-4.5 30h-35c-.5-11-2-21-4.5-30-4-14-4.5-29-.5-40.5C31 38.5 39 34 50 34z', c: 1 },
   { d: 'M34 109h32c0 13.5-2.4 23.3-6.2 29.5H40.2c-3.8-6.2-6.2-16-6.2-29.5z', c: 1 },
   { d: 'M31 38l3.5 1.5c-1.5 3.5-2.5 10.5-3.5 19.5-1.5 12-2 25-2 36H18.5c-1.5-8-2-19-1-31 1-12 5.5-21.5 13.5-26z' },
   { d: 'M18 93l8 1c.5 5 .5 12 0 23-.5 12-1 24-1.5 33h-10c-2-5-3-14-2.5-26 .5-12 2.5-23 6-31z' },
-  { e: '18.5 157 6.2 8.6' },
   { d: 'M32 114h16c.5 5 1 12 1 21 0 12-.5 23-1.5 31H33c-2-2-3.5-7-4-15-1-12 0-25 3-37z' },
-  { e: '39.5 164 8.4 7' },
   { d: 'M31.5 162h15.5c.5 3 1 9 1 18 0 10-.5 20-1.5 27H34c-2-1-3.5-5-4.5-12-1.5-10-1-22 2-33z' },
-  { d: 'M30.5 202h17c1 3 1 8-.5 10.5H32c-3-1-3.5-5.5-1.5-10.5z' },
 ];
 
 // Front view. Each region is one or more shapes; `c` marks a centred one that is
@@ -55,22 +58,52 @@ const BACK = {
   ca: [{ d: 'M46.8 167.5c.8 9.5.6 19.5-.6 28-1.2 6.5-3 10-5.2 11-3-1-5.4-4.7-7.2-11.3-1.6-8.2-1.6-17.7 0-26.2 3.4-2.2 8-2.7 13-1.5z' }],
 };
 
+// Line work laid over the muscles — ab segments, serratus, the splits inside a
+// quad or a calf, the groove down the spine. It is never filled or highlighted;
+// it is what makes the figure read as a drawing rather than a set of blobs.
+const DETAIL = {
+  front: [
+    { d: 'M47.6 25.6c-.4 4.4-1.4 7.6-3 9.8' },
+    { d: 'M34.6 59.4c1.4 1.2 2.9 2.2 4.6 3' },
+    { d: 'M34.8 65.2c1.4 1.2 3 2.2 4.6 2.9' },
+    { d: 'M35.6 70.8c1.3 1 2.7 1.8 4.2 2.4' },
+    { d: 'M43.4 76h13.2', c: 1 },
+    { d: 'M44 85.4h12', c: 1 },
+    { d: 'M44.6 94.6h10.8', c: 1 },
+    { d: 'M50 67.4v33', c: 1 },
+    { d: 'M24.8 65.8c-1.6 7-2.2 14-1.8 21' },
+    { d: 'M20.8 98.6c-1.8 11-3.2 22.6-3.8 34.4' },
+    { d: 'M40.6 118c-1.4 12.4-1.8 25-1.2 37.4' },
+    { d: 'M40.8 170c-1 9.4-1.2 18.8-.6 28.2' },
+  ],
+  back: [
+    { d: 'M50 60v48', c: 1 },
+    { d: 'M45.8 35.6c-1 8.8-2 17-3.2 25.4' },
+    { d: 'M43.8 65.4c-3.6 3.4-7.4 6.4-11.4 8.8' },
+    { d: 'M43.2 75.6c-3 3.2-6.2 6-9.6 8.4' },
+    { d: 'M25.6 64.4c-1.4 7.6-1.8 15-1 22.4' },
+    { d: 'M20.8 98.6c-1.8 11-3.2 22.6-3.8 34.4' },
+    { d: 'M46.4 117.4c-3.8 3.4-8 5.6-12.6 6.6' },
+    { d: 'M39.8 140c-1 7.6-1.2 14.4-.6 20.4' },
+    { d: 'M40.8 170c-1 9.4-1.2 18.8-.6 28.2' },
+  ],
+};
+
 export const VIEWS = { front: FRONT, back: BACK };
 
-// Grey for flesh and an untrained muscle, then the Gym red deepening with load.
-const SKIN = '#e4e4ec';
-const OFF = '#d2d2dd';
+// The Gym red, deepening with the work a muscle gets.
 const RAMP = [[250, 225, 231], [244, 167, 181], [224, 114, 136], [193, 71, 96]];
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
 export function shade(t) {
-  if (!(t > 0)) return OFF;
   const x = clamp(t, 0, 1) * (RAMP.length - 1);
   const i = Math.min(RAMP.length - 2, Math.floor(x));
   return `rgb(${mix(RAMP[i], RAMP[i + 1], x - i).join(',')})`;
 }
 
 const MIRROR = 'transform="matrix(-1 0 0 1 100 0)"';
-const one = s => (s.e ? `<ellipse cx="${s.e.split(' ')[0]}" cy="${s.e.split(' ')[1]}" rx="${s.e.split(' ')[2]}" ry="${s.e.split(' ')[3]}"/>` : `<path d="${s.d}"/>`);
+// Strokes stay a constant width on screen however large the figure is drawn.
+const VE = 'vector-effect="non-scaling-stroke"';
+const one = s => (s.e ? `<ellipse cx="${s.e.split(' ')[0]}" cy="${s.e.split(' ')[1]}" rx="${s.e.split(' ')[2]}" ry="${s.e.split(' ')[3]}" ${VE}/>` : `<path d="${s.d}" ${VE}/>`);
 const shapes = list => list.map(s => one(s) + (s.c ? '' : `<g ${MIRROR}>${one(s)}</g>`)).join('');
 
 // Every shape is defined once in a hidden sprite and referenced after that, so a
@@ -80,15 +113,22 @@ let sprited = false;
 function sprite() {
   if (sprited || typeof document === 'undefined') return;
   sprited = true;
-  const defs = [`<g id="bm-skin">${shapes(BASE)}</g>`,
+  const defs = [`<g id="bm-skin">${shapes(BASE)}</g>`, `<g id="bm-head">${shapes(HEAD)}</g>`, `<g id="bm-joint">${shapes(JOINTS)}</g>`,
     ...Object.entries(FRONT).map(([r, l]) => `<g id="bm-f-${r}">${shapes(l)}</g>`),
-    ...Object.entries(BACK).map(([r, l]) => `<g id="bm-b-${r}">${shapes(l)}</g>`)].join('');
+    ...Object.entries(BACK).map(([r, l]) => `<g id="bm-b-${r}">${shapes(l)}</g>`),
+    ...Object.entries(DETAIL).map(([v, l]) => `<g id="bm-d-${V(v)}">${shapes(l)}</g>`)].join('');
   document.body.insertAdjacentHTML('beforeend', `<svg class="bm-sprite" aria-hidden="true" width="0" height="0"><defs>${defs}</defs></svg>`);
 }
 
 const V = v => (v === 'back' ? 'b' : 'f');
-const figure = (view, fills) => `<use href="#bm-skin" fill="${SKIN}"/>`
-  + Object.keys(VIEWS[view]).map(r => `<use href="#bm-${V(view)}-${r}" fill="${shade(fills[r] ?? 0)}"/>`).join('');
+// A muscle with no work on it carries no fill of its own, so the stylesheet can
+// leave it white on a big drawn figure and grey on one 40 pixels high.
+const figure = (view, fills) => `<use href="#bm-skin" class="bm-skin"/><use href="#bm-joint" class="bm-joint"/>`
+  + Object.keys(VIEWS[view]).map(r => {
+    const t = fills[r] ?? 0;
+    return t > 0 ? `<use href="#bm-${V(view)}-${r}" class="bm-on" fill="${shade(t)}"/>` : `<use href="#bm-${V(view)}-${r}" class="bm-off"/>`;
+  }).join('')
+  + `<use href="#bm-d-${V(view)}" class="bm-detail"/><use href="#bm-head" class="bm-head"/>`;
 const svg = (view, fills, cls = '') => `<svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${figure(view, fills)}</svg>`;
 
 // Regions an exercise works, as fills: primary full strength, secondary half.
@@ -110,9 +150,6 @@ export function addRegions(into, ex, n = 1) {
 }
 export const toFills = (counts, max) => Object.fromEntries(Object.entries(counts).map(([k, v]) => [k, v / (max || 1)]));
 
-// The view an exercise is best seen from, so a list can show just one figure.
-export const bestView = ex => (exRegions(ex).pri.every(r => BACK[r] && !FRONT[r]) ? 'back' : 'front');
-
 const names = ex => { const r = exRegions(ex); return [...r.pri, ...r.sec].map(x => REGIONS[x]?.name).filter(Boolean).join(', '); };
 
 // Front and back together, the hero version. `tap` makes each muscle a button.
@@ -120,12 +157,6 @@ export function bodyMap(fills, { label = 'Muscles worked', tap = false, cls = ''
   sprite();
   return `<div class="bm ${cls}" role="img" aria-label="${esc(label)}">${['front', 'back'].map(v => `<svg class="bm-fig" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${figure(v, fills)}
     ${tap ? Object.keys(VIEWS[v]).map(r => `<use class="bm-hit" href="#bm-${V(v)}-${r}" fill="transparent" data-act="muscle" data-r="${r}" role="button" tabindex="0" aria-label="${esc(REGIONS[r].name)}"/>`).join('') : ''}</svg>`).join('')}</div>`;
-}
-
-// One view only, for a list row where two figures would not fit.
-export function bodyOne(ex, view = null) {
-  sprite();
-  return `<span class="bm-one" role="img" aria-label="Works ${esc(names(ex))}">${svg(view ?? bestView(ex), exFills(ex))}</span>`;
 }
 
 // A figure drawn from raw region counts, for a day or a whole session.

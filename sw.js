@@ -3,7 +3,7 @@
 const CACHE = 'loop-v4.13.0';
 const SHELL = [
   './', './index.html', './css/app.css', './js/app.js', './js/store.js', './js/charts.js', './js/util.js', './js/icons.js',
-  './js/core.js', './js/data.js', './js/health.js', './js/overview.js', './js/gym.js', './js/gym-data.js', './js/body.js', './js/today.js', './js/settings.js', './js/plan.js', './js/study.js', './js/money.js', './js/ai.js', './js/ask.js', './js/csv.js', './js/connect.js', './js/coach.js', './js/analytics.js', './js/an-ui.js', './js/gym-analytics.js', './js/diet-analytics.js', './js/money-analytics.js', './js/uni-analytics.js', './js/day.js', './js/targets.js', './js/fx.js',
+  './js/core.js', './js/data.js', './js/health.js', './js/overview.js', './js/gym.js', './js/gym-data.js', './js/body.js', './js/closeup.js', './js/today.js', './js/settings.js', './js/plan.js', './js/study.js', './js/money.js', './js/ai.js', './js/ask.js', './js/csv.js', './js/connect.js', './js/coach.js', './js/analytics.js', './js/an-ui.js', './js/gym-analytics.js', './js/diet-analytics.js', './js/money-analytics.js', './js/uni-analytics.js', './js/day.js', './js/targets.js', './js/fx.js',
   './manifest.webmanifest', './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png',
 ];
 

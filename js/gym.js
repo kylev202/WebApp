@@ -6,7 +6,8 @@ import { screens, sheets, actions, forms, previews, afterRender, ui, go, render,
 import { lineChart, sparkline } from './charts.js';
 import { of, byId, habits, habitDone } from './data.js';
 import { EXERCISES, MUSCLES, REGIONS, TEMPLATES, REP_PRESETS, PLATES, PLATE_COLORS, exRegions } from './gym-data.js';
-import { bodyMap, bodyOne, bodyPair, exFills, addRegions, toFills } from './body.js';
+import { bodyMap, bodyPair, addRegions, toFills } from './body.js';
+import { exShot, muscleShot, hasHalf } from './closeup.js';
 
 // ---------- data ----------
 export const allExercises = () => [...EXERCISES, ...(state.kv.customExercises ?? [])];
@@ -250,7 +251,7 @@ function renderWorkout() {
 function exCard(x, xi) {
   const ex = exById(x.exId);
   return `<section class="card glass ex-card">
-    <div class="ex-head">${bodyOne(ex)}<div class="grow tap" data-act="sheet" data-sheet="exDetail" data-id="${x.exId}"><div class="t">${esc(ex.name)}</div><div class="d">${esc(ex.equip)} · ${x.plan.sets} × ${x.plan.repMin}–${x.plan.repMax}${x.rest ? ` · ${fmtRest(x.rest)} rest` : ''}</div></div>
+    <div class="ex-head">${exShot(ex)}<div class="grow tap" data-act="sheet" data-sheet="exDetail" data-id="${x.exId}"><div class="t">${esc(ex.name)}</div><div class="d">${esc(ex.equip)} · ${x.plan.sets} × ${x.plan.repMin}–${x.plan.repMax}${x.rest ? ` · ${fmtRest(x.rest)} rest` : ''}</div></div>
       <button class="x-btn" data-act="sheet" data-sheet="exMenu" data-i="${xi}" aria-label="Exercise options">${icon('more')}</button></div>
     ${x.note ? `<div class="ex-note">${icon('pen')}${esc(x.note)}</div>` : ''}
     <div class="hint ${x.up ? 'up' : ''}">${icon(x.up ? 'chart' : 'target')}${esc(x.hint)}</div>
@@ -360,7 +361,7 @@ const stepper = (di, xi, f, v, label) => `<div class="step" role="group" aria-la
 function rtRow(x, di, xi) {
   const ex = exById(x.exId);
   return `<div class="rt-ex">
-    <div class="rt-ex-h">${bodyOne(ex)}
+    <div class="rt-ex-h">${exShot(ex)}
       <div class="grow tap" role="button" tabindex="0" data-act="sheet" data-sheet="exDetail" data-id="${x.exId}"><div class="t">${esc(ex.name)}</div>
         <div class="d">${esc(ex.equip)}${x.rest ? ` · ${fmtRest(x.rest)} rest` : ''}</div></div>
       <button class="x-btn" data-act="sheet" data-sheet="exOpts" data-day="${di}" data-ex="${xi}" aria-label="Options for ${esc(ex.name)}">${icon('more')}</button></div>
@@ -430,7 +431,7 @@ sheets.exPicker = ({ mode, day, ex }) => {
   const d = { mode, day: day ?? '', ex: ex ?? '' };
   const row = e => `<button class="pick-row" data-act="pickEx" data-id="${e.id}" data-mode="${d.mode}" data-day="${d.day}" data-ex="${d.ex}"
       data-name="${esc(searchKey(e))}" data-m="${e.muscle}" data-eq="${esc(e.equip)}">
-      ${bodyOne(e)}<span class="grow"><span class="t">${esc(e.name)}</span><span class="d">${esc(e.equip)}</span></span>${icon(swap ? 'repeat' : 'plus')}</button>`;
+      ${exShot(e)}<span class="grow"><span class="t">${esc(e.name)}</span><span class="d">${esc(e.equip)}</span></span>${icon(swap ? 'repeat' : 'plus')}</button>`;
   const recent = recentExIds().map(id => allExercises().find(e => e.id === id)).filter(Boolean).slice(0, 6);
   const groups = Object.entries(MUSCLES).map(([m, label]) => {
     const list = allExercises().filter(e => e.muscle === m);
@@ -524,10 +525,10 @@ sheets.exDetail = ({ id }) => {
   const pts = h.slice(0, 20).reverse();
   const best = h.flatMap(x => x.sets.map(s => ({ ...s, date: x.date }))).reduce((b, s) => (!b || setScore(s) > setScore(b) ? s : b), null);
   return `<h2>${esc(ex.name)} ${closeBtn}</h2>
-    <div class="ex-hero">${bodyMap(exFills(ex), { label: `Muscles ${ex.name} works` })}
+    <div class="ex-hero">${exShot(ex, { cls: 'cu-lg' })}
       <div class="grow"><span class="hdr-pill" style="background:var(--move-bg);color:var(--move-ink)">${esc(ex.equip)}</span>
         ${ex.cues?.length ? `<ul class="ex-cues">${ex.cues.map(c => `<li>${icon('check')}<span>${esc(c)}</span></li>`).join('')}</ul>` : ''}
-        <p class="note bm-key"><i class="bm-dot on"></i>does the work <i class="bm-dot half"></i>helps out</p></div></div>
+        <p class="note bm-key"><i class="bm-dot on"></i>does the work${hasHalf(ex) ? ' <i class="bm-dot half"></i>helps out' : ''}</p></div></div>
     ${best ? `<div class="calc-result"><div><span>Best set</span><b>${fmt1(best.kg)} × ${best.reps}</b></div><div><span>Est. 1RM</span><b>${fmt1(h.length ? Math.max(...h.map(x => x.best)) : 0)}</b></div><div><span>Sessions</span><b>${h.length}</b></div></div>` : ''}
     ${lineChart({ series: [{ values: pts.map(x => x.best), color: 'var(--move)' }], labels: pts.map((x, i) => (i === 0 || i === pts.length - 1 ? shortDate(x.date) : '')), min: pts.length ? Math.min(...pts.map(x => x.best)) * 0.95 : 0, empty: 'No sets logged for this exercise yet.' })}
     ${h.length ? `<div class="label-sm" style="margin-top:14px">History</div><div class="list">${h.slice(0, 12).map(x => `<div class="row"><div class="grow"><div class="t">${dayLabel(x.date)}</div><div class="d">${x.sets.map(s => `${fmt1(s.kg)}×${s.reps}`).join(' · ')}</div></div><div class="amt">${fmt1(x.best)}</div></div>`).join('')}</div>` : ''}`;
@@ -554,11 +555,12 @@ sheets.muscleDetail = ({ r }) => {
   const top = Object.entries(mo.by).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const more = allExercises().filter(e => exRegions(e).pri.includes(r) && !mo.by[e.id]).slice(0, 5);
   return `<h2>${esc(reg.name)} ${closeBtn}</h2>
-    <p class="note">Part of ${esc(MUSCLES[reg.group])}. A set counts fully when this muscle does the job and half when it only helps.</p>
+    <div class="ex-hero">${muscleShot(r, { cls: 'cu-lg' })}
+      <div class="grow"><p class="note">Part of ${esc(MUSCLES[reg.group])}. A set counts fully when this muscle does the job and half when it only helps.</p></div></div>
     <div class="calc-result"><div><span>This week</span><b>${fmt1(wk.sets)}</b></div><div><span>Weekly avg</span><b>${fmt1(mo.sets / 4)}</b></div><div><span>Days / week</span><b>${fmt1(mo.days / 4)}</b></div></div>
     ${top.length ? `<div class="label-sm" style="margin-top:14px">Where the work comes from · 28 days</div>
     <div class="list">${top.map(([id, n]) => `<div class="row tap" role="button" tabindex="0" data-act="sheet" data-sheet="exDetail" data-id="${id}">
-      ${bodyOne(exById(id))}<div class="grow"><div class="t">${esc(exById(id).name)}</div><div class="d">${esc(exById(id).equip)}</div></div><div class="amt">${fmt1(n)}</div></div>`).join('')}</div>` : '<div class="empty">Nothing has worked this muscle in the last four weeks.</div>'}
+      ${exShot(exById(id))}<div class="grow"><div class="t">${esc(exById(id).name)}</div><div class="d">${esc(exById(id).equip)}</div></div><div class="amt">${fmt1(n)}</div></div>`).join('')}</div>` : '<div class="empty">Nothing has worked this muscle in the last four weeks.</div>'}
     ${more.length ? `<div class="label-sm" style="margin-top:14px">Moves that hit it hardest</div>
     <div class="ex-chips">${more.map(e => `<span>${esc(e.name)}</span>`).join('')}</div>` : ''}`;
 };
@@ -571,7 +573,7 @@ sheets.wkDetail = ({ id, done }) => {
     ${done ? `<div class="done-hero">${tile(w.prs?.length ? 'trophy' : 'check', w.prs?.length ? 'school' : 'diet', 'xl')}<div class="t">${esc(w.name)}</div><div class="d">${w.prs?.length ? `${w.prs.length} new personal record${w.prs.length > 1 ? 's' : ''}!` : 'Nice work. Logged and the Gym habit is ticked.'}</div></div>` : `<p class="note">${dayLabel(w.date)} · ${new Date(w.start).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })}</p>`}
     <div class="calc-result"><div><span>Time</span><b>${fmtDuration(w.end - w.start)}</b></div><div><span>Sets</span><b>${sets}</b></div><div><span>Volume</span><b>${fmt(w.volume)} kg</b></div></div>
     <div class="wk-map">${bodyMap(toFills(workoutLoad(w), topLoad(workoutLoad(w))), { label: 'Muscles this workout worked', tap: true })}</div>
-    <div class="list">${w.exercises.map(x => `<div class="row">${bodyOne(exById(x.exId))}<div class="grow"><div class="t">${esc(exById(x.exId).name)}${w.prs?.includes(x.exId) ? ` <span class="pr-badge">${icon('trophy')}PR</span>` : ''}</div><div class="d">${x.sets.map(s => `${fmt1(s.kg)}×${s.reps}`).join(' · ')}</div></div></div>`).join('')}</div>
+    <div class="list">${w.exercises.map(x => `<div class="row">${exShot(exById(x.exId))}<div class="grow"><div class="t">${esc(exById(x.exId).name)}${w.prs?.includes(x.exId) ? ` <span class="pr-badge">${icon('trophy')}PR</span>` : ''}</div><div class="d">${x.sets.map(s => `${fmt1(s.kg)}×${s.reps}`).join(' · ')}</div></div></div>`).join('')}</div>
     ${done ? '<button class="btn" data-act="close" style="margin-top:14px">Done</button>' : `<button class="btn danger" data-act="delWorkout" data-id="${w.id}" style="margin-top:14px">Delete workout</button>`}`;
 };
 

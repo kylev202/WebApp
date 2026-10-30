@@ -1307,29 +1307,48 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .tl-free:active { background: rgba(255,255,255,.6); }
 
 /* ---------- Anatomy body map ---------- */
-/* Every shape lives once in a hidden sprite; the figures are <use> references. */
+/* Drawn like the chart on a gym machine: a line-art body, with the muscles the
+   move works filled in. Every shape lives once in a hidden sprite and the
+   figures are <use> references, so a hundred-row list stays cheap. */
 .bm-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .bm { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin: 2px 0 10px; }
-.bm-fig { height: 168px; width: auto; flex: none; }
-.bm-big .bm-fig { height: 200px; }
-.bm-rec .bm-fig { height: 148px; }
-.bm-hit { cursor: pointer; }
-.bm-hit:focus-visible { outline: 2px solid var(--move-ink); outline-offset: 1px; }
+.bm svg, .bm-thumb svg { stroke: #9ea4de; stroke-linejoin: round; stroke-linecap: round; }
+.bm-skin, .bm-off, .bm-joint { fill: #fff; }
+.bm-skin { stroke: none; }
+.bm-head { fill: #d9d9e8; }
+.bm-detail { fill: none; stroke: #b7bbe8; }
+.bm-on { stroke: #b9506a; }
+.bm-fig { height: 172px; width: auto; flex: none; stroke-width: 1; }
+.bm-big .bm-fig { height: 206px; stroke-width: 1.1; }
+.bm-rec .bm-fig { height: 150px; }
+.bm-hit { cursor: pointer; stroke: none; }
+.bm-hit:focus-visible { stroke: var(--move-ink); stroke-width: 2; }
+/* Only the transparent hit shapes answer a tap; the body underneath must not
+   swallow it. */
+.bm-fig use { pointer-events: none; }
+.bm-fig use.bm-hit { pointer-events: auto; }
+
+/* Small figures: the line work would turn to mush, so they drop the detail and
+   fill an untrained muscle grey instead of white. */
 .bm-thumb { display: inline-flex; gap: 2px; flex: none; line-height: 0; }
 .bm-thumb svg { height: 46px; width: auto; }
-.bm-one { display: inline-flex; flex: none; line-height: 0; }
-.bm-one svg { height: 36px; width: auto; }
+.bm-thumb svg { stroke-width: .55; }
+.bm-thumb .bm-detail { display: none; }
+.bm-thumb .bm-off { fill: #e3e3ee; }
+.bm-thumb .bm-skin { fill: #eeeef5; }
+.bm-thumb .bm-joint { fill: #f4f4f9; }
 .bm-row svg { height: 34px; }
 .bm-next svg, .bm-week svg { height: 62px; }
 .bm-day svg { height: 54px; }
+
 .bm-scale { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 10px; font-weight: 600; color: var(--text-3); margin: -4px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
-.bm-scale i { width: 110px; height: 6px; border-radius: 999px; background: linear-gradient(90deg, #d2d2dd, #fae1e7, #f4a7b5, #c14760); }
+.bm-scale i { width: 110px; height: 6px; border-radius: 999px; background: linear-gradient(90deg, #fff, #fae1e7, #f4a7b5, #c14760); box-shadow: inset 0 0 0 1px rgba(0,0,0,.07); }
 .bm-key { display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; font-size: 11px; margin: 0; }
 .bm-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-left: 8px; flex: none; }
 .bm-key > .bm-dot:first-child { margin-left: 0; }
 .bm-dot.on { background: #c14760; }
 .bm-dot.half { background: #f4a7b5; }
-.bm-dot.off { background: #d2d2dd; }
+.bm-dot.off { background: #fff; box-shadow: inset 0 0 0 1px #9ea4de; }
 .wk-map { margin: 12px 0 0; }
 .hv-wk-map { margin-top: 8px; }
 .hv-wk-map .bm-thumb svg { height: 42px; }
@@ -1387,7 +1406,13 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .rt-week .bm-fig { height: 72px; }
 .wk-card .bm-thumb svg { height: 40px; }
 
-/* Only the transparent hit shapes answer a tap; the painted body underneath
-   must not swallow it. */
-.bm-fig use { pointer-events: none; }
-.bm-fig use.bm-hit { pointer-events: auto; }
+
+/* ---------- Close-up muscle diagrams ---------- */
+.cu-box { display: inline-flex; flex: none; line-height: 0; }
+.cu { height: 42px; width: 42px; stroke: #9ea4de; stroke-width: 1; stroke-linejoin: round; stroke-linecap: round; }
+.cu .bm-skin { fill: #e7e7f2; stroke: none; }
+.cu .bm-off { fill: #fff; }
+.cu .bm-half { fill: #f7c2cd; stroke: #d28a9c; }
+.cu .bm-on { fill: #d45470; stroke: #ab3f58; }
+.cu .bm-detail { fill: none; stroke: #bcc0ea; }
+.cu-lg .cu { height: 108px; width: 108px; stroke-width: 1.3; }
