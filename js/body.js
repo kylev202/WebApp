@@ -1,98 +1,21 @@
-// The anatomy figure: a front and a back silhouette in grey, with the muscles an
-// exercise or a week of training works lit up in the Gym red. Shapes are authored
-// on the left half of a 100-wide figure and mirrored, so the two sides can never
-// drift apart. Regions that only read from one side (lats, glutes, abs) simply
-// have no shape in the other view.
+// The anatomy figure. The drawing itself is a pair of pictures — img/body-front.webp
+// and img/body-back.webp — and every muscle is an SVG outline traced from the
+// artwork's own borders (js/body-art.js). Lighting a muscle means laying its
+// outline over the picture in red with a multiply blend, so the drawn shading and
+// line work still show through instead of being painted over.
+//
+// A close-up is the same picture with the viewBox cropped to one muscle, so a row
+// in the exercise list and the full figure in the report are the same drawing.
 import { REGIONS, exRegions } from './gym-data.js';
 import { esc, clamp } from './util.js';
+import { ART } from './body-art.js';
 
-const W = 100, H = 220;
+const S = 1000;                       // the square the artwork is drawn on
+const SRC = view => `img/body-${view}.webp`;
 
-// The silhouette everything is drawn inside: head, neck, torso, hips, arms, legs.
-// Muscles sit inside it with a hair of space around them, so the figure still
-// reads as a body when nothing is lit up.
-const HEAD = [{ e: '50 17 9.6 11.6', c: 1 }];
-// Hands, kneecaps and feet: drawn, but never a muscle you can train.
-const JOINTS = [
-  { e: '18.5 157 6.2 8.6' },
-  { e: '39.5 164 8.4 7' },
-  { d: 'M30.5 202h17c1 3 1 8-.5 10.5H32c-3-1-3.5-5.5-1.5-10.5z' },
-];
-const BASE = [
-  { d: 'M45.4 23h9.2v12h-9.2z', c: 1 },
-  { d: 'M50 31.5c11 0 19 5.5 22.5 15 4 11.5 3.5 26.5-.5 40.5-2.5 9-4 19-4.5 30h-35c-.5-11-2-21-4.5-30-4-14-4.5-29-.5-40.5C31 38.5 39 34 50 34z', c: 1 },
-  { d: 'M34 109h32c0 13.5-2.4 23.3-6.2 29.5H40.2c-3.8-6.2-6.2-16-6.2-29.5z', c: 1 },
-  { d: 'M31 38l3.5 1.5c-1.5 3.5-2.5 10.5-3.5 19.5-1.5 12-2 25-2 36H18.5c-1.5-8-2-19-1-31 1-12 5.5-21.5 13.5-26z' },
-  { d: 'M18 93l8 1c.5 5 .5 12 0 23-.5 12-1 24-1.5 33h-10c-2-5-3-14-2.5-26 .5-12 2.5-23 6-31z' },
-  { d: 'M32 114h16c.5 5 1 12 1 21 0 12-.5 23-1.5 31H33c-2-2-3.5-7-4-15-1-12 0-25 3-37z' },
-  { d: 'M31.5 162h15.5c.5 3 1 9 1 18 0 10-.5 20-1.5 27H34c-2-1-3.5-5-4.5-12-1.5-10-1-22 2-33z' },
-];
-
-// Front view. Each region is one or more shapes; `c` marks a centred one that is
-// not mirrored across the middle.
-const FRONT = {
-  tr: [{ d: 'M49.4 28c-8.4 1-15 4.9-18.8 11.6 6.2 2.9 12.5 2.3 18.8-1.9z' }],
-  ds: [{ d: 'M31 38.5c-2.5 6-4.5 14.5-5.2 24H19c-.6-11 1-18.5 4.6-22.3 2.2-2.2 4.8-2.7 7.4-1.7z' }],
-  df: [{ d: 'M31.4 38.6c-2.5 6-4.5 14.5-5.2 24 4.8-2.1 8.8-7.1 11.4-14.6-1-4.6-3.2-7.8-6.2-9.4z' }],
-  ch: [{ d: 'M49.4 37.4c-7.4 0-13.2 2.2-16.8 6.6-1.3 7.5.4 14 5.2 18.5 4.8 2.1 8.6 1.4 11.6-1.5z' }],
-  bi: [{ d: 'M32.5 58c-1 12-3.5 24-6 34.5h-7c-1.5-10.5-1-21.5 1.5-31.5 3-3 7-4 11.5-3z' }],
-  fa: [{ d: 'M26 95c-.5 11-2 23.5-4 35-1 7-2 12-3 15h-5c-1.5-9-2-20-1.5-31 .5-11 2-19.5 4.5-24.5z' }],
-  ab: [{ d: 'M42.5 65.5c5-1.7 10-1.7 15 0 .8 12.5.1 25-2.1 37-3.2 5-7.6 5-10.8 0-2.2-12-2.9-24.5-2.1-37z', c: 1 }],
-  ob: [{ d: 'M41.5 66c-5 2-7.7 7-8.3 15-.4 9 1.6 17.5 6 25.5 2-1.5 2.8-5.5 2.4-12.5-.6-9.5-.7-18.8-.1-28z' }],
-  qu: [{ d: 'M48 114.5c.8 11.5.8 23.5 0 34.5-.8 6-2.6 9.5-5.5 10.5-3.7-.5-6.7-3.5-8.7-9-2.2-10.5-2.6-21.5-1.2-32 3.4-3.5 8.4-4.7 15.4-4z' }],
-  ca: [{ d: 'M46.8 167.5c.8 9.5.6 19.5-.6 28-1.2 6.5-3 10-5.2 11-3-1-5.4-4.7-7.2-11.3-1.6-8.2-1.6-17.7 0-26.2 3.4-2.2 8-2.7 13-1.5z' }],
-};
-
-// Back view.
-const BACK = {
-  tr: [{ d: 'M49.4 27.4c-8.6 1-15.4 5-19.5 11.5 1.9 10.2 6.8 18.2 14.6 23.9 3.2-5.5 4.9-17.3 4.9-35.4z' }],
-  ds: [{ d: 'M31 38.5c-2.5 6-4.5 14.5-5.2 24H19c-.6-11 1-18.5 4.6-22.3 2.2-2.2 4.8-2.7 7.4-1.7z' }],
-  dr: [{ d: 'M31.4 38.6c-2.5 6-4.5 14.5-5.2 24 4.8-2.1 8.8-7.1 11.4-14.6-1-4.6-3.2-7.8-6.2-9.4z' }],
-  lt: [{ d: 'M44.6 59.8c.5 14-.3 27.6-2.5 40.6-7.7-4.4-11.9-13.5-12.5-27.1 2.2-9 7.2-13.5 15-13.5z' }],
-  ub: [{ d: 'M44.8 62.5c3.5-1.2 6.9-1.2 10.4 0-.3 9.5-1.2 17.4-2.8 23.6-1.6 2.6-3.2 2.6-4.8 0-1.6-6.2-2.5-14.1-2.8-23.6z', c: 1 }],
-  lb: [{ d: 'M43 86c4.7-1.8 9.3-1.8 14 0-.5 9.4-2.1 17-4.7 23-1.6 2.6-3.6 2.6-5.2 0-2.6-6-4.2-13.6-4.1-23z', c: 1 }],
-  tx: [{ d: 'M32.5 58c-1 12-3.5 24-6 34.5h-7c-1.5-10.5-1-21.5 1.5-31.5 3-3 7-4 11.5-3z' }],
-  fa: [{ d: 'M26 95c-.5 11-2 23.5-4 35-1 7-2 12-3 15h-5c-1.5-9-2-20-1.5-31 .5-11 2-19.5 4.5-24.5z' }],
-  gl: [{ d: 'M48 110.5c.8 8 .4 15.5-1.2 22-2.8 6-7.4 8-12.2 5.5-3.2-4.5-4-11.5-2.4-20.5 3.2-5.7 8.6-7.9 15.8-7z' }],
-  ha: [{ d: 'M47.6 136.5c-.6 10.5-2.8 17.6-6.4 21.6-3.4 1.3-6.4-.7-8.6-6-1.6-6.5-1.6-13.3.2-20.2 5 2.4 9.9 3.9 14.8 4.6z' }],
-  ca: [{ d: 'M46.8 167.5c.8 9.5.6 19.5-.6 28-1.2 6.5-3 10-5.2 11-3-1-5.4-4.7-7.2-11.3-1.6-8.2-1.6-17.7 0-26.2 3.4-2.2 8-2.7 13-1.5z' }],
-};
-
-// Line work laid over the muscles — ab segments, serratus, the splits inside a
-// quad or a calf, the groove down the spine. It is never filled or highlighted;
-// it is what makes the figure read as a drawing rather than a set of blobs.
-const DETAIL = {
-  front: [
-    { d: 'M47.6 25.6c-.4 4.4-1.4 7.6-3 9.8' },
-    { d: 'M34.6 59.4c1.4 1.2 2.9 2.2 4.6 3' },
-    { d: 'M34.8 65.2c1.4 1.2 3 2.2 4.6 2.9' },
-    { d: 'M35.6 70.8c1.3 1 2.7 1.8 4.2 2.4' },
-    { d: 'M43.4 76h13.2', c: 1 },
-    { d: 'M44 85.4h12', c: 1 },
-    { d: 'M44.6 94.6h10.8', c: 1 },
-    { d: 'M50 67.4v33', c: 1 },
-    { d: 'M24.8 65.8c-1.6 7-2.2 14-1.8 21' },
-    { d: 'M20.8 98.6c-1.8 11-3.2 22.6-3.8 34.4' },
-    { d: 'M40.6 118c-1.4 12.4-1.8 25-1.2 37.4' },
-    { d: 'M40.8 170c-1 9.4-1.2 18.8-.6 28.2' },
-  ],
-  back: [
-    { d: 'M50 60v48', c: 1 },
-    { d: 'M45.8 35.6c-1 8.8-2 17-3.2 25.4' },
-    { d: 'M43.8 65.4c-3.6 3.4-7.4 6.4-11.4 8.8' },
-    { d: 'M43.2 75.6c-3 3.2-6.2 6-9.6 8.4' },
-    { d: 'M25.6 64.4c-1.4 7.6-1.8 15-1 22.4' },
-    { d: 'M20.8 98.6c-1.8 11-3.2 22.6-3.8 34.4' },
-    { d: 'M46.4 117.4c-3.8 3.4-8 5.6-12.6 6.6' },
-    { d: 'M39.8 140c-1 7.6-1.2 14.4-.6 20.4' },
-    { d: 'M40.8 170c-1 9.4-1.2 18.8-.6 28.2' },
-  ],
-};
-
-export const VIEWS = { front: FRONT, back: BACK };
-
-// The Gym red, deepening with the work a muscle gets.
-const RAMP = [[250, 225, 231], [244, 167, 181], [224, 114, 136], [193, 71, 96]];
+// Reds to multiply over the artwork: the faintest tint for a muscle that only
+// helped, deepening with the work it did.
+const RAMP = [[255, 232, 228], [255, 176, 159], [244, 112, 92]];
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
 export function shade(t) {
   const x = clamp(t, 0, 1) * (RAMP.length - 1);
@@ -100,39 +23,19 @@ export function shade(t) {
   return `rgb(${mix(RAMP[i], RAMP[i + 1], x - i).join(',')})`;
 }
 
-const MIRROR = 'transform="matrix(-1 0 0 1 100 0)"';
-// Strokes stay a constant width on screen however large the figure is drawn.
-const VE = 'vector-effect="non-scaling-stroke"';
-const one = s => (s.e ? `<ellipse cx="${s.e.split(' ')[0]}" cy="${s.e.split(' ')[1]}" rx="${s.e.split(' ')[2]}" ry="${s.e.split(' ')[3]}" ${VE}/>` : `<path d="${s.d}" ${VE}/>`);
-const shapes = list => list.map(s => one(s) + (s.c ? '' : `<g ${MIRROR}>${one(s)}</g>`)).join('');
+export const VIEWS = { front: ART.front, back: ART.back };
+// The view a muscle is drawn on; a few show on both, and the front is preferred.
+export const viewOf = r => (ART.front[r] ? 'front' : 'back');
 
-// Every shape is defined once in a hidden sprite and referenced after that, so a
-// list of a hundred exercises costs a few hundred bytes of markup each instead of
-// a few thousand.
-let sprited = false;
-function sprite() {
-  if (sprited || typeof document === 'undefined') return;
-  sprited = true;
-  const defs = [`<g id="bm-skin">${shapes(BASE)}</g>`, `<g id="bm-head">${shapes(HEAD)}</g>`, `<g id="bm-joint">${shapes(JOINTS)}</g>`,
-    ...Object.entries(FRONT).map(([r, l]) => `<g id="bm-f-${r}">${shapes(l)}</g>`),
-    ...Object.entries(BACK).map(([r, l]) => `<g id="bm-b-${r}">${shapes(l)}</g>`),
-    ...Object.entries(DETAIL).map(([v, l]) => `<g id="bm-d-${V(v)}">${shapes(l)}</g>`)].join('');
-  document.body.insertAdjacentHTML('beforeend', `<svg class="bm-sprite" aria-hidden="true" width="0" height="0"><defs>${defs}</defs></svg>`);
-}
+const picture = view => `<image href="${SRC(view)}" x="0" y="0" width="${S}" height="${S}" preserveAspectRatio="xMidYMid meet"/>`;
+const lit = (view, fills) => Object.entries(ART[view]).map(([r, m]) => {
+  const t = fills[r] ?? 0;
+  return t > 0 ? `<path d="${m.d}" fill="${shade(t)}" class="bf-lit"/>` : '';
+}).join('');
 
-const V = v => (v === 'back' ? 'b' : 'f');
-// A muscle with no work on it carries no fill of its own, so the stylesheet can
-// leave it white on a big drawn figure and grey on one 40 pixels high.
-const figure = (view, fills) => `<use href="#bm-skin" class="bm-skin"/><use href="#bm-joint" class="bm-joint"/>`
-  + Object.keys(VIEWS[view]).map(r => {
-    const t = fills[r] ?? 0;
-    return t > 0 ? `<use href="#bm-${V(view)}-${r}" class="bm-on" fill="${shade(t)}"/>` : `<use href="#bm-${V(view)}-${r}" class="bm-off"/>`;
-  }).join('')
-  + `<use href="#bm-d-${V(view)}" class="bm-detail"/><use href="#bm-head" class="bm-head"/>`;
-const svg = (view, fills, cls = '') => `<svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${figure(view, fills)}</svg>`;
-
-// Regions an exercise works, as fills: primary full strength, secondary half.
-export function exFills(ex, { pri = 1, sec = 0.4 } = {}) {
+// Regions an exercise works, as fills: the muscles doing the job at full
+// strength, the ones helping at a little under half.
+export function exFills(ex, { pri = 1, sec = 0.38 } = {}) {
   const r = exRegions(ex);
   const f = {};
   r.sec.forEach(x => { f[x] = sec; });
@@ -140,8 +43,8 @@ export function exFills(ex, { pri = 1, sec = 0.4 } = {}) {
   return f;
 }
 
-// How much of a set counts towards each region: all of it for a primary muscle,
-// half for one that only helps.
+// How much of a set counts towards each muscle: all of it where the muscle does
+// the job, half where it only helps.
 export function addRegions(into, ex, n = 1) {
   const r = exRegions(ex);
   r.pri.forEach(x => { into[x] = (into[x] ?? 0) + n; });
@@ -150,18 +53,60 @@ export function addRegions(into, ex, n = 1) {
 }
 export const toFills = (counts, max) => Object.fromEntries(Object.entries(counts).map(([k, v]) => [k, v / (max || 1)]));
 
-const names = ex => { const r = exRegions(ex); return [...r.pri, ...r.sec].map(x => REGIONS[x]?.name).filter(Boolean).join(', '); };
-
-// Front and back together, the hero version. `tap` makes each muscle a button.
+// Front and back together. `tap` turns each muscle into a button.
 export function bodyMap(fills, { label = 'Muscles worked', tap = false, cls = '' } = {}) {
-  sprite();
-  return `<div class="bm ${cls}" role="img" aria-label="${esc(label)}">${['front', 'back'].map(v => `<svg class="bm-fig" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${figure(v, fills)}
-    ${tap ? Object.keys(VIEWS[v]).map(r => `<use class="bm-hit" href="#bm-${V(v)}-${r}" fill="transparent" data-act="muscle" data-r="${r}" role="button" tabindex="0" aria-label="${esc(REGIONS[r].name)}"/>`).join('') : ''}</svg>`).join('')}</div>`;
+  const fig = view => `<svg class="bf" viewBox="0 0 ${S} ${S}" preserveAspectRatio="xMidYMid meet">
+    ${picture(view)}${lit(view, fills)}
+    ${tap ? Object.entries(ART[view]).map(([r, m]) => `<path class="bf-hit" d="${m.d}" data-act="muscle" data-r="${r}" role="button" tabindex="0" aria-label="${esc(REGIONS[r].name)}"/>`).join('') : ''}</svg>`;
+  return `<div class="bm ${cls}" role="img" aria-label="${esc(label)}">${fig('front')}${fig('back')}</div>`;
 }
 
-// A figure drawn from raw region counts, for a day or a whole session.
+// A square window around one muscle, cropped out of the same picture.
+function crop(view, region) {
+  const [x0, y0, x1, y1] = ART[view][region].box;
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const side = Math.min(S, Math.max(x1 - x0, y1 - y0) * 1.32 + 40);
+  const x = clamp(cx - side / 2, 0, S - side);
+  const y = clamp(cy - side / 2, 0, S - side);
+  return `${x.toFixed(0)} ${y.toFixed(0)} ${side.toFixed(0)} ${side.toFixed(0)}`;
+}
+
+const shot = (view, region, fills) => `<svg class="bf" viewBox="${crop(view, region)}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  ${picture(view)}${lit(view, fills)}</svg>`;
+
+// The close-up for an exercise: the muscle it works hardest, with any other
+// muscle in the same view shaded behind it.
+export function exShot(ex, { cls = '' } = {}) {
+  const r = exRegions(ex);
+  const main = r.pri[0];
+  if (!main) return '';
+  const view = viewOf(main);
+  const fills = {};
+  [...r.pri.slice(1), ...r.sec].forEach(x => { if (ART[view][x]) fills[x] = 0.38; });
+  fills[main] = 1;
+  const names = [...r.pri, ...r.sec].map(x => REGIONS[x]?.name).filter(Boolean).join(', ');
+  return `<span class="cu-box ${cls}" role="img" aria-label="Works ${esc(names)}">${shot(view, main, fills)}</span>`;
+}
+
+// The close-up for one muscle on its own.
+export function muscleShot(region, { cls = '' } = {}) {
+  const view = viewOf(region);
+  if (!ART[view]?.[region]) return '';
+  return `<span class="cu-box ${cls}" role="img" aria-label="${esc(REGIONS[region]?.name ?? '')}">${shot(view, region, { [region]: 1 })}</span>`;
+}
+
+// Whether a muscle that only helped shows in the same close-up.
+export function hasHalf(ex) {
+  const r = exRegions(ex);
+  const main = r.pri[0];
+  if (!main) return false;
+  const view = viewOf(main);
+  return [...r.pri.slice(1), ...r.sec].some(x => ART[view][x]);
+}
+
+// Both figures small, drawn from raw muscle counts — a routine day or a session.
 export function bodyPair(counts, max, { cls = '' } = {}) {
-  sprite();
   const fills = toFills(counts, max);
-  return `<span class="bm-thumb ${cls}" aria-hidden="true">${svg('front', fills)}${svg('back', fills)}</span>`;
+  return `<span class="bm-thumb ${cls}" aria-hidden="true">${['front', 'back'].map(v =>
+    `<svg class="bf" viewBox="0 0 ${S} ${S}" preserveAspectRatio="xMidYMid meet">${picture(v)}${lit(v, fills)}</svg>`).join('')}</span>`;
 }

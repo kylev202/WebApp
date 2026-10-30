@@ -1306,52 +1306,39 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .tl-free span { font-size: 9.5px; font-weight: 600; color: var(--text-3); }
 .tl-free:active { background: rgba(255,255,255,.6); }
 
-/* ---------- Anatomy body map ---------- */
-/* Drawn like the chart on a gym machine: a line-art body, with the muscles the
-   move works filled in. Every shape lives once in a hidden sprite and the
-   figures are <use> references, so a hundred-row list stays cheap. */
-.bm-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
-.bm { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin: 2px 0 10px; }
-.bm svg, .bm-thumb svg { stroke: #9ea4de; stroke-linejoin: round; stroke-linecap: round; }
-.bm-skin, .bm-off, .bm-joint { fill: #fff; }
-.bm-skin { stroke: none; }
-.bm-head { fill: #d9d9e8; }
-.bm-detail { fill: none; stroke: #b7bbe8; }
-.bm-on { stroke: #b9506a; }
-.bm-fig { height: 172px; width: auto; flex: none; stroke-width: 1; }
-.bm-big .bm-fig { height: 206px; stroke-width: 1.1; }
-.bm-rec .bm-fig { height: 150px; }
-.bm-hit { cursor: pointer; stroke: none; }
-.bm-hit:focus-visible { stroke: var(--move-ink); stroke-width: 2; }
-/* Only the transparent hit shapes answer a tap; the body underneath must not
-   swallow it. */
-.bm-fig use { pointer-events: none; }
-.bm-fig use.bm-hit { pointer-events: auto; }
+/* ---------- Anatomy figure ---------- */
+/* The drawing is a picture; a lit muscle is an outline traced from that picture,
+   multiplied over it so the artwork's own shading still reads through the red. */
+.bm { display: flex; justify-content: center; align-items: flex-end; gap: 6px; margin: 2px 0 10px; }
+.bf { display: block; width: auto; isolation: isolate; }  /* keeps multiply inside the figure */
+.bf-lit { mix-blend-mode: multiply; pointer-events: none; }
+.bf-hit { fill: transparent; cursor: pointer; }
+.bf-hit:focus-visible { outline: none; stroke: var(--move-ink); stroke-width: 6; }
+.bm .bf { height: 190px; }
+.bm-big .bf { height: 220px; }
+.bm-rec .bf { height: 164px; }
+.bm-thumb { display: inline-flex; gap: 1px; flex: none; line-height: 0; }
+.bm-thumb .bf { height: 50px; }
+.bm-row .bf { height: 40px; }
+.bm-next .bf, .bm-week .bf { height: 66px; }
+.bm-day .bf { height: 58px; }
 
-/* Small figures: the line work would turn to mush, so they drop the detail and
-   fill an untrained muscle grey instead of white. */
-.bm-thumb { display: inline-flex; gap: 2px; flex: none; line-height: 0; }
-.bm-thumb svg { height: 46px; width: auto; }
-.bm-thumb svg { stroke-width: .55; }
-.bm-thumb .bm-detail { display: none; }
-.bm-thumb .bm-off { fill: #e3e3ee; }
-.bm-thumb .bm-skin { fill: #eeeef5; }
-.bm-thumb .bm-joint { fill: #f4f4f9; }
-.bm-row svg { height: 34px; }
-.bm-next svg, .bm-week svg { height: 62px; }
-.bm-day svg { height: 54px; }
+/* A close-up is the same picture cropped to one muscle. */
+.cu-box { display: inline-flex; flex: none; line-height: 0; }
+.cu-box .bf { height: 44px; width: 44px; border-radius: 11px; background: rgba(255,255,255,.72); box-shadow: inset 0 0 0 1px rgba(0,0,0,.045); }
+.cu-lg .bf { height: 112px; width: 112px; border-radius: 20px; }
 
 .bm-scale { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 10px; font-weight: 600; color: var(--text-3); margin: -4px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
-.bm-scale i { width: 110px; height: 6px; border-radius: 999px; background: linear-gradient(90deg, #fff, #fae1e7, #f4a7b5, #c14760); box-shadow: inset 0 0 0 1px rgba(0,0,0,.07); }
+.bm-scale i { width: 110px; height: 6px; border-radius: 999px; background: linear-gradient(90deg, #eef0f6, #ffe8e4, #ffb09f, #f4705c); box-shadow: inset 0 0 0 1px rgba(0,0,0,.07); }
 .bm-key { display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; font-size: 11px; margin: 0; }
 .bm-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-left: 8px; flex: none; }
 .bm-key > .bm-dot:first-child { margin-left: 0; }
-.bm-dot.on { background: #c14760; }
-.bm-dot.half { background: #f4a7b5; }
-.bm-dot.off { background: #fff; box-shadow: inset 0 0 0 1px #9ea4de; }
+.bm-dot.on { background: #ef7f6c; }
+.bm-dot.half { background: #ffc6ba; }
+.bm-dot.off { background: #eef0f6; box-shadow: inset 0 0 0 1px #c9cde0; }
 .wk-map { margin: 12px 0 0; }
 .hv-wk-map { margin-top: 8px; }
-.hv-wk-map .bm-thumb svg { height: 42px; }
+.hv-wk-map .bf { height: 46px; }
 .next-up { display: flex; align-items: center; gap: 12px; }
 
 /* ---------- Supersets and per-exercise notes ---------- */
@@ -1366,7 +1353,7 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 /* ---------- Exercise detail ---------- */
 .ex-hero { display: flex; gap: 12px; align-items: flex-start; margin: 4px 0 12px; }
 .ex-hero .bm { margin: 0; flex: none; }
-.ex-hero .bm-fig { height: 136px; }
+.ex-hero .cu-box .bf { height: 116px; width: 116px; }
 .ex-cues { list-style: none; display: flex; flex-direction: column; gap: 7px; margin: 10px 0 9px; }
 .ex-cues li { display: flex; gap: 6px; font-size: 12px; line-height: 1.4; color: var(--text-2); }
 .ex-cues .i { color: var(--diet-ink); flex: none; width: 13px; height: 13px; margin-top: 2px; }
@@ -1403,16 +1390,7 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .step b { min-width: 21px; font-size: 13.5px; }
 .step-b { width: 27px; height: 31px; font-size: 16px; }
 .rt-week .bm { margin: 0; flex: none; }
-.rt-week .bm-fig { height: 72px; }
+.rt-week .bf { height: 76px; }
 .wk-card .bm-thumb svg { height: 40px; }
 
 
-/* ---------- Close-up muscle diagrams ---------- */
-.cu-box { display: inline-flex; flex: none; line-height: 0; }
-.cu { height: 42px; width: 42px; stroke: #9ea4de; stroke-width: 1; stroke-linejoin: round; stroke-linecap: round; }
-.cu .bm-skin { fill: #e7e7f2; stroke: none; }
-.cu .bm-off { fill: #fff; }
-.cu .bm-half { fill: #f7c2cd; stroke: #d28a9c; }
-.cu .bm-on { fill: #d45470; stroke: #ab3f58; }
-.cu .bm-detail { fill: none; stroke: #bcc0ea; }
-.cu-lg .cu { height: 108px; width: 108px; stroke-width: 1.3; }

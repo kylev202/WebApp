@@ -6,8 +6,7 @@ import { screens, sheets, actions, forms, previews, afterRender, ui, go, render,
 import { lineChart, sparkline } from './charts.js';
 import { of, byId, habits, habitDone } from './data.js';
 import { EXERCISES, MUSCLES, REGIONS, TEMPLATES, REP_PRESETS, PLATES, PLATE_COLORS, exRegions } from './gym-data.js';
-import { bodyMap, bodyPair, addRegions, toFills } from './body.js';
-import { exShot, muscleShot, hasHalf } from './closeup.js';
+import { bodyMap, bodyPair, addRegions, toFills, exShot, muscleShot, hasHalf } from './body.js';
 
 // ---------- data ----------
 export const allExercises = () => [...EXERCISES, ...(state.kv.customExercises ?? [])];
