@@ -1393,4 +1393,59 @@ body.sheet-open .wallpaper * { animation-play-state: paused; }
 .rt-week .bf { height: 76px; }
 .wk-card .bm-thumb svg { height: 40px; }
 
+/* ---------- Routine editor: direct editing ---------- */
+/* Rows glide to their new place; only the one under your finger moves instantly. */
+.rt-list .rt-ex { transition: transform .19s cubic-bezier(.2,.8,.2,1); }
+.rt-ex.rt-dragging { transition: none; position: relative; z-index: 3; box-shadow: 0 14px 30px -12px rgba(50,50,90,.4); background: #fff; }
+body.rt-drag-on { user-select: none; }
+body.rt-drag-on .rt-ex:not(.rt-dragging) { opacity: .92; }
 
+.rt-grab { display: grid; place-items: center; width: 26px; height: 40px; margin: -4px -2px -4px -6px; flex: none;
+  color: var(--text-3); opacity: .75; cursor: grab; touch-action: none; }
+.rt-grab .i { width: 19px; height: 19px; }
+.rt-grab:active { cursor: grabbing; color: var(--move-ink); }
+.rt-dragging .rt-grab { color: var(--move-ink); }
+
+/* Swapping a move for a variation is the edit you make most, so it comes out of
+   the menu and sits on the row itself. */
+.rt-quick { width: 28px; height: 28px; flex: none; display: grid; place-items: center; border-radius: 10px;
+  color: var(--text-3); background: rgba(255,255,255,.8); box-shadow: inset 0 0 0 1px rgba(0,0,0,.05); }
+.rt-quick .i { width: 15px; height: 15px; }
+.rt-quick:active { background: var(--move-bg); color: var(--move-ink); }
+.rt-ex-h .t { line-height: 1.25; }
+.rt-ex-h > .grow { min-width: 0; }
+
+/* Something that just arrived says so, since the screen around it never moved. */
+.rt-new { animation: rt-land .55s var(--spring-soft) both; }
+@keyframes rt-land {
+  0% { transform: scale(.96); opacity: 0; }
+  60% { background: var(--move-bg); }
+  100% { transform: none; opacity: 1; }
+}
+
+.rt-empty { display: flex; align-items: center; gap: 10px; padding: 4px 2px 12px; color: var(--text-3); }
+.rt-empty .i { width: 22px; height: 22px; flex: none; color: var(--move-ink); opacity: .55; }
+.rt-empty p { font-size: 12px; line-height: 1.45; margin: 0; }
+
+/* ---------- Exercise picker: a library you can live in ---------- */
+/* The search and the filters stay put while 260 exercises scroll under them. */
+.pick-head { position: sticky; top: -8px; z-index: 4; margin: 0 -18px; padding: 8px 18px 0;
+  background: rgba(255,255,255,.93); backdrop-filter: saturate(160%) blur(18px); -webkit-backdrop-filter: saturate(160%) blur(18px); }
+.pick-head h2 { margin-bottom: 12px; }
+.pick-head .search-box { margin-bottom: 10px; }
+.pick-count { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 2px 0 9px; }
+.pick-g-n { font-weight: 600; color: var(--text-3); opacity: .7; }
+.pick-row .pick-add { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; flex: none;
+  background: var(--move-bg); color: var(--move-ink); }
+.pick-row .pick-add .i { width: 15px; height: 15px; }
+.pick-n { font-size: 11px; font-weight: 700; color: var(--move-ink); font-variant-numeric: tabular-nums; }
+.pick-n:not(:empty) { background: var(--move-bg); border-radius: 8px; padding: 3px 6px; }
+.pick-row.just-added { animation: pick-flash .7s ease; }
+@keyframes pick-flash {
+  0% { background: var(--move-bg); }
+  100% { background: transparent; }
+}
+/* A sheet you can add five moves from needs its own way out. */
+.pick-done { position: sticky; bottom: calc(env(safe-area-inset-bottom) * -1 - 22px); z-index: 4;
+  margin: 14px -18px calc(env(safe-area-inset-bottom) * -1 - 22px); padding: 10px 18px calc(env(safe-area-inset-bottom) + 14px);
+  background: linear-gradient(rgba(255,255,255,0), rgba(255,255,255,.94) 28%); }

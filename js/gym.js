@@ -2,7 +2,7 @@
 import { state, addEntry, putEntry, removeEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, weekStart, shortDate, dayLabel, fmt, fmt1, fmtDuration, num, uid, plural, clamp } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, afterRender, ui, go, render, openSheet, closeSheet, refreshSheet, toast, haptic, confetti, unlockAudio, chime, closeBtn, header } from './core.js';
+import { screens, sheets, actions, forms, previews, afterRender, ui, go, render, openSheet, closeSheet, refreshSheet, makeFocusable, toast, haptic, confetti, unlockAudio, chime, closeBtn, header, reduceMotion } from './core.js';
 import { lineChart, sparkline } from './charts.js';
 import { of, byId, habits, habitDone } from './data.js';
 import { EXERCISES, MUSCLES, REGIONS, TEMPLATES, REP_PRESETS, PLATES, PLATE_COLORS, exRegions } from './gym-data.js';
@@ -352,17 +352,20 @@ export function workoutCard() {
 const LIM = { sets: [1, 12], repMin: [1, 60], repMax: [1, 60] };
 const REST_OPTS = [45, 60, 90, 120, 150, 180, 240];
 
-const stepper = (di, xi, f, v, label) => `<div class="step" role="group" aria-label="${label}">
+const stepper = (di, xi, f, v, label) => `<div class="step" data-f="${f}" role="group" aria-label="${label}">
   <button class="step-b" data-act="stepNum" data-day="${di}" data-ex="${xi}" data-f="${f}" data-d="-1" aria-label="Fewer ${label}">−</button>
   <b>${v}</b>
   <button class="step-b" data-act="stepNum" data-day="${di}" data-ex="${xi}" data-f="${f}" data-d="1" aria-label="More ${label}">+</button></div>`;
 
 function rtRow(x, di, xi) {
   const ex = exById(x.exId);
-  return `<div class="rt-ex">
-    <div class="rt-ex-h">${exShot(ex)}
+  return `<div class="rt-ex" data-day="${di}" data-ex="${xi}">
+    <div class="rt-ex-h">
+      <span class="rt-grab" role="button" tabindex="-1" aria-label="Drag to reorder ${esc(ex.name)}">${icon('drag')}</span>
+      ${exShot(ex)}
       <div class="grow tap" role="button" tabindex="0" data-act="sheet" data-sheet="exDetail" data-id="${x.exId}"><div class="t">${esc(ex.name)}</div>
         <div class="d">${esc(ex.equip)}${x.rest ? ` · ${fmtRest(x.rest)} rest` : ''}</div></div>
+      <button class="rt-quick" data-act="sheet" data-sheet="exPicker" data-mode="swap" data-day="${di}" data-ex="${xi}" aria-label="Swap ${esc(ex.name)} for another exercise">${icon('repeat')}</button>
       <button class="x-btn" data-act="sheet" data-sheet="exOpts" data-day="${di}" data-ex="${xi}" aria-label="Options for ${esc(ex.name)}">${icon('more')}</button></div>
     <div class="rt-nums">${stepper(di, xi, 'sets', x.sets, 'sets')}<span class="rt-unit">sets ×</span>
       ${stepper(di, xi, 'repMin', x.repMin, 'minimum reps')}<span class="rt-dash">–</span>${stepper(di, xi, 'repMax', x.repMax, 'maximum reps')}<span class="rt-unit">reps</span></div>
@@ -370,35 +373,42 @@ function rtRow(x, di, xi) {
   </div>`;
 }
 
+const daySets = d => d.exercises.reduce((t, x) => t + (Number(x.sets) || 0), 0);
+const dayMins = d => Math.round(daySets(d) * 2.6 + d.exercises.length * 1.5);
+const daySub = d => `${plural(daySets(d), 'hard set')}${daySets(d) ? ` · about ${dayMins(d)} min` : ''}`;
+
 function dayCard(d, di) {
   const load = dayLoad(d);
-  const sets = d.exercises.reduce((t, x) => t + x.sets, 0);
   return `<section class="card glass rt-day" data-day="${di}">
     <div class="day-head"><input class="input-x r-in day-name" data-day="${di}" data-f="dayName" value="${esc(d.name)}" aria-label="Day name">
       <button class="x-btn" data-act="sheet" data-sheet="dayMenu" data-day="${di}" aria-label="Day options">${icon('more')}</button></div>
-    <div class="rt-sum">${bodyPair(load, topLoad(load), { cls: 'bm-day' })}
+    <div class="rt-sum"><span class="rt-sum-fig">${bodyPair(load, topLoad(load), { cls: 'bm-day' })}</span>
       <div class="grow"><div class="rt-sum-n">${plural(d.exercises.length, 'exercise')}</div>
-        <div class="sub-note">${plural(sets, 'hard set')}${sets ? ` · about ${Math.round(sets * 2.6 + d.exercises.length * 1.5)} min` : ''}</div>
-        ${d.exercises.length ? `<div class="rt-presets">${REP_PRESETS.map(pz => `<button class="mini-pill" data-act="dayPreset" data-day="${di}" data-p="${pz.id}">${pz.name}</button>`).join('')}</div>` : ''}</div></div>
+        <div class="sub-note rt-sum-sub">${daySub(d)}</div>
+        ${d.exercises.length ? `<div class="rt-presets">${REP_PRESETS.map(pz => `<button class="mini-pill" data-act="dayPreset" data-day="${di}" data-p="${pz.id}" title="${esc(pz.blurb)}">${pz.name}</button>`).join('')}</div>` : ''}</div></div>
     ${d.exercises.length ? `<div class="rt-list">${groupSets(d.exercises).map(g => {
       const rows = g.items.map(({ x, i }) => rtRow(x, di, i)).join('');
       return g.items.length > 1 ? `<div class="ss-group tight"><div class="ss-tag">${icon('repeat')} Superset</div>${rows}</div>` : rows;
-    }).join('')}</div>` : '<p class="note" style="margin:4px 0 10px">No exercises yet. Add the first one below.</p>'}
+    }).join('')}</div>` : `<div class="rt-empty">${icon('dumbbell')}<p>Nothing here yet. Add the first move and set its sets and reps right on the card.</p></div>`}
     <button class="chip-btn soft add-ex" data-act="sheet" data-sheet="exPicker" data-mode="routine" data-day="${di}">${icon('plus')} Add exercise</button>
   </section>`;
+}
+
+function weekSummary(r) {
+  const weekly = regionLoad(r.days.flatMap(d => d.exercises.map(x => ({ exId: x.exId, sets: x.sets }))));
+  const sets = r.days.reduce((t, d) => t + daySets(d), 0);
+  return `${bodyMap(toFills(weekly, topLoad(weekly)), { label: 'Muscles this routine works', tap: true, cls: 'bm-week' })}
+    <div class="grow"><div class="label-sm">One round of this routine</div>
+      <div class="big-md">${plural(sets, 'set')}</div>
+      <div class="sub-note">across ${plural(r.days.length, 'day')}. Tap a muscle to see what feeds it.</div></div>`;
 }
 
 function renderRoutine() {
   const r = routine();
   if (!r) return `${header('Routine', 'Gym')}${gymTab()}`;
-  const weekly = regionLoad(r.days.flatMap(d => d.exercises.map(x => ({ exId: x.exId, sets: x.sets }))));
-  const sets = r.days.reduce((t, d) => t + d.exercises.reduce((n, x) => n + x.sets, 0), 0);
   return `${header('Routine', esc(r.name), '<button class="pill-btn" data-act="nav" data-to="health">Done</button>')}
   <section class="card glass">
-    <div class="rt-week">${bodyMap(toFills(weekly, topLoad(weekly)), { label: 'Muscles this routine works', tap: true, cls: 'bm-week' })}
-      <div class="grow"><div class="label-sm">One round of this routine</div>
-        <div class="big-md">${plural(sets, 'set')}</div>
-        <div class="sub-note">across ${plural(r.days.length, 'day')}. Tap a muscle to see what feeds it.</div></div></div>
+    <div class="rt-week" id="rt-week">${weekSummary(r)}</div>
     <div class="row2">
       <div class="field"><label>Routine name</label><input class="input-x r-in" data-f="name" value="${esc(r.name)}"></div>
       <div class="field"><label>Workouts per week</label><input class="input-x r-in" data-f="perWeek" inputmode="numeric" value="${r.perWeek}"></div>
@@ -406,8 +416,78 @@ function renderRoutine() {
     <div class="label-sm">Start again from a template</div>
     <div class="day-pick">${Object.entries(TEMPLATES).map(([k, t]) => `<button class="chip-btn soft" data-act="useTemplate" data-t="${k}" data-confirm="1">${t.name}</button>`).join('')}</div>
   </section>
-  ${r.days.map(dayCard).join('')}
+  <div id="rt-days">${r.days.map(dayCard).join('')}</div>
   <button class="btn soft" data-act="addDay">${icon('plus')} Add a day</button>`;
+}
+
+// ---------- patching the editor in place ----------
+// Editing a routine never redraws the screen. Only the card you touched is
+// rebuilt, so the page keeps its scroll position, its open keyboard and the
+// text you were part way through typing.
+function keepFocus(run) {
+  const a = document.activeElement;
+  const f = a?.dataset?.f;
+  const keep = f && a.matches?.('#rt-days input') ? { f, day: a.dataset.day, s: a.selectionStart, e: a.selectionEnd } : null;
+  run();
+  if (!keep) return;
+  const back = document.querySelector(`#rt-days input[data-f="${keep.f}"][data-day="${keep.day}"]`);
+  if (!back) return;
+  back.focus();
+  try { back.setSelectionRange(keep.s, keep.e); } catch { /* not a text input */ }
+}
+
+// The weekly figure is a whole body drawing, so it waits for a gap in the tapping.
+let weekTimer;
+function patchWeek() {
+  clearTimeout(weekTimer);
+  weekTimer = setTimeout(() => {
+    const el = document.getElementById('rt-week');
+    const r = routine();
+    if (el && r) el.innerHTML = weekSummary(r);
+  }, 150);
+}
+
+// One day card, rebuilt. `flash` pops the row that just arrived.
+function patchDay(di, { flash = null } = {}) {
+  if (ui.route !== 'routine') return;
+  const el = document.querySelector(`.rt-day[data-day="${di}"]`);
+  const d = routine()?.days[di];
+  if (!el || !d) { patchDays(); return; }
+  keepFocus(() => { el.outerHTML = dayCard(d, di); });
+  const card = document.querySelector(`.rt-day[data-day="${di}"]`);
+  makeFocusable(card);
+  if (flash != null) card.querySelectorAll('.rt-ex')[flash === 'last' ? d.exercises.length - 1 : flash]?.classList.add('rt-new');
+  patchWeek();
+}
+
+// Every day card, when the days themselves moved and the indexes shifted.
+function patchDays() {
+  if (ui.route !== 'routine') return;
+  const el = document.getElementById('rt-days');
+  const r = routine();
+  if (!el || !r) { render(); return; }
+  keepFocus(() => { el.innerHTML = r.days.map(dayCard).join(''); });
+  makeFocusable(el);
+  patchWeek();
+}
+
+// Just the counts on one day card: used while a stepper is held down, so the
+// numbers move but nothing under your thumb is replaced.
+function patchDaySummary(di) {
+  const card = document.querySelector(`.rt-day[data-day="${di}"]`);
+  const d = routine()?.days[di];
+  if (!card || !d) return;
+  const load = dayLoad(d);
+  card.querySelector('.rt-sum-sub').textContent = daySub(d);
+  card.querySelector('.rt-sum-fig').innerHTML = bodyPair(load, topLoad(load), { cls: 'bm-day' });
+  patchWeek();
+}
+
+// A superset tag only means something while both halves still sit together.
+function tidySupersets(list) {
+  list.forEach((x, i) => {
+    if (x.sg && list[i - 1]?.sg !== x.sg && list[i + 1]?.sg !== x.sg) x.sg = null;
+  });
 }
 
 screens.workout = renderWorkout;
@@ -423,25 +503,32 @@ function recentExIds() {
 // What a search matches on: the name, the gear and the muscles it works, so
 // "lats" finds pulldowns and "machine" finds the machines.
 const searchKey = e => [e.name, e.equip, ...exRegions(e).pri.map(r => REGIONS[r]?.name ?? ''), MUSCLES[e.muscle] ?? ''].join(' ').toLowerCase();
-const EQUIPS = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight'];
+// The gear list comes from the library itself, so a new kind of kit — or your
+// own custom moves — turns up in the filters without anything else changing.
+const equipList = () => [...new Set(allExercises().map(e => e.equip))].filter(Boolean);
 
 sheets.exPicker = ({ mode, day, ex }) => {
-  const swap = mode === 'swap';
+  const swap = mode === 'swap' || mode === 'wkswap';
   const d = { mode, day: day ?? '', ex: ex ?? '' };
+  const have = pickerCounts(mode, day);
+  pickerAdded = 0;
   const row = e => `<button class="pick-row" data-act="pickEx" data-id="${e.id}" data-mode="${d.mode}" data-day="${d.day}" data-ex="${d.ex}"
       data-name="${esc(searchKey(e))}" data-m="${e.muscle}" data-eq="${esc(e.equip)}">
-      ${exShot(e)}<span class="grow"><span class="t">${esc(e.name)}</span><span class="d">${esc(e.equip)}</span></span>${icon(swap ? 'repeat' : 'plus')}</button>`;
+      ${exShot(e)}<span class="grow"><span class="t">${esc(e.name)}</span><span class="d">${esc(e.equip)} · ${esc(MUSCLES[e.muscle] ?? '')}</span></span>
+      <span class="pick-n" data-n="${e.id}">${have.get(e.id) ? `${have.get(e.id)}×` : ''}</span>
+      <span class="pick-add">${icon(swap ? 'repeat' : 'plus')}</span></button>`;
   const recent = recentExIds().map(id => allExercises().find(e => e.id === id)).filter(Boolean).slice(0, 6);
   const groups = Object.entries(MUSCLES).map(([m, label]) => {
     const list = allExercises().filter(e => e.muscle === m);
-    return list.length ? `<div class="pick-group"><div class="label-sm">${label}</div>${list.map(row).join('')}</div>` : '';
+    return list.length ? `<div class="pick-group"><div class="label-sm">${label} <span class="pick-g-n">${list.length}</span></div>${list.map(row).join('')}</div>` : '';
   }).join('');
   const chips = (key, opts) => `<div class="pick-filters" data-k="${key}">${[['', 'All'], ...opts].map(([v, label], i) =>
     `<button class="chip-btn ${i ? 'soft' : 'on'}" data-act="exFilter" data-k="${key}" data-v="${esc(v)}">${esc(label)}</button>`).join('')}</div>`;
-  return `<h2>${swap ? 'Swap exercise' : 'Add exercise'} ${closeBtn}</h2>
+  return `<div class="pick-head"><h2>${swap ? 'Swap exercise' : 'Add exercise'} ${closeBtn}</h2>
     <div class="search-box">${icon('search')}<input class="input-x" id="ex-search" placeholder="Search a move, a muscle or the gear" autocomplete="off" enterkeyhint="search"></div>
     ${chips('m', Object.entries(MUSCLES))}
-    ${chips('eq', EQUIPS.map(e => [e, e]))}
+    ${chips('eq', equipList().map(e => [e, e]))}
+    <div class="pick-count" id="ex-count">${allExercises().length} exercises</div></div>
     <div class="pick-list">
       ${recent.length ? `<div class="pick-group pick-recent"><div class="label-sm">${swap ? 'You train these most' : 'Recent'}</div>${recent.map(row).join('')}</div>` : ''}
       ${groups}
@@ -451,16 +538,20 @@ sheets.exPicker = ({ mode, day, ex }) => {
       <form data-form="customEx" data-mode="${d.mode}" data-day="${d.day}" data-ex="${d.ex}">
         <div class="field"><label>Name</label><input class="input-x" name="name" required maxlength="40"></div>
         <div class="row2"><div class="field"><label>Muscle</label><select class="input-x" name="muscle">${Object.entries(MUSCLES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
-        <div class="field"><label>Weight step (kg)</label><input class="input-x" name="inc" inputmode="decimal" value="2.5"></div></div>
+        <div class="field"><label>Equipment</label><select class="input-x" name="equip">${equipList().map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join('')}<option value="Custom">Other</option></select></div></div>
+        <div class="field"><label>Weight step (kg)</label><input class="input-x" name="inc" inputmode="decimal" value="2.5"></div>
         <button class="btn">Create and add</button>
-      </form></details>`;
+      </form></details>
+    ${swap ? '' : '<div class="pick-done"><button class="btn" data-act="close" id="pick-done">Done</button></div>'}`;
 };
 
 // Options for one exercise inside the routine.
 sheets.exOpts = ({ day, ex }) => {
   const x = routine()?.days[day]?.exercises[ex];
   if (!x) return `<h2>Exercise ${closeBtn}</h2><div class="empty">This exercise is gone.</div>`;
-  const list = routine().days[day].exercises;
+  const days = routine().days;
+  const i2 = Number(day);
+  const list = days[i2].exercises;
   const i = Number(ex);
   const paired = i < list.length - 1 && x.sg && list[i + 1].sg === x.sg;
   return `<h2>${esc(exById(x.exId).name)} ${closeBtn}</h2>
@@ -470,12 +561,14 @@ sheets.exOpts = ({ day, ex }) => {
     <form data-form="exNote" data-day="${day}" data-ex="${ex}">
       <div class="field"><label>Note to yourself</label><input class="input-x" name="note" maxlength="80" placeholder="Seat 4, feet high, pause at the bottom" value="${esc(x.note ?? '')}"></div>
       <button class="btn soft">Save note</button></form>
+    ${days.length > 1 ? `<div class="label-sm">Move to another day</div>
+    <div class="day-pick">${days.map((d2, j) => (j === i2 ? '' : `<button class="chip-btn soft" data-act="moveExDay" data-day="${day}" data-ex="${ex}" data-to="${j}">${esc(d2.name)}</button>`)).join('')}</div>` : ''}
     <div class="menu">
       <button class="menu-row" data-act="sheet" data-sheet="exPicker" data-mode="swap" data-day="${day}" data-ex="${ex}">${icon('repeat')}Swap for another exercise</button>
       <button class="menu-row" data-act="sheet" data-sheet="exDetail" data-id="${x.exId}">${icon('chart')}History and best sets</button>
       ${i < list.length - 1 ? `<button class="menu-row" data-act="superset" data-day="${day}" data-ex="${ex}">${icon('repeat')}${paired ? 'Break the superset' : `Superset with ${esc(exById(list[i + 1].exId).name)}`}</button>` : ''}
-      <button class="menu-row" data-act="moveEx" data-day="${day}" data-ex="${ex}" data-d="-1">${icon('chevron', 'up')}Move up</button>
-      <button class="menu-row" data-act="moveEx" data-day="${day}" data-ex="${ex}" data-d="1">${icon('chevron', 'down')}Move down</button>
+      ${i > 0 ? `<button class="menu-row" data-act="moveEx" data-day="${day}" data-ex="${ex}" data-d="-1">${icon('chevron', 'up')}Move up</button>` : ''}
+      ${i < list.length - 1 ? `<button class="menu-row" data-act="moveEx" data-day="${day}" data-ex="${ex}" data-d="1">${icon('chevron', 'down')}Move down</button>` : ''}
       <button class="menu-row danger" data-act="removeEx" data-day="${day}" data-ex="${ex}">${icon('trash')}Remove from this day</button>
     </div>`;
 };
@@ -600,25 +693,27 @@ previews.plates = form => {
 };
 
 // ---------- actions ----------
-// The routine saves itself a beat after you stop tapping, and only the day you
-// touched is redrawn, so holding + on a stepper stays smooth.
+// The routine saves itself a beat after you stop tapping, so holding + on a
+// stepper writes to the database once instead of on every number.
 let rtTimer;
 function saveRoutine(r) {
   clearTimeout(rtTimer);
   rtTimer = setTimeout(() => setKV('routine', r), 350);
 }
-function refreshDay(di) {
-  const el = document.querySelector(`.rt-day[data-day="${di}"]`);
-  if (!el) { render(); return; }
-  el.outerHTML = dayCard(routine().days[di], di);
+
+// Change the routine and redraw only the part that moved: one day card, every
+// day card, or nothing at all. `patch` is a day index, 'days', or null.
+function editRoutine(fn, patch = null, opts = {}) {
+  const r = routine();
+  if (!r) return;
+  if (fn(r) === false) return;
+  if (patch === 'days') patchDays();
+  else if (patch != null) patchDay(Number(patch), opts);
+  saveRoutine(r);
 }
 
-const updateRoutine = async (fn, rerender = true) => {
-  const r = structuredClone(routine());
-  fn(r);
-  await setKV('routine', r);
-  if (rerender) render();
-};
+// Put a removed day or exercise back exactly where it was.
+const undoToast = (msg, put) => toast(msg, { icon: 'trash', action: { label: 'Undo', run: () => { haptic(); put(); } } });
 
 Object.assign(actions, {
   startWorkout: el => startWorkout(el.dataset.day),
@@ -716,27 +811,82 @@ Object.assign(actions, {
     render();
     toast('Workout deleted', { icon: 'trash', action: { label: 'Undo', run: async () => { await putEntry(entry); render(); } } });
   },
-  addDay: () => updateRoutine(r => r.days.push({ id: uid(), name: `Day ${r.days.length + 1}`, exercises: [] })),
-  removeDay: el => {
-    if (!confirm('Remove this day from your routine?')) return;
-    closeSheet();
-    return updateRoutine(r => r.days.splice(Number(el.dataset.day), 1));
+  // ---------- days ----------
+  addDay() {
+    editRoutine(r => { r.days.push({ id: uid(), name: `Day ${r.days.length + 1}`, exercises: [] }); }, 'days');
+    haptic();
+    const card = document.querySelector('#rt-days .rt-day:last-of-type');
+    card?.classList.add('rt-new');
+    card?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    card?.querySelector('.day-name')?.select();
   },
-  removeEx: el => { closeSheet(); return updateRoutine(r => r.days[el.dataset.day].exercises.splice(Number(el.dataset.ex), 1)); },
-  moveEx: el => {
+  removeDay(el) {
+    const di = Number(el.dataset.day);
+    const r = routine();
+    const gone = structuredClone(r.days[di]);
     closeSheet();
-    return updateRoutine(r => {
-      const list = r.days[el.dataset.day].exercises, i = Number(el.dataset.ex), j = i + Number(el.dataset.d);
-      if (j < 0 || j >= list.length) return;
-      [list[i], list[j]] = [list[j], list[i]];
-    });
+    editRoutine(rr => { rr.days.splice(di, 1); }, 'days');
+    undoToast(`${gone.name} removed`, () => editRoutine(rr => { rr.days.splice(di, 0, gone); }, 'days'));
+  },
+  dupDay(el) {
+    const di = Number(el.dataset.day);
+    closeSheet();
+    editRoutine(r => {
+      const d = structuredClone(r.days[di]);
+      r.days.splice(di + 1, 0, { ...d, id: uid(), name: `${d.name} copy` });
+    }, 'days');
+    toast('Day duplicated', { icon: 'plus' });
+  },
+  moveDay(el) {
+    closeSheet();
+    editRoutine(r => {
+      const i = Number(el.dataset.day), j = i + Number(el.dataset.d);
+      if (j < 0 || j >= r.days.length) return false;
+      [r.days[i], r.days[j]] = [r.days[j], r.days[i]];
+    }, 'days');
   },
 
-  // Sets and rep range, one tap at a time.
+  // ---------- exercises inside a day ----------
+  removeEx(el) {
+    const di = Number(el.dataset.day), xi = Number(el.dataset.ex);
+    const gone = structuredClone(routine().days[di].exercises[xi]);
+    closeSheet();
+    haptic();
+    editRoutine(r => { r.days[di].exercises.splice(xi, 1); tidySupersets(r.days[di].exercises); }, di);
+    undoToast(`${exById(gone.exId).name} removed`, () => editRoutine(r => { r.days[di].exercises.splice(xi, 0, gone); }, di, { flash: xi }));
+  },
+  moveEx(el) {
+    closeSheet();
+    const di = Number(el.dataset.day);
+    editRoutine(r => {
+      const list = r.days[di].exercises, i = Number(el.dataset.ex), j = i + Number(el.dataset.d);
+      if (j < 0 || j >= list.length) return false;
+      [list[i], list[j]] = [list[j], list[i]];
+      tidySupersets(list);
+    }, di);
+  },
+  // Send an exercise to another day, keeping its sets, reps, rest and note.
+  moveExDay(el) {
+    const from = Number(el.dataset.day), to = Number(el.dataset.to), xi = Number(el.dataset.ex);
+    closeSheet();
+    let name = '';
+    editRoutine(r => {
+      const [x] = r.days[from].exercises.splice(xi, 1);
+      x.sg = null;
+      tidySupersets(r.days[from].exercises);
+      r.days[to].exercises.push(x);
+      name = r.days[to].name;
+    }, 'days');
+    haptic();
+    toast(`Moved to ${name}`, { icon: 'repeat' });
+  },
+
+  // Sets and rep range, one tap at a time. Only the three numbers change, so the
+  // button stays put under your thumb and can be held down to run them up.
   stepNum(el) {
     const r = routine();
     const { day, ex, f } = el.dataset;
-    const x = r.days[day]?.exercises[ex];
+    const x = r?.days[day]?.exercises[ex];
     if (!x) return;
     const [lo, hi] = LIM[f];
     const v = clamp((Number(x[f]) || lo) + Number(el.dataset.d), lo, hi);
@@ -745,30 +895,38 @@ Object.assign(actions, {
     if (f === 'repMin' && x.repMax < v) x.repMax = v;
     if (f === 'repMax' && x.repMin > v) x.repMin = v;
     haptic();
-    refreshDay(Number(day));
+    const row = el.closest('.rt-ex');
+    ['sets', 'repMin', 'repMax'].forEach(k => {
+      const b = row?.querySelector(`.step[data-f="${k}"] b`);
+      if (b) b.textContent = x[k];
+    });
+    patchDaySummary(Number(day));
     saveRoutine(r);
   },
   // Point a whole day at strength, hypertrophy or pump in one tap.
   dayPreset(el) {
-    const r = routine();
+    const di = Number(el.dataset.day);
     const pz = REP_PRESETS.find(x => x.id === el.dataset.p);
-    const d = r.days[el.dataset.day];
-    if (!pz || !d) return;
-    d.exercises.forEach(x => { x.sets = pz.sets; x.repMin = pz.repMin; x.repMax = pz.repMax; x.rest = pz.rest; });
+    const before = structuredClone(routine().days[di].exercises);
+    if (!pz) return;
     haptic();
-    toast(`${d.name} set to ${pz.name.toLowerCase()}`, { icon: 'target' });
-    refreshDay(Number(el.dataset.day));
-    saveRoutine(r);
+    editRoutine(r => {
+      r.days[di].exercises.forEach(x => { x.sets = pz.sets; x.repMin = pz.repMin; x.repMax = pz.repMax; x.rest = pz.rest; });
+    }, di);
+    toast(`Set to ${pz.name.toLowerCase()} — ${pz.sets}×${pz.repMin}–${pz.repMax}`, {
+      icon: 'target',
+      action: { label: 'Undo', run: () => editRoutine(r => { r.days[di].exercises = before; }, di) },
+    });
   },
   setExRest(el) {
-    const r = routine();
-    const x = r.days[el.dataset.day]?.exercises[el.dataset.ex];
-    if (!x) return;
-    x.rest = el.dataset.s ? Number(el.dataset.s) : null;
+    const di = Number(el.dataset.day);
+    editRoutine(r => {
+      const x = r.days[di]?.exercises[el.dataset.ex];
+      if (!x) return false;
+      x.rest = el.dataset.s ? Number(el.dataset.s) : null;
+    }, di);
     haptic();
     refreshSheet();
-    refreshDay(Number(el.dataset.day));
-    saveRoutine(r);
   },
   setWkRest(el) {
     const aw = active();
@@ -780,30 +938,17 @@ Object.assign(actions, {
     render();
   },
   // Superset with the next exercise, or break the pair apart again.
-  superset: el => {
+  superset(el) {
     closeSheet();
-    return updateRoutine(r => {
-      const list = r.days[el.dataset.day].exercises, i = Number(el.dataset.ex);
-      if (i >= list.length - 1) return;
+    const di = Number(el.dataset.day);
+    editRoutine(r => {
+      const list = r.days[di].exercises, i = Number(el.dataset.ex);
+      if (i >= list.length - 1) return false;
       if (list[i].sg && list[i + 1].sg === list[i].sg) { list[i].sg = null; list[i + 1].sg = null; }
       else { const tag = uid().slice(0, 6); list[i].sg = tag; list[i + 1].sg = tag; }
-    });
+    }, di);
   },
-  dupDay: el => {
-    closeSheet();
-    return updateRoutine(r => {
-      const d = structuredClone(r.days[el.dataset.day]);
-      r.days.splice(Number(el.dataset.day) + 1, 0, { ...d, id: uid(), name: `${d.name} copy` });
-    });
-  },
-  moveDay: el => {
-    closeSheet();
-    return updateRoutine(r => {
-      const i = Number(el.dataset.day), j = i + Number(el.dataset.d);
-      if (j < 0 || j >= r.days.length) return;
-      [r.days[i], r.days[j]] = [r.days[j], r.days[i]];
-    });
-  },
+
   // Filter chips on the exercise picker, applied without redrawing the sheet.
   exFilter(el) {
     el.parentElement.querySelectorAll('.chip-btn').forEach(b => { b.classList.toggle('on', b === el); b.classList.toggle('soft', b !== el); });
@@ -812,57 +957,103 @@ Object.assign(actions, {
   muscle: el => openSheet('muscleDetail', { r: el.dataset.r }),
 });
 
-// Narrow the picker to what matches the search box and the two chip rows.
+// Narrow the picker to what matches the search box and the two chip rows, and
+// say how many are left, so a library this size never feels like a wall.
 function filterEx() {
   const q = (document.getElementById('ex-search')?.value ?? '').trim().toLowerCase();
   const pick = k => document.querySelector(`.pick-filters[data-k="${k}"] .chip-btn.on`)?.dataset.v ?? '';
   const m = pick('m'), eq = pick('eq');
-  let any = false;
-  document.querySelectorAll('.pick-row').forEach(row => {
+  let n = 0;
+  document.querySelectorAll('.pick-list .pick-row').forEach(row => {
     const ok = (!q || row.dataset.name.includes(q)) && (!m || row.dataset.m === m) && (!eq || row.dataset.eq === eq);
     row.hidden = !ok;
-    any = any || ok;
+    if (ok && !row.closest('.pick-recent')) n++;
   });
-  document.querySelectorAll('.pick-group').forEach(g => { g.hidden = ![...g.querySelectorAll('.pick-row')].some(r => !r.hidden); });
+  // Recents are a shortcut, not a section of the library: hide them once you search.
+  const recent = document.querySelector('.pick-recent');
+  if (recent) recent.hidden = !!q;
+  document.querySelectorAll('.pick-group').forEach(g => {
+    if (!g.classList.contains('pick-recent')) g.hidden = ![...g.querySelectorAll('.pick-row')].some(r => !r.hidden);
+  });
   const none = document.getElementById('ex-none');
-  if (none) none.hidden = any;
+  if (none) none.hidden = n > 0;
+  const count = document.getElementById('ex-count');
+  if (count) count.textContent = q || m || eq ? `${plural(n, 'match', 'matches')}` : `${allExercises().length} exercises`;
 }
+
+// How many times an exercise already appears where you are adding it, so the
+// picker can say "already in here" instead of letting you add it twice by mistake.
+function pickerCounts(mode, day) {
+  const list = mode === 'routine' || mode === 'swap' ? routine()?.days[day]?.exercises : active()?.exercises;
+  const out = new Map();
+  (list ?? []).forEach(x => out.set(x.exId, (out.get(x.exId) ?? 0) + 1));
+  return out;
+}
+
+// Keep the sheet open after an add so several moves go in one after another.
+function bumpPicker(exId) {
+  const sheet = document.querySelector('.sheet');
+  if (!sheet) return;
+  const badge = sheet.querySelector(`.pick-n[data-n="${exId}"]`);
+  if (badge) badge.textContent = `${(Number(badge.textContent.replace(/\D/g, '')) || 0) + 1}×`;
+  sheet.querySelectorAll(`.pick-row[data-id="${exId}"]`).forEach(row => {
+    row.classList.remove('just-added');
+    void row.offsetWidth;
+    row.classList.add('just-added');
+  });
+  pickerAdded++;
+  const done = sheet.querySelector('#pick-done');
+  if (done) done.textContent = pickerAdded === 1 ? 'Done · 1 added' : `Done · ${pickerAdded} added`;
+}
+let pickerAdded = 0;
 
 async function addExercise(exId, mode, day, exIndex) {
   const name = exById(exId).name;
+  const di = Number(day);
   if (mode === 'swap') {
     // Keep the sets, reps, rest and superset of the exercise being replaced.
-    await updateRoutine(r => { r.days[day].exercises[exIndex] = { ...r.days[day].exercises[exIndex], exId }; }, false);
+    editRoutine(r => { r.days[di].exercises[exIndex] = { ...r.days[di].exercises[exIndex], exId }; }, di, { flash: Number(exIndex) });
   } else if (mode === 'routine') {
-    await updateRoutine(r => r.days[day].exercises.push({ exId, ...DEFAULT_PLAN }), false);
+    editRoutine(r => { r.days[di].exercises.push({ exId, ...DEFAULT_PLAN }); }, di, { flash: 'last' });
   } else if (mode === 'wkswap') {
     const aw = active();
     const old = aw.exercises[exIndex];
     aw.exercises[exIndex] = workoutExercise(exId, { ...old.plan, rest: old.rest, note: old.note, sg: old.sg });
     await saveActive(aw, true);
+    render();
   } else {
     const aw = active();
     aw.exercises.push(workoutExercise(exId));
     await saveActive(aw, true);
+    render();
   }
   haptic();
-  closeSheet();
-  toast(`${name} ${mode === 'swap' || mode === 'wkswap' ? 'swapped in' : 'added'}`, { icon: mode.includes('swap') ? 'repeat' : 'plus' });
-  render();
+  // A swap is one decision, so it closes. Adding is usually several in a row,
+  // so the picker stays where it is with its search and its place in the list.
+  if (mode === 'swap' || mode === 'wkswap') {
+    closeSheet();
+    toast(`${name} swapped in`, { icon: 'repeat' });
+  } else {
+    bumpPicker(exId);
+    toast(`${name} added`, { icon: 'plus', ms: 1200 });
+  }
 }
 
 forms.customEx = async (f, form) => {
-  const ex = { id: `c_${uid().slice(0, 8)}`, name: String(f.get('name')).trim(), muscle: f.get('muscle'), equip: 'Custom', inc: num(f.get('inc')) || 2.5 };
+  const ex = {
+    id: `c_${uid().slice(0, 8)}`, name: String(f.get('name')).trim(), muscle: f.get('muscle'),
+    equip: String(f.get('equip') || 'Custom'), inc: num(f.get('inc')) || 2.5,
+  };
   await setKV('customExercises', [...(state.kv.customExercises ?? []), ex]);
   await addExercise(ex.id, form.dataset.mode, form.dataset.day, form.dataset.ex);
+  if (ui.sheet === 'exPicker') refreshSheet();
 };
 
-forms.exNote = async (f, form) => {
-  const { day, ex } = form.dataset;
-  await updateRoutine(r => { r.days[day].exercises[ex].note = String(f.get('note')).trim(); }, false);
+forms.exNote = (f, form) => {
+  const di = Number(form.dataset.day);
   closeSheet();
+  editRoutine(r => { r.days[di].exercises[form.dataset.ex].note = String(f.get('note')).trim(); }, di);
   toast('Note saved', { icon: 'pen' });
-  render();
 };
 
 // Live inputs: workout sets and routine fields save as you type (no re-render, keeps focus).
@@ -884,4 +1075,102 @@ document.addEventListener('input', e => {
     else r.days[day].exercises[ex][f] = Math.max(1, Math.round(num(t.value))) || 1;
     saveRoutine(r);
   }
+});
+
+// ---------- drag an exercise into place ----------
+// Lifting a row and dropping it where you want it, rather than opening a menu
+// and tapping "move up" four times. Nothing is saved until you let go.
+let drag = null;
+const pageY = e => e.clientY + window.scrollY;
+
+function layOutDrag() {
+  const { rows, rects, from, h, gap } = drag;
+  const y = pageY({ clientY: drag.clientY });
+  rows[from].style.transform = `translateY(${y - drag.y0}px)`;
+  let to = 0;
+  rects.forEach((r, j) => { if (j !== from && y > r.top + r.height / 2) to++; });
+  if (to !== drag.to) { drag.to = to; haptic(); }
+  const shift = h + gap;
+  rows.forEach((el, j) => {
+    if (j === from) return;
+    const d = j > from && j <= drag.to ? -shift : j < from && j >= drag.to ? shift : 0;
+    el.style.transform = d ? `translateY(${d}px)` : '';
+  });
+}
+
+// Dragging near the top or bottom of the screen scrolls the list along with you.
+function dragTick() {
+  if (!drag) return;
+  const edge = 96, y = drag.clientY;
+  const v = y < edge ? -Math.min(16, (edge - y) / 4) : y > innerHeight - edge ? Math.min(16, (y - (innerHeight - edge)) / 4) : 0;
+  if (v) { window.scrollBy(0, v); layOutDrag(); }
+  requestAnimationFrame(dragTick);
+}
+
+document.addEventListener('pointerdown', e => {
+  const handle = e.target.closest?.('.rt-grab');
+  if (!handle || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const row = handle.closest('.rt-ex');
+  const dayEl = row?.closest('.rt-day');
+  if (!dayEl) return;
+  e.preventDefault();
+  const rows = [...dayEl.querySelectorAll('.rt-ex')];
+  const rects = rows.map(el => { const r = el.getBoundingClientRect(); return { top: r.top + window.scrollY, height: r.height }; });
+  const from = rows.indexOf(row);
+  drag = {
+    day: Number(dayEl.dataset.day), rows, rects, from, to: from, h: rects[from].height,
+    gap: rows.length > 1 ? Math.max(4, rects[1].top - (rects[0].top + rects[0].height)) : 7,
+    y0: pageY(e), clientY: e.clientY, id: e.pointerId,
+  };
+  handle.setPointerCapture?.(e.pointerId);
+  row.classList.add('rt-dragging');
+  document.body.classList.add('rt-drag-on');
+  haptic();
+  requestAnimationFrame(dragTick);
+});
+
+document.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  e.preventDefault();
+  drag.clientY = e.clientY;
+  layOutDrag();
+}, { passive: false });
+
+function endDrag() {
+  if (!drag) return;
+  const { rows, from, to, day } = drag;
+  rows.forEach(el => { el.style.transform = ''; el.classList.remove('rt-dragging'); });
+  document.body.classList.remove('rt-drag-on');
+  drag = null;
+  if (to === from) return;
+  haptic();
+  editRoutine(r => {
+    const list = r.days[day].exercises;
+    list.splice(to, 0, list.splice(from, 1)[0]);
+    tidySupersets(list);
+  }, day, { flash: to });
+}
+['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, endDrag));
+
+// ---------- hold a stepper down ----------
+// The first tap is the click. Keep holding and the number runs on by itself.
+let holdWait, holdRun;
+const stopHold = () => { clearTimeout(holdWait); clearInterval(holdRun); holdWait = holdRun = null; };
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest?.('.step-b');
+  if (!b) return;
+  stopHold();
+  holdWait = setTimeout(() => {
+    holdRun = setInterval(() => {
+      if (!b.isConnected) { stopHold(); return; }
+      actions.stepNum(b);
+    }, 110);
+  }, 430);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => document.addEventListener(t, stopHold));
+// Leaving the routine screen mid-gesture must not leave a timer running, and a
+// drag whose rows have just been redrawn under it is abandoned, not committed.
+afterRender.push(() => {
+  stopHold();
+  if (drag) { document.body.classList.remove('rt-drag-on'); drag = null; }
 });

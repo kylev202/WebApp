@@ -9,6 +9,7 @@ const P = {
   chevron: '<path d="M9.5 6l6 6-6 6"/>',
   back: '<path d="M14.5 6l-6 6 6 6"/>',
   more: '<path d="M6 12h.01M12 12h.01M18 12h.01" stroke-width="2.6"/>',
+  drag: '<path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="2.6"/>',
   ring: '<circle cx="12" cy="12" r="6.5"/>',
   search: '<circle cx="11" cy="11" r="6.5" class="d"/><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>',
   edit: '<path d="M4.5 19.5l1-4.5L15.8 4.7a2.1 2.1 0 0 1 3 3L8.5 18l-4 1.5Z" class="d"/><path d="M4.5 19.5l1-4.5L15.8 4.7a2.1 2.1 0 0 1 3 3L8.5 18l-4 1.5ZM13.5 7l3 3"/>',

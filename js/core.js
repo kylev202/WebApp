@@ -65,7 +65,7 @@ export function render({ enter = false } = {}) {
 
 // Tappable cards and rows are divs; give them a button role and a tab stop so
 // VoiceOver and a keyboard can reach them (app.js turns Enter/Space into a tap).
-function makeFocusable(root) {
+export function makeFocusable(root) {
   root.querySelectorAll('[data-act]:not(button, a[href], input, select, textarea, label, .sheet-bg)').forEach(el => {
     el.tabIndex = 0;
     if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
