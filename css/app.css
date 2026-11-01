@@ -1561,3 +1561,33 @@ body.rt-drag-on .rt-ex:not(.rt-dragging) { opacity: .92; }
 .cs-composer .input-bar input { flex: 1; }
 .cs-clear { margin-top: 10px; }
 .cs-offline .cs-plan { margin: 12px 0 14px; }
+
+/* Health profile (Settings) */
+.hp-card .money-top { margin-bottom: 8px; align-items: flex-start; }
+.hp-when { font-size: 13px; font-weight: 600; color: var(--text-2); margin-top: 2px; }
+.hp-unset { color: var(--text-3); font-weight: 600; }
+.hp-missing { background: var(--school-bg); border-radius: 16px; padding: 10px; margin: 2px 0; align-items: center; }
+.hp-missing .d { color: var(--text-2); }
+.hp-missing .pill-btn { flex: none; }
+.hp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 6px 0 12px; }
+.hp-tile { padding: 11px 12px; border-radius: 16px; background: rgba(255,255,255,.62); box-shadow: inset 0 0 0 1px rgba(0,0,0,.05); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.hp-l { display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; color: var(--text-2); }
+.hp-l .i { width: 14px; height: 14px; flex: none; }
+.hp-v { font-size: 22px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.hp-v small { font-size: 12px; font-weight: 600; color: var(--text-3); margin-left: 3px; letter-spacing: 0; }
+.hp-d { font-size: 11px; color: var(--text-3); font-weight: 550; }
+.hp-suggest { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 14px; border-radius: 16px; background: var(--diet-bg); }
+.hp-suggest .t { font-size: 14px; font-weight: 650; }
+.hp-suggest .d { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.hp-suggest .pill-btn, .hp-suggest .hv-chip { flex: none; }
+.hp-sub { margin: 6px 0 10px; }
+.hp-sub small, .field label small { font-weight: 500; color: var(--text-3); }
+.hp-hint { display: flex; gap: 6px; align-items: flex-start; margin: -6px 0 14px; }
+.hp-hint .i { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+.hp-paste textarea { margin-bottom: 10px; }
+.hp-paste .note:empty { display: none; }
+.hp-fields .field { margin-bottom: 12px; }
+.hp-bp { display: flex; align-items: center; gap: 6px; }
+.hp-bp .input-x { min-width: 0; flex: 1; }
+.hp-bp span { color: var(--text-3); font-weight: 700; }
+.hp-date { color: var(--text-3); font-size: 11px; }

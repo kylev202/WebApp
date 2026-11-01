@@ -1,9 +1,9 @@
 // Health: diet, sleep and body tabs (the overview lives in overview.js, gym in gym.js), plus their logging sheets.
-import { state, addEntry, updateEntry, putEntry, removeEntry, setKV } from './store.js';
+import { addEntry, updateEntry, putEntry, removeEntry } from './store.js';
 import { esc, dayKey, lastDays, longDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num, plural } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sect, sheetForm, dateField, readDate } from './core.js';
-import { goals, of, byId, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, maintenanceKcal, sleepHours, recentMeals } from './data.js';
+import { goals, of, byId, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, sleepHours, recentMeals } from './data.js';
 import { gymTab } from './gym.js';
 import { overviewTab, overviewHeader } from './overview.js';
 import { sleepAnalytics, bodyAnalytics } from './analytics.js';
@@ -154,64 +154,20 @@ sheets.weight = ({ id }) => {
   </form>`;
 };
 
-sheets.calc = () => {
-  const p = { sex: 'male', age: 20, height: 175, activity: '1.55', pace: '400', ...state.kv.profile };
-  const kg = weights().at(-1)?.kg ?? p.weight ?? 70;
-  const opt = (val, cur, label) => `<option value="${val}" ${String(cur) === val ? 'selected' : ''}>${label}</option>`;
-  return `<h2>Bulk calculator ${closeBtn}</h2>
-  <form data-form="calc">
-    <div class="seg wide radio">
-      <label><input type="radio" name="sex" value="male" ${p.sex === 'male' ? 'checked' : ''}>Male</label>
-      <label><input type="radio" name="sex" value="female" ${p.sex === 'female' ? 'checked' : ''}>Female</label>
-    </div>
-    <div class="row3">
-      <div class="field"><label>Age</label><input class="input-x" name="age" inputmode="numeric" value="${p.age}" required></div>
-      <div class="field"><label>Height (cm)</label><input class="input-x" name="height" inputmode="numeric" value="${p.height}" required></div>
-      <div class="field"><label>Weight (kg)</label><input class="input-x" name="weight" inputmode="decimal" value="${kg}" required></div>
-    </div>
-    <div class="field"><label>How active are you?</label><select class="input-x" name="activity">
-      ${opt('1.375', p.activity, 'Light: gym 1–3 days a week')}${opt('1.55', p.activity, 'Moderate: gym 3–5 days a week')}${opt('1.725', p.activity, 'Very active: 6–7 days or a physical job')}
-    </select></div>
-    <div class="field"><label>Bulk pace</label><select class="input-x" name="pace">
-      ${opt('250', p.pace, 'Lean: +250 kcal a day')}${opt('400', p.pace, 'Standard: +400 kcal a day')}${opt('600', p.pace, 'Fast: +600 kcal a day')}
-    </select></div>
-    <div class="calc-result" id="calc-result"></div>
-    <button class="btn">Use these goals</button>
-  </form>`;
-};
-
 sheets.welcome = () => `<div class="welcome">
     <img src="icons/icon-192.png" alt="" width="84" height="84">
     <h2 class="center">Welcome to Loop</h2>
     <p class="note center">Your gym, diet, sleep and habits in one place. Everything stays on this iPhone.</p>
     <ul class="welcome-list">
-      <li>${tile('target', 'move')}Set calorie and protein goals for your bulk</li>
+      <li>${tile('medical', 'move')}A health profile your specialists read: height, age and every health check</li>
       <li>${tile('dumbbell', 'school')}Follow a gym routine with smart weight suggestions</li>
       <li>${tile('chart', 'diet')}Watch your progress as soft line charts</li>
       <li>${tile('cloud', 'work')}Back up to iCloud Drive from Settings</li>
     </ul>
-    <button class="btn" data-act="sheet" data-sheet="calc">Set my bulk goals</button>
+    <button class="btn" data-act="sheet" data-sheet="profile" data-onboard="1">Set up my health profile</button>
     <button class="btn ghost" data-act="finishWelcome">Skip for now</button>
   </div>`;
 
-export function calcGoals(f) {
-  const n = k => num(f.get(k));
-  const weight = n('weight');
-  // Maintenance plus a bulking surplus.
-  const maintenance = maintenanceKcal({ sex: f.get('sex'), age: n('age'), height: n('height'), activity: f.get('activity') }, weight);
-  if (maintenance == null) return null;
-  const kcal = Math.round((maintenance + Number(f.get('pace'))) / 50) * 50;
-  const protein = Math.round((weight * 2) / 5) * 5; // ~2 g per kg
-  return { maintenance: Math.round(maintenance / 10) * 10, kcal, protein };
-}
-
-previews.calc = form => {
-  const r = calcGoals(new FormData(form));
-  const el = document.getElementById('calc-result');
-  if (el) el.innerHTML = r
-    ? `<div><span>Maintenance</span><b>${fmt(r.maintenance)} kcal</b></div><div><span>Bulk target</span><b>${fmt(r.kcal)} kcal</b></div><div><span>Protein</span><b>${r.protein} g</b></div>`
-    : '<div><span>Fill in your details</span></div>';
-};
 previews.sleep = form => {
   const el = document.getElementById('sleep-preview');
   const h = sleepHours(form.elements.bed.value, form.elements.wake.value);
@@ -224,7 +180,7 @@ export async function deleteWithUndo(id) {
   if (!entry) return;
   haptic();
   render();
-  const what = { meal: 'Meal', sleep: 'Sleep', weight: 'Weigh-in' }[entry.type] ?? 'Entry';
+  const what = { meal: 'Meal', sleep: 'Sleep', weight: 'Weigh-in', check: 'Health check' }[entry.type] ?? 'Entry';
   toast(`${what} deleted`, { icon: 'trash', action: { label: 'Undo', run: async () => { await putEntry(entry); render(); } } });
 }
 
@@ -311,17 +267,6 @@ Object.assign(forms, {
     haptic();
     closeSheet();
     toast('Weigh-in saved', { icon: 'scale' });
-    render();
-  },
-  async calc(f) {
-    const r = calcGoals(f);
-    if (!r) return toast('Check your details', { icon: 'info' });
-    await setKV('profile', { sex: f.get('sex'), age: num(f.get('age')), height: num(f.get('height')), weight: num(f.get('weight')), activity: f.get('activity'), pace: f.get('pace') });
-    await setKV('goals', { ...goals(), kcal: r.kcal, protein: r.protein });
-    await setKV('onboarded', true);
-    haptic();
-    closeSheet();
-    toast(`${fmt(r.kcal)} kcal · ${r.protein} g protein`, { icon: 'target' });
     render();
   },
 });

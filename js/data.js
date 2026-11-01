@@ -115,6 +115,39 @@ export function maintenanceKcal({ sex, age, height, activity }, weight) {
   return bmr * factor;
 }
 
+// Age from a birthday when there is one (it keeps itself current), else the age typed in.
+export function ageOf(p = state.kv.profile ?? {}, on = dayKey()) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(p.birth ?? '')) {
+    const [y, m, d] = p.birth.split('-').map(Number), [ty, tm, td] = on.split('-').map(Number);
+    const a = ty - y - (tm < m || (tm === m && td < d) ? 1 : 0);
+    if (a > 0 && a < 120) return a;
+  }
+  return Number(p.age) > 0 ? Number(p.age) : null;
+}
+
+// Height as typed, or, when it never was, worked back out of a health check that
+// printed both weight and BMI (BMI = kg / m², so m = √(kg / BMI)). A kiosk rounds
+// BMI to one decimal, which leaves the estimate good to about half a centimetre.
+export function heightInfo() {
+  const p = state.kv.profile ?? {};
+  if (Number(p.height) > 100) return { cm: Number(p.height), source: 'profile' };
+  const c = of('check').filter(x => x.metrics?.weight > 0 && x.metrics?.bmi > 0).sort((a, b) => a.date.localeCompare(b.date)).at(-1);
+  if (!c) return null;
+  const cm = Math.round(Math.sqrt(c.metrics.weight / c.metrics.bmi) * 100);
+  return cm >= 120 && cm <= 230 ? { cm, source: 'check', date: c.date } : null;
+}
+
+// The profile every calculation should read: saved details with age kept current
+// and height filled in from a check when it was never typed.
+export function bodyProfile() {
+  const p = { ...state.kv.profile };
+  const age = ageOf(p);
+  if (age) p.age = age;
+  const h = heightInfo();
+  if (h) p.height = h.cm;
+  return p;
+}
+
 // Bulking split: protein from goals, fat ~25% of calories, carbs fill the rest.
 export function macroTargets(g = goals()) {
   const fat = Math.round((g.kcal * 0.25) / 9);

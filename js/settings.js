@@ -4,8 +4,9 @@ import { esc, dayKey, num, uid } from './util.js';
 import { icon, tile, HABIT_ICONS } from './icons.js';
 import { screens, actions, forms, afterRender, render, toast, haptic, header, sect, go } from './core.js';
 import { goals, habits, DEFAULT_GOALS } from './data.js';
+import { healthProfileSection, goalsSuggestion } from './profile.js';
 
-export const VERSION = '4.6.0';
+export const VERSION = '4.7.0';
 // Later versions add their own settings cards (AI key, connections...).
 export const settingsSections = [];
 
@@ -15,9 +16,11 @@ function renderSettings() {
   return `${header('Settings', 'Loop', '<button class="pill-btn" data-act="nav" data-to="today">Done</button>')}
   <section class="card glass brand"><img src="icons/icon-192.png" alt="" width="52" height="52"><div><div class="t">Loop</div><div class="d">Version ${VERSION} · data stays on this iPhone</div></div></section>
 
-  ${sect('Daily goals', { note: 'The numbers every card in the app is measured against.', open: true })}
+  ${healthProfileSection()}
+
+  ${sect('Daily goals', { note: 'The numbers every card in the app is measured against.' })}
   <form class="card glass" data-form="goals">
-    <button type="button" class="btn soft calc-btn" data-act="sheet" data-sheet="calc">${icon('calculator')} Calculate for my bulk</button>
+    ${goalsSuggestion()}
     <div class="row2">
       <div class="field"><label>Calories (kcal)</label><input class="input-x" name="kcal" inputmode="numeric" value="${g.kcal}"></div>
       <div class="field"><label>Protein (g)</label><input class="input-x" name="protein" inputmode="numeric" value="${g.protein}"></div>

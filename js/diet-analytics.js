@@ -3,11 +3,10 @@
 // eat and how the weekend differs from the week. Everything comes from logged
 // meals; the only estimate is the same Mifflin–St Jeor maintenance the rest of the
 // app uses. Today is left out of every average — it is still being eaten.
-import { state } from './store.js';
 import { esc, dayKey, addDays, daysBetween, toDate, shortDate, initial, fmt, fmt1, time12, toMin, fromMin, mean, sum, plural, clamp } from './util.js';
 import { icon, tile } from './icons.js';
 import { lineChart } from './charts.js';
-import { goals, of, kcalOn, proteinOn, weights, maintenanceKcal } from './data.js';
+import { goals, of, kcalOn, proteinOn, weights, maintenanceKcal, bodyProfile } from './data.js';
 import { chip, note, notes, signed, fmtMins, stat, section, meter, sd } from './an-ui.js';
 
 // Protein per kg of body weight a day: the range that best supports muscle gain.
@@ -66,7 +65,7 @@ export function dietFacts() {
 
   const kg = weights().at(-1)?.kg ?? null;
   const perKg = kg && prot7 != null ? prot7 / kg : null;
-  const maint = kg ? maintenanceKcal(state.kv.profile ?? {}, kg) : null;
+  const maint = kg ? maintenanceKcal(bodyProfile(), kg) : null;
   const surplus = maint && kcal7 != null ? kcal7 - maint : null;
 
   // ---- meal timing: only meals that carry a clock time ----

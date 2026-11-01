@@ -9,16 +9,18 @@
 // questions in a chat, briefed with their own consult and the rest of your data.
 import { state, setKV } from './store.js';
 import { esc, uid, dayKey, addDays, daysBetween, shortDate, toDate, fmt, fmt1, fmtHours, time12, fromMin, toMin, mean, sum, plural, clamp, lastDays } from './util.js';
-import { icon } from './icons.js';
+import { icon, tile } from './icons.js';
 import { sheets, actions, forms, ui, render, refreshSheet, closeSheet, toast, haptic, closeBtn } from './core.js';
-import { goals, of, sleepOn, waterOn, kcalOn } from './data.js';
+import { goals, of, sleepOn, waterOn, kcalOn, ageOf, heightInfo } from './data.js';
 import { sleepFacts, bodyFacts } from './analytics.js';
 import { dietFacts } from './diet-analytics.js';
 import { gymFacts, status as trainingStatus, LEVELS } from './gym-analytics.js';
 import { nextDay } from './gym.js';
 import { targets, targetStatus } from './targets.js';
-import { hasAI, generate, snapshot } from './ai.js';
+import { hasAI, generate, snapshot, runTool, undoCard } from './ai.js';
+import { profileTools } from './profile.js';
 import { signed, fmtMins, slope, dayNo } from './an-ui.js';
+import { checkRead, profileNotes, profile } from './health-profile.js';
 
 // ---------- the team ----------
 export const DOCTORS = {
@@ -491,7 +493,135 @@ function gpConsult() {
   return c;
 }
 
-const CONSULTS = { overview: gpConsult, gym: gymConsult, diet: dietConsult, sleep: sleepConsult, body: bodyConsult };
+// ============================================================
+// THE HEALTH PROFILE IN EACH CONSULT
+// ============================================================
+// Every specialist reads the latest health check, but only for their own
+// questions: the GP owns blood pressure, heart age and the in-person flags; the
+// body specialist owns body fat and lean mass; the sports physician reads resting
+// heart rate as fitness; the dietitian reads diabetes risk and blood lipids as
+// food; the sleep physician reads a high resting pulse against short nights.
+const PROFILE_HINT = 'Settings → Health profile';
+const CHECK_OLD = 365;
+
+function withProfile(key, c) {
+  const r = checkRead();
+  const p = profile();
+  const h = heightInfo();
+  const age = ageOf();
+  const v = k => r?.m?.[k];
+  const word = k => r?.by[k]?.grade?.[1]?.toLowerCase() ?? '';
+  const lv = k => r?.by[k]?.grade?.[0];
+  // Only worth saying when the report's own word disagrees with ours.
+  const said = k => { const rep = r?.by[k]?.reported; return rep && rep.toLowerCase() !== word(k) ? ` (the report said “${esc(rep)}”)` : ''; };
+  const plan = x => { if (c.plan.length < 7 && !c.plan.includes(x)) c.plan.push(x); };
+  const sleepShort = (() => { try { const f = sleepFacts(); return f.avg7 != null && f.avg7 < goals().sleep - 0.5 ? f.avg7 : null; } catch { return null; } })();
+
+  if (key === 'overview') {
+    // Height is the body specialist's to ask for, so it isn't asked for twice.
+    const miss = [!p.sex && 'sex', !age && 'age'].filter(Boolean);
+    if (miss.length) c.gaps.push(`Your ${miss.join(', ')} in ${PROFILE_HINT}.`);
+    if (!r) {
+      c.gaps.push('A health check (blood pressure, resting heart rate, diabetes risk). Many pharmacies do one free in about 10 minutes; add the results in ' + PROFILE_HINT + '.');
+      return c;
+    }
+    const n = r.rows.length, bad = r.flagged;
+    c.findings.unshift(finding('medical', `Health check ${r.when}: <b>${n - bad.length} of ${n}</b> results in range${bad.length ? `; <b>${bad.map(x => esc(x.label.toLowerCase())).join(', ')}</b> to watch` : ''}.`,
+      r.age > CHECK_OLD ? 'That check is over a year old, so treat it as history rather than where you are now.' : 'I read these alongside your logs: a single reading is a snapshot, the logs show what happens every day.'));
+    if (v('bpSys') != null) {
+      const bp = `${v('bpSys')}/${v('bpDia')}`;
+      c.findings.push(finding('heart', `Blood pressure <b>${bp} mmHg</b>: ${word('bp')}${said('bp')}.`, r.by.bp.grade[2] + (lv('bp') === 'good' ? ' Training and a low-salt diet help keep it there.' : '')));
+      if (v('bpSys') >= 140 || v('bpDia') >= 90) c.alerts.push(`Blood pressure read ${bp} at your ${r.when} check. One high reading isn’t a diagnosis, but it needs a GP to recheck it, ideally within a month.`);
+      if (v('bpSys') >= 130 && v('bpSys') < 140) plan(`Recheck your blood pressure in 3–6 months (${bp} is high-normal). Sit for 5 minutes first, no coffee for 30.`);
+    }
+    if (v('hr') != null && lv('hr') !== 'good') {
+      c.findings.push(finding('heart', `Resting heart rate <b>${v('hr')} bpm</b>: ${word('hr')}${said('hr')}.`,
+        `${r.by.hr.grade[2]} At a kiosk it is often raised by walking in, caffeine, nerves or a short night${sleepShort ? `, and you’re averaging ${fmtHours(sleepShort)} at the moment` : ''}. A reading taken after 5 quiet minutes on a different day tells you more.`));
+      plan(`Take your own resting pulse on 3 mornings this week, before getting up: count 30 seconds, double it. Under 80 means the check caught you on a busy moment; still 85+ means it’s real, so ask ${DOCTORS.gym.short} on the Gym tab about conditioning.`);
+      if (v('hr') > 100) c.alerts.push(`Resting heart rate was ${v('hr')} bpm at your check. If it’s over 100 at rest again, or comes with palpitations, dizziness or chest discomfort, see a GP.`);
+    }
+    if (v('heartAge') != null) {
+      if (age) {
+        const d = Math.round(v('heartAge') - age);
+        c.findings.push(finding('heart', `Heart age <b>${v('heartAge')}</b> against a real age of ${age}: ${d > 0 ? `<b>${d} year${d > 1 ? 's' : ''} older</b>` : 'at or under your age'}${said('heartAge')}.`,
+          'Heart age is a 10-year risk estimate built from blood pressure, cholesterol, smoking, diabetes and weight. At your age the absolute risk is tiny, so read it as a direction, not a danger; the inputs that moved it are the ones to work on.'));
+        if (d >= 10) c.alerts.push(`Heart age came out ${d} years above your real age. Worth asking a GP for a cholesterol test and a proper blood-pressure check.`);
+      } else c.gaps.push(`Your age (heart age ${v('heartAge')} can’t be judged without it).`);
+    }
+    if (v('diabetes') != null) {
+      c.findings.push(finding('drop', `Diabetes risk score <b>${v('diabetes')} points</b>: ${word('diabetes')}${said('diabetes')}.`, r.by.diabetes.grade[2] + ' The score counts things you can’t change (age, family history, background) and things you can (waist, activity, diet).'));
+      if (v('diabetes') >= 6) plan(`Mention your diabetes risk score (${v('diabetes')}) at your next GP visit and ask whether a fasting glucose or HbA1c is worth doing; ${DOCTORS.diet.short} on the Diet tab can turn it into a food plan.`);
+      if (v('diabetes') >= 12) c.alerts.push(`A diabetes risk score of ${v('diabetes')} is in the high band: a GP should check your blood glucose.`);
+    }
+    for (const k of ['glucose', 'hba1c', 'cholTotal', 'ldl', 'hdl', 'trig', 'spo2']) {
+      if (v(k) == null) continue;
+      const row = r.by[k];
+      if (lv(k) !== 'good') c.findings.push(finding('drop', `${esc(row.label)} <b>${row.value} ${row.unit}</b>: ${word(k)}.`, row.grade[2]));
+      if (lv(k) === 'low') c.alerts.push(`${row.label} ${row.value} ${row.unit} (${word(k)}) at your ${r.when} check: take this to a GP.`);
+    }
+    if (p.family) c.findings.push(finding('users', `Family history: ${esc(p.family)}.`, 'Family history raises the stakes on the numbers you can change, and changes how often a GP will want to check them.'));
+    if (r.age > CHECK_OLD) plan('Book a fresh health check: your last one is over a year old.');
+    else c.followUp = `${c.followUp} Next health check due around ${shortDate(addDays(r.c.date, r.flagged.length ? 182 : CHECK_OLD))}.`.trim();
+    return c;
+  }
+
+  if (key === 'body') {
+    if (!h) c.gaps.push(`Your height in ${PROFILE_HINT} (needed for BMI and lean-mass maths).`);
+    else if (h.source === 'check') c.gaps.push(`Confirm your height in ${PROFILE_HINT}: I’m using ${h.cm} cm, worked out from your check’s weight and BMI.`);
+    if (!r) return c;
+    if (v('bodyFat') != null) {
+      c.findings.push(finding('muscle', `Body fat <b>${v('bodyFat')}%</b> at your ${r.when} check: ${word('bodyFat')}${said('bodyFat')}.`,
+        `${r.by.bodyFat.grade[2]} Kiosk and scale readings use bio-impedance, which can be 3–5 points out either way and shifts with hydration, so compare readings from the same machine at the same time of day.`));
+      if (r.lean) c.findings.push(finding('scale', `That puts lean mass at about <b>${fmt1(r.lean)} kg</b>${r.ffmi ? ` and a fat-free mass index of <b>${fmt1(r.ffmi)}</b>` : ''}.`,
+        r.ffmi ? `FFMI is lean mass for your height. ${r.ffmi < 18 ? 'Under 18 is below average for a man, so there is plenty of room to build.' : r.ffmi < 20 ? '18–20 is average for a man who trains a little; a few years of good training typically adds 2–4 points.' : r.ffmi < 22 ? '20–22 is well above average, the mark of consistent training.' : '22+ is excellent; progress from here is slow and earned.'}` : 'Add your height and I can put that against your frame.'));
+      if (v('bodyFat') <= 12 && p.sex !== 'female') c.findings.push(finding('info', 'At this body fat a surplus is the right call.', 'You have room to gain without needing to diet down later; the lean-bulk band is what keeps the ratio of muscle to fat good.'));
+      if (lv('bodyFat') === 'low') c.alerts.push(`Body fat read ${v('bodyFat')}%, below essential levels. If you also feel cold, tired or your libido or periods have changed, see a GP.`);
+      plan('Re-measure body fat on the same machine every 8–12 weeks, same time of day, after the bathroom and before eating, and read the change rather than the number.');
+    }
+    for (const k of ['waist', 'visceral', 'muscle']) {
+      if (v(k) == null) continue;
+      const row = r.by[k];
+      c.findings.push(finding('scale', `${esc(row.label)} <b>${row.value} ${row.unit}</b>${row.grade?.[1] ? `: ${row.grade[1].toLowerCase()}` : ''}.`, row.grade?.[2] ?? ''));
+    }
+    return c;
+  }
+
+  if (!r) return c;
+
+  if (key === 'gym') {
+    if (v('hr') != null && v('hr') > 80) {
+      c.findings.push(finding('heart', `Resting heart rate <b>${v('hr')} bpm</b> at your ${r.when} check${said('hr')}.`,
+        'For someone who lifts, a resting pulse in the 80s–90s usually means the aerobic base is behind the strength. It also slows recovery between sets and between sessions.'));
+      plan('Add two 25–30 minute zone-2 sessions a week (brisk incline walk, bike or rower, able to talk in full sentences) on non-leg days or after upper sessions. Expect resting heart rate to fall 5–10 bpm over 8–12 weeks, without costing strength.');
+    } else if (v('hr') != null && v('hr') < 60) c.findings.push(finding('heart', `Resting heart rate <b>${v('hr')} bpm</b>: a good aerobic base.`, 'That helps recovery between hard sets and sessions.'));
+    if (v('heartAge') != null && age && v('heartAge') > age) plan('Keep the cardio in even on a bulk: it is the training lever on heart age and blood pressure.');
+    return c;
+  }
+
+  if (key === 'sleep') {
+    if (v('hr') != null && v('hr') > 80 && sleepShort) c.findings.push(finding('heart', `Resting heart rate was <b>${v('hr')} bpm</b> at your check, and sleep is running short.`, 'Short sleep keeps the nervous system on alert and pushes resting heart rate up; a week of full nights often takes several beats off it.'));
+    return c;
+  }
+
+  if (key === 'diet') {
+    if (v('diabetes') != null && v('diabetes') >= 6) {
+      c.findings.push(finding('drop', `Diabetes risk score <b>${v('diabetes')} points</b> (${word('diabetes')}) at your ${r.when} check.`, 'A bulk doesn’t have to raise it: what moves the risk is fibre, whole foods and staying lean, not total calories on their own.'));
+      plan('Build the surplus from oats, rice, potatoes, wholegrain bread, fruit, milk and nuts rather than lollies, juice and soft drink; aim for 30 g of fibre a day.');
+    }
+    for (const k of ['glucose', 'hba1c', 'cholTotal', 'ldl', 'trig']) {
+      if (v(k) == null || lv(k) === 'good') continue;
+      const row = r.by[k];
+      c.findings.push(finding('drop', `${esc(row.label)} <b>${row.value} ${row.unit}</b> (${word(k)}).`, row.grade[2]));
+    }
+    if (['ldl', 'cholTotal', 'trig'].some(k => v(k) != null && lv(k) !== 'good')) plan('For the lipids: swap butter and fatty meats for olive oil, fish twice a week, legumes and nuts; it changes LDL within 6–8 weeks.');
+    if (p.allergies) c.findings.push(finding('alert', `Allergies or intolerances on file: ${esc(p.allergies)}.`, 'I’ll keep food suggestions clear of these.'));
+    return c;
+  }
+  return c;
+}
+
+const CONSULTS = Object.fromEntries(Object.entries({ overview: gpConsult, gym: gymConsult, diet: dietConsult, sleep: sleepConsult, body: bodyConsult })
+  .map(([k, fn]) => [k, () => withProfile(k, fn())]));
 export const consultFor = key => CONSULTS[key]?.();
 
 // ============================================================
@@ -581,15 +711,19 @@ function specialistPrompt(key) {
 How to speak: like a warm, experienced specialist who has read the chart before the appointment. Plain language, Australian English, metric units. Use the patient's actual numbers.
 
 Rules:
-- Base everything on YOUR CONSULT NOTES and PATIENT DATA below. Never invent numbers or results that aren't there. If something isn't logged, say exactly what you'd need.
+- Base everything on YOUR CONSULT NOTES, the HEALTH PROFILE and PATIENT DATA below. Read health-check results against the daily logs, not on their own, and say how old a check is when it matters. Never invent numbers or results that aren't there. If something isn't logged, say exactly what you'd need.
 - When you predict, say what you expect, by when, how confident you are and why (which numbers drive it), and what would change the outcome.
 - Give specific, practical actions: amounts, times, foods, sets and reps.
 - Stay in your specialty. If a question belongs to a colleague (${others}), answer briefly and suggest asking them on their tab.
 - You are an AI reading app logs: guidance, not a diagnosis, and not a substitute for in-person care. If anything sounds urgent or concerning (chest pain, fainting, severe or worsening symptoms, signs of disordered eating, thoughts of self-harm), kindly advise seeing a GP, or calling 000 in an emergency (Lifeline 13 11 14 for crisis support). Don't add disclaimers to every reply otherwise.
+- If the patient gives you new health-check results or personal details (height, age, conditions, medications, allergies, family history), save them with log_health_check or update_health_profile, then say in one line what you saved. You can't log food, sleep or workouts; for those, point them to Ask.
 - Keep replies to 2–6 short sentences or a short bulleted list, **bold** the key numbers. No headings.
 
 YOUR CONSULT NOTES (computed today from the logs):
 ${consultNotes(key)}
+
+HEALTH PROFILE AND HEALTH CHECKS (from Settings → Health profile; the patient or the assistant can add to it):
+${profileNotes()}
 
 COACH'S STANDING NOTES ABOUT THE PATIENT:
 ${state.kv.coachProfile?.text || '(none yet)'}
@@ -630,7 +764,27 @@ async function sendSpec(key, text) {
   let reply;
   try {
     const contents = list.slice(-14).map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] }));
-    reply = { id: uid(), role: 'doc', text: aiText(await generate({ system: specialistPrompt(key), contents })) || 'Sorry, I didn’t catch that. Could you ask again?', ts: Date.now() };
+    // A specialist can write to the health profile (a new check, a height, a
+    // medication) but nothing else: logging food or sets stays with Ask.
+    const saved = [];
+    let text = '';
+    for (let step = 0; step < 4; step++) {
+      const res = await generate({ system: specialistPrompt(key), contents, tools: profileTools() });
+      const parts = res.candidates?.[0]?.content?.parts ?? [];
+      const calls = parts.filter(p => p.functionCall);
+      const said = aiText(res);
+      if (said) text = said;
+      if (!calls.length) break;
+      contents.push(res.candidates[0].content);
+      const responses = [];
+      for (const p of calls) {
+        const { result, card } = await runTool(p.functionCall.name, p.functionCall.args);
+        if (card) saved.push(card);
+        responses.push({ functionResponse: { ...(p.functionCall.id ? { id: p.functionCall.id } : {}), name: p.functionCall.name, response: result } });
+      }
+      contents.push({ role: 'user', parts: responses });
+    }
+    reply = { id: uid(), role: 'doc', text: text || (saved.length ? 'Saved to your health profile.' : 'Sorry, I didn’t catch that. Could you ask again?'), saved, ts: Date.now() };
   } catch (err) {
     reply = { id: uid(), role: 'doc', text: `I couldn’t reach Gemini: ${String(err.message ?? err)}`, error: true, ts: Date.now() };
   }
@@ -658,7 +812,7 @@ sheets.specialist = ({ spec }) => {
   : `<div class="chat cs-chat">
       ${msgs.length ? msgs.map(m => (m.role === 'user'
         ? `<div class="msg-me">${esc(m.text)}</div>`
-        : `<div class="msg-ai">${avatar(d, 'sm')}<div class="bubble glass ${m.error ? 'err' : ''}"><p>${fmtAI(m.text)}</p></div></div>`)).join('')
+        : `<div class="msg-ai">${avatar(d, 'sm')}<div class="bubble glass ${m.error ? 'err' : ''}"><p>${fmtAI(m.text)}</p>${(m.saved ?? []).map((c, i) => `<div class="logged ${c.undone ? 'undone' : ''}">${tile(c.icon, c.area)}<div class="grow"><div class="t">${esc(c.title)}</div><div class="d">${esc(c.sub ?? '')}</div></div>${c.undone ? '<span class="undone-tag">Undone</span>' : `<button class="undo" data-act="specUndo" data-spec="${key}" data-m="${m.id}" data-c="${i}">Undo</button>`}</div>`).join('')}</div></div>`)).join('')
       : `<div class="msg-ai">${avatar(d, 'sm')}<div class="bubble glass"><p>${esc(`Hi, I’m ${d.name}. I’ve read through your ${d.tab === 'Overview' ? 'whole chart' : `${d.tab.toLowerCase()} data`}`)}${c ? ` and my overall read is <b>${esc(c.level[1].toLowerCase())}</b>` : ''}. What would you like to go over?</p></div></div>`}
       ${busy ? `<div class="msg-ai">${avatar(d, 'sm')}<div class="bubble glass typing"><i></i><i></i><i></i></div></div>` : ''}
     </div>
@@ -681,6 +835,19 @@ Object.assign(actions, {
     refreshSheet();
   },
   specToAsk: () => { closeSheet(); location.hash = 'ask'; },
+  async specUndo(el) {
+    const all = chats();
+    const list = (all[el.dataset.spec] ?? []).map(m => ({ ...m }));
+    const m = list.find(x => x.id === el.dataset.m);
+    const c = m?.saved?.[el.dataset.c];
+    if (!c || c.undone) return;
+    await undoCard(c);
+    m.saved = m.saved.map((x, i) => (i === Number(el.dataset.c) ? { ...x, undone: true } : x));
+    await setKV('specChats', { ...all, [el.dataset.spec]: list });
+    haptic();
+    refreshSheet();
+    render();
+  },
 });
 forms.specAsk = (f, form) => {
   const q = f.get('q');

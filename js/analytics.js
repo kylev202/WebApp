@@ -1,11 +1,10 @@
 // Health analytics for the Sleep, Body and Gym tabs: the same logged data as the
 // rest of the app, read the way a coach would. Every figure says what it is
 // measured against, and every card ends in what to do about it.
-import { state } from './store.js';
 import { esc, dayKey, addDays, daysBetween, weekStart, toDate, shortDate, initial, fmt, fmt1, fmtHours, time12, toMin, fromMin, mean, sum, plural, clamp } from './util.js';
 import { icon, tile } from './icons.js';
 import { lineChart } from './charts.js';
-import { goals, of, sleepOn, weights, weeklyRate, maintenanceKcal, kcalOn } from './data.js';
+import { goals, of, sleepOn, weights, weeklyRate, maintenanceKcal, kcalOn, bodyProfile } from './data.js';
 
 import { chip, note, notes, signed, fmtMins, stat, section, meter, sd, slope, dayNo } from './an-ui.js';
 
@@ -160,7 +159,7 @@ export function bodyFacts() {
   const today = dayKey();
   const g = goals();
   const kg = latest.kg;
-  const profile = state.kv.profile ?? {};
+  const profile = bodyProfile();
 
   // Trend weight: the mean of the weigh-ins in the 7 days up to each reading. Daily
   // noise (water, food in transit) averages out, so this is the number to steer by.
@@ -240,7 +239,7 @@ export function bodyAnalytics() {
     const diff = kcalFromLog - kcalFromScale;
     insights.push(note('diet', 'diet', `The scale implies a surplus of <b>${signed(kcalFromScale, 0)} kcal/day</b>; your food log against estimated maintenance says <b>${signed(kcalFromLog, 0)}</b>. ${Math.abs(diff) < 250 ? 'They agree, so your logging and maintenance estimate look accurate.' : diff > 0 ? 'The log shows more than the scale, so meals are probably under-recorded or maintenance is set too low.' : 'The scale shows more than the log, so meals are probably under-recorded.'}`));
   } else if (kcalFromScale != null) {
-    insights.push(note('diet', 'diet', `The scale implies a surplus of about <b>${signed(kcalFromScale, 0)} kcal/day</b>. Set your profile in Settings to compare with your food log.`));
+    insights.push(note('diet', 'diet', `The scale implies a surplus of about <b>${signed(kcalFromScale, 0)} kcal/day</b>. Fill in your health profile in Settings to compare with your food log.`));
   }
   if (fit28 && fit28.r2 < 0.4 && fit28.n >= 6) insights.push(note('info', 'move', `Weigh-ins are scattered (fit ${Math.round(fit28.r2 * 100)}%), so the weekly rate is a rough guide. Weigh in under the same conditions, ideally each morning.`));
   if (proj && Math.abs(fit28.perWeek) >= 0.02) insights.push(note('target', 'work', `At this rate you reach about <b>${proj(4).toFixed(1)} kg</b> in 4 weeks and <b>${proj(8).toFixed(1)} kg</b> in 8.`));

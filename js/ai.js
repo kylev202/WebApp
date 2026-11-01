@@ -7,6 +7,7 @@ import { routine, nextDay, workouts, exById, exByName, addCustomExercise, record
 import { courses, assessments, tasks, shifts, jobs, jobOf, shiftHours, shiftPay, projects, invoices, invoiceStatus, courseResult, band, AREAS } from './plan.js';
 import { CATEGORIES, INCOME, ACCOUNTS, monthSummary, bills, budgets, spentIn, goalsList, balances, netWorth, hasBalances, monthStats } from './money.js';
 import { targetLines } from './targets.js';
+import { profileFacts } from './health-profile.js';
 
 const API = 'https://generativelanguage.googleapis.com/v1beta';
 export const aiSettings = () => ({ key: '', model: '', ...state.kv.ai });
@@ -85,6 +86,8 @@ export function snapshot() {
     last_7_days: days.map(d => ({ d, kcal: kcalOn(d), protein: proteinOn(d), water: waterOn(d), sleep_h: sleepOn(d) })),
     habits: habits().map(h => ({ name: h.name, done_today: habitDone(h.id, t) })),
     body: { latest_kg: ws.at(-1)?.kg ?? null, trend_kg_per_week: weeklyRate() != null ? fmt1(weeklyRate()) : null, goal: 'lean bulk' },
+    // Personal details and every health check: what a clinician would read before the logs.
+    health_profile: profileFacts(),
     gym: {
       routine: r ? { name: r.name, per_week: r.perWeek, days: r.days.map(d => `${d.name}: ${d.exercises.map(x => `${exById(x.exId).name} ${x.sets}x${x.repMin}-${x.repMax}`).join(', ')}`) } : null,
       next_day: nextDay()?.name ?? null,

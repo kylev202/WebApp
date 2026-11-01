@@ -7,6 +7,7 @@ import './health.js';
 import './gym.js';
 import './today.js';
 import './settings.js';
+import './profile.js';
 import './plan.js';
 import './study.js';
 import './money.js';

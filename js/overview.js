@@ -2,12 +2,11 @@
 // leaves you, what you've eaten against the hours left, water, training load and
 // which muscles are still recovering, and where body weight is heading — with the
 // numbers turned into sentences instead of left for you to interpret.
-import { state } from './store.js';
 import { esc, dayKey, addDays, daysBetween, weekStart, toDate, dayLabel, initial, longDate, fmt, fmt1, fmtHours, time12, timeOf, toMin, fromMin, minNow, nowHHMM, pad, clamp, mean, sum, plural } from './util.js';
 import { icon, tile } from './icons.js';
 import { actions, ui, render, header, sect } from './core.js';
 import { sparkline } from './charts.js';
-import { goals, of, sleepOn, waterOn, weights, weeklyRate, macroTargets, maintenanceKcal } from './data.js';
+import { goals, of, sleepOn, waterOn, weights, weeklyRate, macroTargets, maintenanceKcal, bodyProfile } from './data.js';
 import { workouts, nextDay, active, routine, exById, workoutLoad } from './gym.js';
 import { MUSCLES, exRegions } from './gym-data.js';
 import { bodyMap, bodyPair } from './body.js';
@@ -216,7 +215,7 @@ function nutritionCard(f) {
   const left = Math.max(0, g.kcal - f.kcal), pLeft = Math.max(0, g.protein - f.protein);
   const kg = f.weigh?.kg ?? null;
   const perKg = kg && f.protein ? f.protein / kg : null;
-  const exact = kg ? maintenanceKcal(state.kv.profile ?? {}, kg) : null;
+  const exact = kg ? maintenanceKcal(bodyProfile(), kg) : null;
   const maint = exact && Math.round(exact / 10) * 10; // as the bulk calculator shows it
   const lastMeal = f.meals.map(m => m.time).filter(Boolean).sort().at(-1);
   const bar = (label, value, goal, color) => `<div class="macro"><span>${label}</span><div class="track"><div class="fill" style="width:${Math.min(100, (value / goal) * 100)}%;background:${color}"></div></div><b>${fmt(value)} / ${fmt(goal)} g</b></div>`;
@@ -293,7 +292,7 @@ function waterCard(f) {
 function bodyCard(f) {
   const w = f.weigh;
   const level = weightLevel(f);
-  const height = Number(state.kv.profile?.height);
+  const height = Number(bodyProfile().height);
   const bmi = w && height > 100 ? w.kg / (height / 100) ** 2 : null;
   const trend = weights().filter(x => x.date <= f.date && x.date >= addDays(f.date, -30)).map(x => x.kg);
   return `<section class="card glass hv-mini tap" data-act="segTab" data-key="health" data-tab="body">
