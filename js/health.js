@@ -1,8 +1,8 @@
 // Health: diet, sleep and body tabs (the overview lives in overview.js, gym in gym.js), plus their logging sheets.
 import { state, addEntry, updateEntry, putEntry, removeEntry, setKV } from './store.js';
-import { esc, dayKey, lastDays, longDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num } from './util.js';
+import { esc, dayKey, lastDays, longDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num, plural } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sheetForm, dateField, readDate } from './core.js';
+import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sect, sheetForm, dateField, readDate } from './core.js';
 import { goals, of, byId, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, maintenanceKcal, sleepHours, recentMeals } from './data.js';
 import { gymTab } from './gym.js';
 import { overviewTab, overviewHeader } from './overview.js';
@@ -18,10 +18,21 @@ export function mealRow(m) {
     <button class="x-btn" data-act="del" data-id="${m.id}" aria-label="Delete">${icon('close')}</button></div>`;
 }
 
+// Each subtab says, in the header, what it is a view of: Overview is one day
+// read closely, the other four are one subject read over time. Without that the
+// five identical pills gave no clue which of the two you were about to get.
+const HEALTH_SUB = {
+  overview: 'One day, read closely',
+  gym: 'Training · session, then progress',
+  diet: 'Food · today, then the weeks',
+  sleep: 'Sleep · report, then every night',
+  body: 'Weight · trend, then every reading',
+};
+
 function renderHealth() {
   const tab = ui.tab.health ?? 'overview';
   const body = { overview: overviewTab, gym: () => gymTab(gymAnalytics()), diet: healthDiet, sleep: healthSleep, body: healthBody }[tab]();
-  const top = tab === 'overview' ? overviewHeader() : header('Health', longDate());
+  const top = tab === 'overview' ? overviewHeader() : header('Health', HEALTH_SUB[tab] ?? longDate());
   // Each tab has its own specialist, who reads that tab's data first. The GP reads
   // everything, so it sits on today's overview (a past day is a record, not a consult).
   const doc = tab === 'overview' && ui.tab.healthDate ? '' : consultCard(tab);
@@ -35,8 +46,16 @@ function healthDiet() {
   const meals = of('meal', t);
   const [p, c, f] = ['protein', 'carbs', 'fat'].map(k => sum(meals, k));
   const targets = macroTargets(g);
-  // Today first, because that's what you came to log; the report reads the weeks behind it.
+  // Today's number, then the meals that made it, then the report, then the days
+  // before. The meals used to sit under the multi-week report, so checking what
+  // you had an hour ago meant scrolling past four charts to get to it.
+  const earlier = lastDays(7).slice(0, -1).reverse().map(d => {
+    const ms = of('meal', d);
+    if (!ms.length) return '';
+    return `<div class="section-label">${dayLabel(d)} <span>${fmt(sum(ms, 'kcal'))} kcal · ${fmt(sum(ms, 'protein'))} g P</span></div><section class="card glass"><div class="list">${ms.map(mealRow).join('')}</div></section>`;
+  }).join('');
   return `
+  ${sect('Today', { note: `Against your ${fmt(g.kcal)} kcal and ${g.protein} g protein targets.`, open: true })}
   <section class="card glass">
     <div class="money-top"><div><div class="label-sm">Eaten today</div><div class="big-xl">${fmt(sum(meals, 'kcal'))}<small>of ${fmt(g.kcal)} kcal</small></div></div>
       <button class="pill-btn" data-act="sheet" data-sheet="meal">${icon('plus')} Meal</button></div>
@@ -46,12 +65,12 @@ function healthDiet() {
       ${macroBar('Fat', f, targets.fat, 'var(--diet)')}
     </div>
   </section>
+  ${sect('Today’s meals', { note: meals.length ? 'Tap a meal to edit it.' : 'Nothing written down yet today.', right: `<span class="sect-v">${plural(meals.length, 'meal')}</span>` })}
+  <section class="card glass">${meals.length ? `<div class="list">${meals.map(mealRow).join('')}</div>`
+    : '<div class="empty">Add your first meal of the day with ＋ Meal above.</div>'}</section>
+  ${sect('Report', { note: 'How you have actually eaten over the last weeks: averages, consistency and where the calories came from.' })}
   ${dietAnalytics()}
-  ${lastDays(7).reverse().map(d => {
-    const ms = of('meal', d);
-    if (!ms.length) return '';
-    return `<div class="section-label">${dayLabel(d)} <span>${fmt(sum(ms, 'kcal'))} kcal · ${fmt(sum(ms, 'protein'))} g P</span></div><section class="card glass"><div class="list">${ms.map(mealRow).join('')}</div></section>`;
-  }).join('')}`;
+  ${earlier ? `${sect('Earlier days', { note: 'The six days before today, newest first.' })}${earlier}` : ''}`;
 }
 
 function macroBar(label, value, goal, color) {
@@ -60,8 +79,9 @@ function macroBar(label, value, goal, color) {
 
 function healthSleep() {
   const recent = of('sleep').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14);
-  return `${sleepAnalytics()}
-  ${recent.length ? `<div class="section-label">Nights</div><section class="card glass"><div class="list">${recent.map(s => `
+  return `${sect('Report', { note: 'Your last weeks of sleep: average against goal, debt, how steady your bedtime is and a score out of 100.', open: true })}
+  ${sleepAnalytics()}
+  ${recent.length ? `${sect('Every night', { note: 'The nights the report is built from, newest first. Tap one to correct it.', right: `<span class="sect-v">${plural(recent.length, 'night')}</span>` })}<section class="card glass"><div class="list">${recent.map(s => `
     <div class="row tap" data-act="sheet" data-sheet="sleep" data-id="${s.id}" role="button"><div class="bar" style="background:var(--sleep)"></div><div class="grow"><div class="t">${dayLabel(s.date)}</div><div class="d">${esc(s.bed)} → ${esc(s.wake)}</div></div>
     <div class="amt">${fmtHours(s.hours)}</div><button class="x-btn" data-act="del" data-id="${s.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>` : ''}`;
 }
@@ -69,8 +89,9 @@ function healthSleep() {
 function healthBody() {
   const ws = weights();
   return `
+  ${sect('Report', { note: 'Day-to-day water swings smoothed into a trend, read against a lean-bulk rate and your calories.', open: true })}
   ${bodyAnalytics()}
-  ${ws.length ? `<div class="section-label">Weigh-ins</div><section class="card glass"><div class="list">${ws.slice().reverse().slice(0, 20).map(w => `
+  ${ws.length ? `${sect('Every weigh-in', { note: 'The raw readings behind the trend, newest first.', right: `<span class="sect-v">${plural(ws.length, 'weigh-in')}</span>` })}<section class="card glass"><div class="list">${ws.slice().reverse().slice(0, 20).map(w => `
     <div class="row tap" data-act="sheet" data-sheet="weight" data-id="${w.id}" role="button"><div class="bar" style="background:var(--move)"></div><div class="grow"><div class="t">${dayLabel(w.date)}</div></div>
     <div class="amt">${w.kg} kg</div><button class="x-btn" data-act="del" data-id="${w.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>` : ''}`;
 }

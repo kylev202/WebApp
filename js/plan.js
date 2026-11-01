@@ -2,7 +2,7 @@
 import { state, addEntry, updateEntry, removeEntry, setKV } from './store.js';
 import { esc, uid, pad, dayKey, addDays, addMonths, toDate, weekStart, monthKey, monthDays, monthName, dayLabel, shortDate, longDate, initial, time12, toMin, nowHHMM, fmt, fmt1, money, num, plural, daysBetween } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, removeWithUndo, chips, dateField, readDate, toggle, afterRender } from './core.js';
+import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sect, removeWithUndo, chips, dateField, readDate, toggle, afterRender } from './core.js';
 import { of, byId } from './data.js';
 import { lineChart } from './charts.js';
 import { todaySections } from './today.js';
@@ -142,12 +142,23 @@ function taskRow(t) {
 // countdown and its planner).
 export const planTabs = []; // { key, label, render }
 
+// Agenda is a day at a time, Uni and Work are the standing shape of a semester,
+// Tasks is one flat list. Saying so in the subtitle stops the five pills reading
+// as five versions of the same thing.
+const PLAN_SUB = {
+  agenda: 'One day at a time',
+  uni: 'Units, timetable and marks',
+  work: 'Shifts, clients and invoices',
+  tasks: 'Everything you owe yourself',
+  study: 'Exams and the plan for them',
+};
+
 function renderPlan() {
   const tab = ui.tab.plan ?? 'agenda';
   const extra = planTabs.find(t => t.key === tab);
   const body = extra ? extra.render() : ({ agenda: planAgenda, uni: planUni, work: planWork, tasks: planTasks }[tab] ?? planAgenda)();
   const tabs = [['agenda', 'Agenda'], ['uni', 'Uni'], ...planTabs.map(t => [t.key, t.label]), ['work', 'Work'], ['tasks', 'Tasks']];
-  return `${header('Plan', longDate(), `<button class="icon-btn glass" data-act="sheet" data-sheet="planAdd" aria-label="Add">${icon('plus')}</button>`)}
+  return `${header('Plan', PLAN_SUB[tab] ?? longDate(), `<button class="icon-btn glass" data-act="sheet" data-sheet="planAdd" aria-label="Add">${icon('plus')}</button>`)}
     ${seg('plan', tabs, tab)}${body}`;
 }
 screens.plan = renderPlan;
@@ -197,7 +208,10 @@ function planAgenda() {
   const sel = ui.planDay ?? dayKey();
   const items = agendaFor(sel);
   return `${planCalendar(sel)}
-  <div class="section-label">${dayLabel(sel)} <span>${toDate(sel).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}</span></div>
+  ${sect(dayLabel(sel), {
+    note: `${toDate(sel).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })} — classes, shifts, events and anything falling due, in clock order.`,
+    right: `<span class="sect-v">${items.length ? plural(items.length, 'item') : 'clear'}</span>`,
+  })}
   <section class="card glass">${items.length ? `<div class="list">${items.map(agendaRow).join('')}</div>` : `<div class="empty">Nothing planned. Enjoy the free time.</div>`}</section>
   <div class="row2"><button class="btn soft" data-act="sheet" data-sheet="event" data-date="${sel}">${icon('calendar')} Event</button><button class="btn soft" data-act="sheet" data-sheet="task" data-date="${sel}">${icon('list')} Task</button></div>`;
 }
@@ -205,20 +219,24 @@ function planAgenda() {
 function planUni() {
   const cs = courses();
   const byDay = DAYS.map((name, i) => ({ name, list: classes().filter(c => Number(c.day) === i).sort((a, b) => a.start.localeCompare(b.start)) })).filter(d => d.list.length);
+  // Units and timetable are the facts of the semester; the mark analysis is a
+  // reading of them. The analysis used to come first, so the tab opened on a
+  // chart about units you had to scroll down to see.
   return `
-  ${uniAnalytics()}
-  <div class="section-label">Units <a data-act="sheet" data-sheet="course">Add</a></div>
+  ${sect('Your units', { note: 'What you are enrolled in this semester, and how much of each is marked so far.', right: '<a data-act="sheet" data-sheet="course">Add</a>', open: true })}
   <section class="card glass">${cs.length ? `<div class="list">${cs.map(c => {
     const r = courseResult(c.id);
     return `<div class="row tap" data-act="sheet" data-sheet="courseDetail" data-id="${c.id}" role="button">${tile('book', c.color ?? 'school')}
       <div class="grow"><div class="t">${esc(c.code)} · ${esc(c.name)}</div><div class="d">${c.credits || 6} credit points · ${r.weightDone}% marked</div></div>
       ${r.average != null ? `<span class="tag" style="background:var(--${c.color}-bg);color:var(--${c.color}-ink)">${band(r.average)} ${fmt(r.average)}</span>` : '<span class="chev">' + icon('chevron') + '</span>'}</div>`;
   }).join('')}</div>` : '<div class="empty">No units yet. Add the ones you are taking this semester.</div>'}</section>
-  <div class="section-label">Timetable <a data-act="sheet" data-sheet="cls">Add class</a></div>
+  ${sect('Timetable', { note: 'Your repeating weekly classes. These appear in the agenda automatically.', right: '<a data-act="sheet" data-sheet="cls">Add class</a>' })}
   <section class="card glass">${byDay.length ? byDay.map(d => `<div class="tt-day"><div class="label-sm">${d.name}</div><div class="list">${d.list.map(c => {
     const course = courseById(c.courseId);
     return `<div class="row tap" data-act="sheet" data-sheet="cls" data-id="${c.id}" role="button"><div class="time">${time12(c.start)}</div><div class="bar" style="background:var(--${course.color ?? 'school'})"></div><div class="grow"><div class="t">${esc(course.code)} ${esc(c.kind)}</div><div class="d">${time12(c.start)}–${time12(c.end)}${c.room ? ` · ${esc(c.room)}` : ''}</div></div></div>`;
-  }).join('')}</div></div>`).join('') : '<div class="empty">Add your weekly classes and they appear in your agenda automatically.</div>'}</section>`;
+  }).join('')}</div></div>`).join('') : '<div class="empty">Add your weekly classes and they appear in your agenda automatically.</div>'}</section>
+  ${sect('Marks report', { note: 'What you have scored against what each piece was worth, and what the rest still has to score.' })}
+  ${uniAnalytics()}`;
 }
 
 function planWork() {
@@ -234,6 +252,7 @@ function planWork() {
   const unpaid = invoices().filter(i => i.status !== 'paid');
   const overdue = unpaid.filter(i => invoiceStatus(i) === 'overdue');
   return `
+  ${sect('Part-time work', { note: 'Hours and expected pay for the week you are in, then the shifts still to come.', open: true })}
   <section class="card glass">
     <div class="head"><div class="title">${tile(many ? 'briefcase' : js[0].icon, 'work')}${many ? 'Part-time jobs' : esc(js[0].name)}</div><button class="sub-note" data-act="sheet" data-sheet="jobs">${many ? plural(js.length, 'job') : 'Jobs &amp; pay'} ${icon('chevron')}</button></div>
     <div class="calc-result"><div><span>This week</span><b>${fmt1(hours)} h</b></div><div><span>Expected pay</span><b>${money(pay, false)}</b></div><div><span>Shifts</span><b>${thisWeek.length}</b></div></div>
@@ -244,12 +263,13 @@ function planWork() {
     ${weeklyPay.flat().some(Boolean) ? payChart(weeks, weeklyPay, js) : ''}
     <div class="row2"><button class="btn soft" data-act="sheet" data-sheet="shift">${icon('plus')} Shift</button><button class="btn soft" data-act="addPay" ${pay ? '' : 'disabled'}>${icon('coins')} Add pay to Money</button></div>
   </section>
-  ${upcoming.length ? `<div class="section-label">Upcoming shifts</div><section class="card glass"><div class="list">${upcoming.map(s => {
+  ${upcoming.length ? `<div class="section-label">Upcoming shifts <span>${plural(upcoming.length, 'shift')}</span></div><section class="card glass"><div class="list">${upcoming.map(s => {
     const j = jobOf(s);
     return `<div class="row tap" data-act="sheet" data-sheet="shift" data-id="${s.id}" role="button">
     <div class="time">${dayLabel(s.date).replace('Tomorrow', 'Tmrw')}</div><div class="bar" style="background:var(--${j.color})"></div><div class="grow"><div class="t">${time12(s.start)}–${time12(s.end)}</div><div class="d">${many ? `${esc(j.name)} · ` : ''}${fmt1(shiftHours(s))} h · ${money(shiftRate(s), false)}/h</div></div><div class="amt">${money(shiftPay(s), false)}</div></div>`;
   }).join('')}</div></section>` : ''}
 
+  ${sect('Client work', { note: 'Where each project stands and what is still owed to you.' })}
   <section class="card glass">
     <div class="head"><div class="title">${tile('laptop', 'work')}Freelance web</div><button class="sub-note" data-act="sheet" data-sheet="client">${plural(clients().length, 'client')} ${icon('chevron')}</button></div>
     <div class="calc-result"><div><span>Active projects</span><b>${ps.filter(p => p.status === 'active').length}</b></div><div><span>Unpaid</span><b>${money(unpaid.reduce((t, i) => t + Number(i.amount), 0), false)}</b></div><div><span>Overdue</span><b ${overdue.length ? 'class="late"' : ''}>${overdue.length}</b></div></div>
@@ -284,36 +304,38 @@ function planTasks() {
   ].filter(([, list]) => list.length);
   const done = all.filter(x => x.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)).slice(0, 8);
   return `
+  ${sect('Add a task', { note: 'Type it, pick a day and an area, and it lands in the right group below.', open: true })}
   <form class="card glass quick-task" data-form="quickTask">
     <div class="qt-row"><input class="input-x" name="title" placeholder="Add a task…" required maxlength="80" autocomplete="off" aria-label="Task">
       <button class="qt-add" aria-label="Add task">${icon('plus')}</button></div>
     ${dateField('due', '', { none: true })}
     ${chips('area', Object.entries(AREAS).map(([k, a]) => [k, a.label, a.icon, a.color]), 'life', { cls: 'scroll' })}
   </form>
+  ${sect('Still to do', { note: 'Grouped by when they are due — overdue first, undated last.', right: `<span class="sect-v">${open.length ? plural(open.length, 'task') : 'all clear'}</span>` })}
   ${groups.length ? groups.map(([name, list]) => `<div class="section-label">${name} <span>${list.length}</span></div><section class="card glass"><div class="list">${list.map(taskRow).join('')}</div></section>`).join('')
     : `<section class="card glass soon">${tile('check', 'diet', 'xl')}<p>All clear. Add a task above.</p></section>`}
-  ${done.length ? `<div class="section-label">Done</div><section class="card glass"><div class="list">${done.map(taskRow).join('')}</div></section>` : ''}`;
+  ${done.length ? `${sect('Done', { note: 'The last few you finished, newest first.' })}<section class="card glass"><div class="list">${done.map(taskRow).join('')}</div></section>` : ''}`;
 }
 
 // ---------- Today sections ----------
 todaySections.push({
-  pos: 'mid',
+  band: 'next',
   render() {
     const t = dayKey(), now = nowHHMM();
     const items = agendaFor(t).filter(it => !it.time || (it.end ?? it.time) >= now).slice(0, 5);
     if (!items.length) return '';
-    return `<div class="section-label">Up Next <a data-act="nav" data-to="plan">Plan</a></div><section class="card glass"><div class="list">${items.map(agendaRow).join('')}</div></section>`;
+    return `<div class="section-label">On the clock <span>${plural(items.length, 'item')}</span></div><section class="card glass"><div class="list">${items.map(agendaRow).join('')}</div></section>`;
   },
 });
 todaySections.push({
-  pos: 'mid',
+  band: 'next',
   render() {
     const t = dayKey(), soon = addDays(t, 2);
     const due = tasks().filter(x => !x.done && x.due && x.due <= soon);
     const exams = assessments().filter(a => !a.done && a.due >= t && a.due <= addDays(t, 3));
     const late = invoices().filter(i => invoiceStatus(i) === 'overdue');
     if (!due.length && !exams.length && !late.length) return '';
-    return `<div class="section-label">To-Do <a data-act="toTasks">All tasks</a></div><section class="card glass"><div class="list">
+    return `<div class="section-label">Due soon <a data-act="toTasks">All tasks</a></div><section class="card glass"><div class="list">
       ${due.slice(0, 5).map(taskRow).join('')}
       ${exams.map(a => `<div class="row tap" data-act="sheet" data-sheet="assessment" data-id="${a.id}" role="button">${tile(a.kind === 'exam' ? 'exam' : 'pen', 'school')}<div class="grow"><div class="t">${esc(a.title)}</div><div class="d">${esc(courseById(a.courseId).code)}${a.weight ? ` · ${a.weight}%` : ''}</div></div><span class="tag hot">${dayLabel(a.due)}</span></div>`).join('')}
       ${late.map(i => `<div class="row tap" data-act="sheet" data-sheet="invoice" data-id="${i.id}" role="button">${tile('receipt', 'move')}<div class="grow"><div class="t">Chase invoice ${esc(i.number || '')}</div><div class="d">${money(i.amount, false)} overdue since ${dayLabel(i.due)}</div></div></div>`).join('')}

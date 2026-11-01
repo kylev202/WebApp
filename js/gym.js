@@ -2,7 +2,7 @@
 import { state, addEntry, putEntry, removeEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, weekStart, shortDate, dayLabel, fmt, fmt1, fmtDuration, num, uid, plural, clamp } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, afterRender, ui, go, render, openSheet, closeSheet, refreshSheet, makeFocusable, toast, haptic, confetti, unlockAudio, chime, closeBtn, header, reduceMotion } from './core.js';
+import { screens, sheets, actions, forms, previews, afterRender, ui, go, render, openSheet, closeSheet, refreshSheet, makeFocusable, toast, haptic, confetti, unlockAudio, chime, closeBtn, header, sect, reduceMotion } from './core.js';
 import { lineChart, sparkline } from './charts.js';
 import { of, byId, habits, habitDone } from './data.js';
 import { EXERCISES, MUSCLES, REGIONS, TEMPLATES, REP_PRESETS, PLATES, PLATE_COLORS, exRegions } from './gym-data.js';
@@ -277,7 +277,11 @@ export function gymTab(insights = '') {
   const weeks = Array.from({ length: 8 }, (_, i) => addDays(weekStart(), (i - 7) * 7));
   const setsPerWeek = weeks.map(w0 => ws.filter(w => w.date >= w0 && w.date <= addDays(w0, 6)).reduce((t, w) => t + w.exercises.reduce((s, x) => s + x.sets.length, 0), 0));
   const lifts = keyLifts();
+  // Reading order: the session in front of you, then the sessions behind you,
+  // then the long-range report. Before, the eight-week chart sat between the two
+  // and you scrolled past a trend line to find last Tuesday's workout.
   return `
+  ${sect('Next session', { note: aw ? 'A workout is running right now.' : r ? `From your ${esc(r.name)} routine. Swap day with the chips underneath.` : 'Pick a split to train against.', open: true })}
   ${aw ? `<section class="card glass live-card tap" data-act="nav" data-to="workout"><div class="head"><div class="title">${tile('play', 'move')}${esc(aw.name)} in progress</div><div class="chev">${icon('chevron')}</div></div><p class="note" style="margin:0">Started ${fmtDuration(Date.now() - aw.start)} ago. Tap to resume.</p></section>` : `
   ${!r || !next ? chooser : `<section class="card glass">
     <div class="head"><div class="title">${tile('dumbbell', 'move')}Next up</div><span class="sub-note">${esc(r.name)}</span></div>
@@ -289,6 +293,12 @@ export function gymTab(insights = '') {
     <div class="day-pick">${r.days.filter(d => d.id !== next.id).map(d => `<button class="chip-btn soft" data-act="startWorkout" data-day="${d.id}">${esc(d.name)}</button>`).join('')}<button class="chip-btn soft" data-act="startEmpty">Empty</button></div>
   </section>`}`}
 
+  ${ws.length ? `${sect('Recent workouts', { note: 'Your last sessions, newest first. Tap one for every set.', right: `<span class="sect-v">${plural(thisWeek, 'workout')} this week</span>` })}
+  <section class="card glass"><div class="list">${ws.slice(0, 8).map(w => `<div class="row tap" data-act="sheet" data-sheet="wkDetail" data-id="${w.id}" role="button">
+    ${bodyPair(workoutLoad(w), topLoad(workoutLoad(w)), { cls: 'bm-row' })}<div class="grow"><div class="t">${esc(w.name)}${w.prs?.length ? ` <span class="pr-badge">${icon('trophy')}${w.prs.length} PR</span>` : ''}</div>
+    <div class="d">${dayLabel(w.date)} · ${fmtDuration(w.end - w.start)} · ${plural(w.exercises.reduce((t, x) => t + x.sets.length, 0), 'set')}</div></div><div class="chev">${icon('chevron')}</div></div>`).join('')}</div></section>` : ''}
+
+  ${sect('Progress', { note: 'Training volume and strength over the last weeks, not today.' })}
   ${insights || `  <section class="card glass">
     <div class="head"><div class="title">This week</div><span class="sub-note">sets per week</span></div>
     <div class="stats two"><div class="stat"><div class="l">Workouts</div><div class="v">${thisWeek}<span>${r ? ` / ${r.perWeek}` : ''}</span></div></div>
@@ -301,12 +311,7 @@ export function gymTab(insights = '') {
     <div class="grow"><div class="t">${esc(l.name)}</div><div class="d">Best ${l.bestText}</div></div>
     <div class="lift-spark">${sparkline(l.trend, 'var(--move)')}</div><div class="amt">${fmt1(l.now)}${l.bw ? ' reps' : ' kg'}</div></div>`).join('')}</div></section>` : ''}`}
 
-  ${ws.length ? `<div class="section-label">Recent workouts</div>
-  <section class="card glass"><div class="list">${ws.slice(0, 8).map(w => `<div class="row tap" data-act="sheet" data-sheet="wkDetail" data-id="${w.id}" role="button">
-    ${bodyPair(workoutLoad(w), topLoad(workoutLoad(w)), { cls: 'bm-row' })}<div class="grow"><div class="t">${esc(w.name)}${w.prs?.length ? ` <span class="pr-badge">${icon('trophy')}${w.prs.length} PR</span>` : ''}</div>
-    <div class="d">${dayLabel(w.date)} · ${fmtDuration(w.end - w.start)} · ${plural(w.exercises.reduce((t, x) => t + x.sets.length, 0), 'set')}</div></div><div class="chev">${icon('chevron')}</div></div>`).join('')}</div></section>` : ''}
-
-  <div class="section-label">Tools</div>
+  ${sect('Tools')}
   <div class="tools">
     <button class="tool glass tap" data-act="nav" data-to="routine">${tile('list', 'move')}<span>Routine</span></button>
     <button class="tool glass tap" data-act="sheet" data-sheet="plates">${tile('plate', 'work')}<span>Plates</span></button>

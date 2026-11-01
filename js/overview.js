@@ -5,7 +5,7 @@
 import { state } from './store.js';
 import { esc, dayKey, addDays, daysBetween, weekStart, toDate, dayLabel, initial, longDate, fmt, fmt1, fmtHours, time12, timeOf, toMin, fromMin, minNow, nowHHMM, pad, clamp, mean, sum, plural } from './util.js';
 import { icon, tile } from './icons.js';
-import { actions, ui, render, header } from './core.js';
+import { actions, ui, render, header, sect } from './core.js';
 import { sparkline } from './charts.js';
 import { goals, of, sleepOn, waterOn, weights, weeklyRate, macroTargets, maintenanceKcal } from './data.js';
 import { workouts, nextDay, active, routine, exById, workoutLoad } from './gym.js';
@@ -189,7 +189,7 @@ function sleepCard(f) {
   }
   if (logged.length && logged.length < 7) notes.push(note('info', 'sleep', `${plural(logged.length, 'night')} logged out of the last 7; averages use only those.`));
 
-  return `<div class="section-label">Sleep &amp; recovery ${toTab('sleep', 'History')}</div>
+  return `${sect('The night before', { note: `How you slept${f.live ? ' last night' : ''}, and how recovered that leaves you.`, right: toTab('sleep', 'Every night') })}
   <section class="card glass">
     <div class="hv-top"><div><div class="label-sm">${f.live ? 'Last night' : 'Night before'}</div>
       <div class="big-xl">${f.sleep ? fmtHours(f.sleep.hours) : '–'}<small>${f.sleep ? `${time12(f.sleep.bed)} → ${time12(f.sleep.wake)}` : 'not logged'}</small></div></div>
@@ -249,7 +249,7 @@ function nutritionCard(f) {
   const rich = f.meals.filter(m => Number(m.protein) >= 25).length;
   if (f.meals.length >= 2) notes.push(note('muscle', 'move', `${rich} of ${f.meals.length} meals had 25 g or more protein${rich < f.meals.length ? '; spreading it evenly across meals helps muscle repair' : ''}.`));
 
-  return `<div class="section-label">Nutrition ${toTab('diet', 'Meals')}</div>
+  return `${sect('What you have eaten', { note: f.live ? 'Against your goal and against the hours of the day still left.' : 'Against your goal for that day.', right: toTab('diet', 'Meals') })}
   <section class="card glass">
     <div class="hv-top"><div><div class="label-sm">${f.live ? 'Eaten so far' : 'Eaten'}</div>
       <div class="big-xl">${fmt(f.kcal)}<small>of ${fmt(g.kcal)} kcal</small></div></div>
@@ -379,7 +379,7 @@ function trainingCard(f) {
     else notes.push(note('star', 'move', `This week’s ${r.perWeek} workouts are done.`));
   }
 
-  return `<div class="section-label">Training ${toTab('gym', 'Gym')}</div>
+  return `${sect('Training', { note: 'The load you are carrying this week, and which muscles are still recovering.', right: toTab('gym', 'Gym') })}
   <section class="card glass">
     <div class="head"><div class="title">${tile('dumbbell', 'move')}${f.live ? 'Today' : dayLabel(f.date)}</div>${chip(trainingLevel(f))}</div>
     ${main}
@@ -405,7 +405,7 @@ function logCard(f) {
   of('weight', f.date).forEach(w => items.push({ min: w.time ? toMin(w.time) : null, time: w.time ? time12(w.time) : '', area: 'move', t: 'Weigh-in', d: `${w.kg} kg`, sheet: 'weight', id: w.id }));
   // Things logged without a clock time (backdated, imported) go last rather than at a guessed hour.
   items.sort((a, b) => (a.min ?? DAY_END) - (b.min ?? DAY_END));
-  return `<div class="section-label">Day log${f.water ? ` <span>${plural(f.water, 'glass', 'glasses')} of water</span>` : ''}</div>
+  return `${sect('Everything logged', { note: 'Every entry on this day, in the order it happened. Tap one to correct it.', right: `<span class="sect-v">${f.water ? `${plural(f.water, 'glass', 'glasses')} of water` : ''}</span>` })}
   <section class="card glass">${items.length ? `<div class="list">${items.map(it => `<div class="row tap" data-act="sheet" data-sheet="${it.sheet}" data-id="${it.id}" role="button">
     <div class="time">${it.time || '–'}</div><div class="bar" style="background:var(--${it.area})"></div>
     <div class="grow"><div class="t">${esc(it.t)}</div><div class="d">${it.d}</div></div></div>`).join('')}</div>`
@@ -426,6 +426,10 @@ export function overviewHeader() {
 export function overviewTab() {
   const f = factsFor(overviewDate());
   const ps = pillars(f);
+  // The day in the order it happens: the verdict, then the night that set it up,
+  // then the eating and the body it feeds, then training, then the raw log. The
+  // cards were always in this order; the headings make it visible, so it reads
+  // as five short chapters instead of six cards that each have to be identified.
   return `${heroCard(f, ps)}
   ${sleepCard(f)}
   ${nutritionCard(f)}

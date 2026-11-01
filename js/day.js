@@ -4,7 +4,7 @@
 import { state, addEntry, updateEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, dayLabel, time12, toMin, fromMin, snapMin, minNow, nowHHMM, pad, fmt, fmt1, fmtHours, money, num, clamp, plural } from './util.js';
 import { icon, tile } from './icons.js';
-import { views, sheets, actions, forms, ui, render, openSheet, closeSheet, toast, haptic, header, closeBtn, chips, dateField, readDate, toggle, removeWithUndo, afterRender } from './core.js';
+import { views, sheets, actions, forms, ui, render, openSheet, closeSheet, toast, haptic, header, sect, closeBtn, chips, dateField, readDate, toggle, removeWithUndo, afterRender } from './core.js';
 import { of, byId, goals, habits, habitDone, waterOn, BLOCK_KINDS, kindOf, blocks, runningBlock as running } from './data.js';
 import { agendaFor, AREAS, courseById } from './plan.js';
 import { workouts } from './gym.js';
@@ -297,6 +297,7 @@ function renderDay() {
   ${coachNotes(nudges)}
   ${planCard(date)}
 
+  ${sect('The day', { note: 'Everything that happened, placed at the time it happened. Tap a gap to fill it.', open: true })}
   <section class="card glass tl-card">
     <div class="head"><div class="title">${tile('clock', 'school')}Timeline</div>
       ${live ? `<button class="pill-btn hot" data-act="stopBlock">${icon('stop')} Stop ${esc(live.title || kindOf(live.kind).label)}</button>`
@@ -316,13 +317,12 @@ function renderDay() {
     </div>
   </section>
 
-  ${unplaced.length ? `<div class="section-label">No time yet <span>${unplaced.length}</span></div>
+  ${unplaced.length ? `${sect('No time yet', { note: 'Logged for this day without a clock time — imported, or added after the fact.', right: `<span class="sect-v">${unplaced.length}</span>` })}
   <section class="card glass"><div class="list">${unplaced.map(u => `<div class="row">
     ${tile(u.icon, u.color)}<div class="grow tap" data-act="sheet" data-sheet="${u.sheet}" data-id="${esc(u.id)}" role="button"><div class="t">${esc(u.title)}</div><div class="d">${esc(u.sub)}</div></div>
-    <button class="pill-btn" data-act="sheet" data-sheet="placeTime" data-id="${esc(u.id)}">Place</button></div>`).join('')}</div>
-  <p class="note">Logged for this day without a clock time — imported, or added after the fact.</p></section>` : ''}
+    <button class="pill-btn" data-act="sheet" data-sheet="placeTime" data-id="${esc(u.id)}">Place</button></div>`).join('')}</div></section>` : ''}
 
-  <div class="section-label">How the day went</div>
+  ${sect('How the day went', { note: 'A line in your own words. The coach reads it at the evening review.' })}
   <section class="card glass tap" data-act="sheet" data-sheet="dayNote" data-date="${date}" role="button">
     ${note?.text ? `<p class="day-note">${esc(note.text)}</p>` : `<div class="empty">Add a line about the day. The coach reads it at the evening review.</div>`}
   </section>`;

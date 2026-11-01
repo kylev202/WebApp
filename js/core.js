@@ -276,6 +276,21 @@ export const toggle = (name, label, on) => `<label class="toggle"><input type="c
 // ---------- shared bits of markup ----------
 export const closeBtn = `<button type="button" class="x-btn" data-act="close" aria-label="Close">${icon('close')}</button>`;
 export const header = (title, sub, right = '') => `<header><div class="grow"><div class="date">${sub}</div><h1>${title}</h1></div>${right}</header>`;
+
+// ---------- reading order ----------
+// Every screen is a short stack of named sections, always in the same order:
+// what is true *now*, what is coming *next*, the *records* behind it, then the
+// longer-range *report*. Before, a tab was nine identical glass cards 12px
+// apart, so where one subject ended and the next began had to be guessed from
+// the numbers inside them. A section title says which of the four you are
+// reading, and its note says what the numbers in it are measured against.
+//
+// sect() is the chapter heading (one per band); .section-label stays as the
+// smaller label for a group *inside* a band (a day of meals, a weekday of
+// classes), so the two levels no longer look alike.
+// open: the first section of a screen, with nothing above it to divide from.
+export const sect = (title, { note = '', right = '', open = false } = {}) =>
+  `<div class="sect${open ? ' open' : ''}"><div class="sect-h"><h2>${esc(title)}</h2>${right}</div>${note ? `<p class="sect-n">${note}</p>` : ''}</div>`;
 export const seg = (key, options, current) => `<div class="seg wide">${options.map(([k, label]) =>
   `<button class="${current === k ? 'on' : ''}" data-act="segTab" data-key="${key}" data-tab="${k}">${label}</button>`).join('')}</div>`;
 actions.segTab = el => { ui.tab[el.dataset.key] = el.dataset.tab; render({ enter: true }); };

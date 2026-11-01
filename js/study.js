@@ -12,7 +12,7 @@
 import { state, addEntry, removeEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, daysBetween, dayLabel, initial, time12, toMin, fromMin, minNow, fmt1, plural, clamp, num } from './util.js';
 import { icon, tile } from './icons.js';
-import { sheets, actions, forms, render, refreshSheet, closeSheet, toast, haptic, closeBtn, ui } from './core.js';
+import { sheets, actions, forms, render, refreshSheet, closeSheet, toast, haptic, closeBtn, ui, sect } from './core.js';
 import { of, kindOf } from './data.js';
 import { assessments, courseById, agendaFor, planTabs, ASSESS_KINDS } from './plan.js';
 import { workouts } from './gym.js';
@@ -314,13 +314,12 @@ export function planStudy() {
   }
   const rest = list.slice(1);
   return `
-  ${list.length ? hero(list[0]) : ''}
-  ${rest.length ? `<div class="section-label">After that <a data-act="sheet" data-sheet="assessment">Add</a></div>
+  ${list.length ? `${sect('Next deadline', { note: 'The one closest to now, with the work it still needs.', open: true })}${hero(list[0])}` : ''}
+  ${rest.length ? `${sect('After that', { note: 'Everything else on the books, soonest first.', right: '<a data-act="sheet" data-sheet="assessment">Add</a>' })}
     <section class="card glass"><div class="list">${rest.map(assessRow).join('')}</div></section>` : ''}
-  ${late.length ? `<div class="section-label">Past due <span>${late.length}</span></div>
-    <section class="card glass"><div class="list">${late.map(assessRow).join('')}</div>
-    <p class="note sub">Mark these submitted, or move the date, and they drop out of the countdown.</p></section>` : ''}
-  ${list.length ? diaryCard() : ''}
+  ${late.length ? `${sect('Past due', { note: 'Mark these submitted, or move the date, and they drop out of the countdown.', right: `<span class="sect-v">${late.length}</span>` })}
+    <section class="card glass"><div class="list">${late.map(assessRow).join('')}</div></section>` : ''}
+  ${list.length ? `${sect('The plan', { note: 'Study sessions worked back from each deadline into the free hours on your days.' })}${diaryCard()}` : ''}
   ${freeCard()}`;
 }
 
@@ -328,7 +327,7 @@ planTabs.push({ key: 'study', label: 'Study', render: planStudy });
 
 // ---------- Today ----------
 todaySections.push({
-  pos: 'mid',
+  band: 'next',
   render() {
     const soon = openAssessments().filter(a => daysTo(a) <= 21).slice(0, 3);
     if (!soon.length) return '';

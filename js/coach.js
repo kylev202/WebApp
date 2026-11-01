@@ -2,7 +2,7 @@
 import { state, addEntry, updateEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, weekStart, monthKey, monthDays, shortDate, initial, fmt, fmt1, fmtHours, money, plural, avgLogged, time12, toMin, fromMin, minNow, clamp, dayLabel } from './util.js';
 import { icon, tile } from './icons.js';
-import { sheets, actions, forms, afterRender, render, refreshSheet, toast, haptic, confetti, closeBtn } from './core.js';
+import { sheets, actions, forms, afterRender, render, refreshSheet, toast, haptic, confetti, closeBtn, sect } from './core.js';
 import { targets, targetsSection, targetLines, TARGET_METRICS, PICKABLE } from './targets.js';
 import { lineChart } from './charts.js';
 import { of, goals, habits, kcalOn, proteinOn, waterOn, sleepOn, weights, habitDone, streak, anyLogOn, weeklyRate, bulkStatus, BLOCK_KINDS, kindOf } from './data.js';
@@ -241,14 +241,14 @@ function weeklyCard() {
 
 // The checkpoint notes sit above everything else on Today and the Day view.
 export function coachNotes(nudges) {
-  return nudges.length ? `<div class="section-label">Coach</div>
+  return nudges.length ? `${sect('Coach', { note: 'Checkpoints for today, at the times they matter.', open: true })}
   <section class="card glass"><div class="list">${nudges.map(n => `<div class="row">
     ${tile(n.ai ? 'sparkle' : 'bell', 'sleep')}<div class="grow"><div class="t">${time12(n.at)}</div><div class="d">${n.html}</div></div></div>`).join('')}</div></section>` : '';
 }
-todaySections.unshift({ pos: 'top', render: () => coachNotes(nudgesFor(dayKey())) });
+todaySections.unshift({ band: 'top', render: () => coachNotes(nudgesFor(dayKey())) });
 
 todaySections.push({
-  pos: 'top',
+  band: 'top',
   render() {
     const h = hour(), dow = new Date().getDay();
     let html = '';
@@ -263,21 +263,21 @@ todaySections.push({
 // evening review, it looks for something worth suggesting. Both are cached, so
 // opening Today twenty times costs what opening it once does.
 todaySections.push({
-  pos: 'top',
+  band: 'top',
   render() {
     refreshProfile();
     if (hour() >= 18) makeProposals(`prop:${dayKey()}`, `Today is ${dayKey()} and the day is nearly done. Look at today against the last few weeks and suggest what I should change or put in the diary for tomorrow.`);
     if (new Date().getDay() === 0) makeProposals(`prop:w:${weekStart()}`, `The week is ending. Looking at how the last few weeks compare rather than at this week alone, suggest what I should change: a daily target that no longer fits, time I should put aside, or a long-term target worth setting.`);
     const open = openProposals();
     if (!open.length) return '';
-    return `<div class="section-label">Coach suggests <span>${open.length}</span></div>
+    return `${sect('Coach suggests', { note: 'Changes worth making, from how the last few weeks actually went.', right: `<span class="sect-v">${open.length}</span>` })}
       <section class="card glass">${open.map(p => `<div class="prop">
         <div class="prop-h">${tile('sparkle', 'sleep')}<div class="grow"><div class="t">${esc(p.title)}</div><div class="d">${esc(p.why)}</div></div></div>
         <div class="prop-btns"><button class="pill-btn go" data-act="acceptProposal" data-id="${p.id}">${icon('check')} Accept</button><button class="pill-btn" data-act="dismissProposal" data-id="${p.id}">Not now</button></div>
       </div>`).join('')}</section>`;
   },
 });
-todaySections.push({ pos: 'end', render: targetsSection });
+todaySections.push({ band: 'week', render: targetsSection });
 
 
 // ---------- the long view ----------

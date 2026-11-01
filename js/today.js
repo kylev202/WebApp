@@ -2,17 +2,23 @@
 import { state, addEntry, removeEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, lastDays, initial, fmt, fmtHours, avgLogged, sum, longDate } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, actions, ui, render, toast, haptic, header, seg, views } from './core.js';
+import { screens, actions, ui, render, toast, haptic, header, seg, sect, views } from './core.js';
 import { lineChart, sparkline } from './charts.js';
 import { goals, habits, of, kcalOn, waterOn, sleepOn, weights, habitDone, anyLogOn, streak, weeklyRate, bulkStatus, isStandalone } from './data.js';
 import { mealRow } from './health.js';
 import { workoutCard } from './gym.js';
 
 const WEEK = 7 * 24 * 3600 * 1000;
-// Other areas add their own Today sections (Up Next, To-Do, money...) here.
-// Order on screen: things to do today (workout, numbers, habits), then what's coming
-// up (mid sections), then how the week is going.
+// Other areas add their own Today sections here, each into one of the four bands
+// Today is read in (see the comment on sect() in core.js):
+//   top   advice to read before anything else (the coach's notes and suggestions)
+//   next  what is coming up or due soon (Up Next, To-Do, exam countdown)
+//   week  how the last week or month went (money glance, long-term targets)
+// Anything with an unrecognised band falls into "next" rather than vanishing.
 export const todaySections = [];
+const BANDS = ['top', 'next', 'week'];
+const bandOf = s => (BANDS.includes(s.band ?? s.pos) ? (s.band ?? s.pos) : 'next');
+const at = band => todaySections.filter(s => bandOf(s) === band).map(s => s.render()).join('');
 
 function greeting() {
   const h = new Date().getHours();
@@ -61,11 +67,14 @@ function renderToday() {
     + (logStreak >= 2 ? ` · <button class="streak" data-act="sheet" data-sheet="badges">${icon('flame')}${logStreak} days</button>` : '');
   const eatAvg = avgLogged(days.map(kcalOn)), sleepAvg = avgLogged(days.map(sleepOn)), waterAvg = avgLogged(days.map(waterOn));
 
+  const coming = at('next');
   return `
   ${header(greeting(), dateLine, `<button class="icon-btn glass" data-act="nav" data-to="settings" aria-label="Settings">${icon('gear')}</button>`)}
   ${viewToggle()}
   ${banners()}
-  ${todaySections.filter(s => s.pos === 'top').map(s => s.render()).join('')}
+  ${at('top')}
+
+  ${sect('Today', { note: 'Where the day stands against your goals. Tap any card to log.', open: true })}
   ${workoutCard()}
 
   <div class="grid">
@@ -105,10 +114,22 @@ function renderToday() {
     }).join('')}</div>
   </section>
 
-  ${todaySections.filter(s => s.pos !== 'top' && s.pos !== 'end').map(s => s.render()).join('')}
+  ${coming ? `${sect('Coming up', { note: 'What is left on the clock today and what falls due in the next few days.', right: '<a data-act="nav" data-to="plan">Plan</a>' })}${coming}` : ''}
 
+  ${sect('Logged today', {
+    note: meals.length ? 'Everything you have eaten today, in the order you logged it.' : 'Nothing eaten has been written down yet.',
+    right: `<span class="sect-v">${meals.length ? `${fmt(kcal)} kcal · ${fmt(protein)} g P` : '0 meals'}</span>`,
+  })}
+  <section class="card glass">
+    ${meals.length ? `<div class="list">${meals.map(mealRow).join('')}</div>`
+      : `<div class="empty">Nothing logged yet today.</div>${yesterdayMeals.length
+        ? `<button class="btn soft" data-act="repeatYesterday">${icon('repeat')} Repeat yesterday’s ${yesterdayMeals.length} meal${yesterdayMeals.length > 1 ? 's' : ''}</button>` : ''}`}
+  </section>
+  <button class="btn soft" data-act="sheet" data-sheet="meal">${icon('plus')} Add a meal</button>
+
+  ${sect('The week behind you', { note: 'Daily averages and how each day compared with its goal — the longer view, after today.' })}
   <section class="card glass tap" data-act="nav" data-to="health">
-    <div class="head"><div class="title">This Week</div><div class="sub-note">% of goal ${icon('chevron')}</div></div>
+    <div class="head"><div class="title">Last 7 days</div><div class="sub-note">% of goal ${icon('chevron')}</div></div>
     <div class="stats">
       <div class="stat"><div class="l"><span class="dot" style="background:var(--diet)"></span>Eat</div><div class="v">${eatAvg ? fmt(eatAvg) : '–'}<span> avg</span></div></div>
       <div class="stat"><div class="l"><span class="dot" style="background:var(--sleep)"></span>Sleep</div><div class="v">${sleepAvg ? fmtHours(sleepAvg) : '–'}<span> avg</span></div></div>
@@ -125,14 +146,7 @@ function renderToday() {
       empty: 'Log meals, water and sleep to see your week here.',
     })}
   </section>
-
-  <div class="section-label">Today’s food${meals.length ? ` <span>${fmt(kcal)} kcal · ${fmt(protein)} g P</span>` : ''} <a data-act="sheet" data-sheet="meal">Add</a></div>
-  <section class="card glass">
-    ${meals.length ? `<div class="list">${meals.map(mealRow).join('')}</div>`
-      : `<div class="empty">Nothing logged yet today.</div>${yesterdayMeals.length
-        ? `<button class="btn soft" data-act="repeatYesterday">${icon('repeat')} Repeat yesterday’s ${yesterdayMeals.length} meal${yesterdayMeals.length > 1 ? 's' : ''}</button>` : ''}`}
-  </section>
-  ${todaySections.filter(s => s.pos === 'end').map(s => s.render()).join('')}`;
+  ${at('week')}`;
 }
 screens.today = renderToday;
 

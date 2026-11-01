@@ -5,7 +5,7 @@
 import { addEntry, updateEntry } from './store.js';
 import { esc, dayKey, addDays, addMonths, daysBetween, dayLabel, shortDate, toMin, fmt, fmt1, fmtHours, money, num, clamp, plural } from './util.js';
 import { icon, tile } from './icons.js';
-import { sheets, actions, forms, previews, render, closeSheet, haptic, toast, closeBtn, chips, removeWithUndo, sheetForm } from './core.js';
+import { sheets, actions, forms, previews, render, closeSheet, haptic, toast, closeBtn, chips, removeWithUndo, sheetForm, sect } from './core.js';
 import { of, byId, goals, proteinOn, sleepOn, weights, BLOCK_KINDS } from './data.js';
 import { workouts } from './gym.js';
 import { uniSummary } from './plan.js';
@@ -152,7 +152,7 @@ function targetRow(t) {
 
 export function targetsSection() {
   const list = targets();
-  return `<div class="section-label">Targets <a data-act="sheet" data-sheet="target">Add</a></div>
+  return `${sect('Long-term targets', { note: 'The things you are working towards over months, and whether your pace gets you there.', right: '<a data-act="sheet" data-sheet="target">Add</a>' })}
   <section class="card glass">${list.length
     ? `<div class="list">${list.slice(0, 5).map(targetRow).join('')}</div>`
     : `<div class="empty">No long-term targets yet. Add one and the coach will track your pace against it.</div>`}</section>`;

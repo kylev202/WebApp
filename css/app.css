@@ -69,7 +69,19 @@ h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; margin-top: 2px
 .big-ico { width: 30px; height: 30px; font-size: 16px; background: rgba(255,255,255,.7); border-radius: 10px; }
 .chev { color: var(--text-3); font-size: 14px; }
 .sub-note { font-size: 10.5px; color: var(--text-3); font-weight: 500; }
-.section-label { font-size: 13px; font-weight: 600; color: var(--text-2); padding: 6px 4px 0; display: flex; justify-content: space-between; }
+/* Two levels of heading, so a screen reads as a few named chapters rather than
+   a stack of identical cards. .sect is the chapter: bigger, darker, with a
+   hairline and air above it. .section-label is a group inside one. */
+.sect { padding: 14px 4px 0; border-top: 1px solid rgba(44,44,46,.075); margin-top: 4px; }
+.sect.open { border-top: none; margin-top: 0; padding-top: 4px; }
+.sect-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.sect h2 { font-size: 15.5px; font-weight: 650; letter-spacing: -.02em; color: var(--text); }
+.sect-h a, .sect-h button { font-size: 12px; font-weight: 600; color: var(--work-ink); white-space: nowrap; }
+.sect-h a:active, .sect-h button:active { opacity: .55; }
+.sect-n { font-size: 11.5px; color: var(--text-3); line-height: 1.4; margin-top: 3px; max-width: 34em; }
+.sect-v { font-size: 12px; font-weight: 600; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.section-label { font-size: 12.5px; font-weight: 600; color: var(--text-2); padding: 6px 4px 0; display: flex; justify-content: space-between; }
 .section-label a { color: var(--work-ink); font-weight: 500; }
 .section-label span { font-weight: 500; color: var(--text-3); }
 .label-sm { font-size: 11px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
@@ -926,6 +938,7 @@ button, [data-act], .tab, .pk > span { -webkit-user-select: none; user-select: n
 .x-btn::after { content: ""; position: absolute; inset: -9px; }
 .cal-nav .x-btn::after, .r-move .x-btn::after { inset: -9px -2px; } /* neighbours sit close; don't steal each other's taps */
 .section-label a { padding: 10px 6px; margin: -10px -6px; }
+.sect-h a, .sect-h button { padding: 10px 6px; margin: -10px -6px; }
 button.sub-note { padding: 8px 6px; margin: -8px -6px; }
 .cal-today { padding: 7px 12px; }
 
