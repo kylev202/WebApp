@@ -47,7 +47,7 @@ export function displaySection() {
   const p = displayPrefs();
   const auto = Math.round(iphoneScale() * 100);
   const sizes = SIZES.map(([v, label]) => [v, v === 'auto' ? `${label}${auto > 100 ? ` · ${auto}%` : ''}` : label]);
-  return `${sect('Display & accessibility', { note: 'Text size follows your iPhone unless you choose one here. Motion follows Reduce Motion in iPhone Settings.' })}
+  return `${sect('Display & accessibility', { nav: 'Display', note: 'Text size follows your iPhone unless you choose one here. Motion follows Reduce Motion in iPhone Settings.' })}
   <form class="card glass" data-form="display">
     <div class="label-sm">Text size</div>
     ${chips('text', sizes, p.text, { cls: 'wrap' })}

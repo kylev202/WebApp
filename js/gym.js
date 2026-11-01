@@ -285,7 +285,7 @@ export function gymTab(insights = '') {
   // then the long-range report. Before, the eight-week chart sat between the two
   // and you scrolled past a trend line to find last Tuesday's workout.
   return `
-  ${sect('Next session', { note: aw ? 'A workout is running right now.' : r ? `From your ${esc(r.name)} routine. Swap day with the chips underneath.` : 'Pick a split to train against.', open: true })}
+  ${sect('Next session', { nav: 'Next', note: aw ? 'A workout is running right now.' : r ? `From your ${esc(r.name)} routine. Swap day with the chips underneath.` : 'Pick a split to train against.', open: true })}
   ${aw ? `<section class="card glass live-card tap" data-act="nav" data-to="workout"><div class="head"><div class="title">${tile('play', 'move')}${esc(aw.name)} in progress</div><div class="chev">${icon('chevron')}</div></div><p class="note" style="margin:0">Started ${fmtDuration(Date.now() - aw.start)} ago. Tap to resume.</p></section>` : `
   ${!r || !next ? chooser : `<section class="card glass">
     <div class="head"><div class="title">${tile('dumbbell', 'move')}Next up</div><span class="sub-note">${esc(r.name)}</span></div>
@@ -297,11 +297,11 @@ export function gymTab(insights = '') {
     <div class="day-pick">${r.days.filter(d => d.id !== next.id).map(d => `<button class="chip-btn soft" data-act="startWorkout" data-day="${d.id}">${esc(d.name)}</button>`).join('')}<button class="chip-btn soft" data-act="startEmpty">Empty</button></div>
   </section>`}`}
 
-  ${ws.length ? `${sect('Recent workouts', { note: 'Your last sessions, newest first. Tap one for every set.', right: `<span class="sect-v">${plural(thisWeek, 'workout')} this week</span>` })}
+  ${ws.length ? `${sect('Recent workouts', { nav: 'Recent', note: 'Your last sessions, newest first. Tap one for every set.', right: `<span class="sect-v">${plural(thisWeek, 'workout')} this week</span>` })}
   <section class="card glass"><div class="list">${ws.slice(0, 3).map(workoutRow).join('')}</div></section>
   ${ws.length > 3 ? fold('gym:older', 'Older sessions', `<section class="card glass"><div class="list">${ws.slice(3, 12).map(workoutRow).join('')}</div></section>`, { aside: `${plural(Math.min(9, ws.length - 3), 'more workout')}` }) : ''}` : ''}
 
-  ${sect('Progress', { note: 'Training volume and strength over the last weeks, not today.' })}
+  ${sect('Progress', { nav: 'Progress', note: 'Training volume and strength over the last weeks, not today.' })}
   ${insights || `  <section class="card glass">
     <div class="head"><div class="title">This week</div><span class="sub-note">sets per week</span></div>
     <div class="stats two"><div class="stat"><div class="l">Workouts</div><div class="v">${thisWeek}<span>${r ? ` / ${r.perWeek}` : ''}</span></div></div>

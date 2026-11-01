@@ -297,7 +297,7 @@ function renderDay() {
   ${coachNotes(nudges)}
   ${planCard(date)}
 
-  ${sect('The day', { note: 'Everything that happened, placed at the time it happened. Tap a gap to fill it.', open: true })}
+  ${sect('The day', { nav: 'Timeline', note: 'Everything that happened, placed at the time it happened. Tap a gap to fill it.', open: true })}
   <section class="card glass tl-card">
     <div class="head"><div class="title">${tile('clock', 'school')}Timeline</div>
       ${live ? `<button class="pill-btn hot" data-act="stopBlock">${icon('stop')} Stop ${esc(live.title || kindOf(live.kind).label)}</button>`
@@ -317,12 +317,12 @@ function renderDay() {
     </div>
   </section>
 
-  ${unplaced.length ? `${sect('No time yet', { note: 'Logged for this day without a clock time — imported, or added after the fact.', right: `<span class="sect-v">${unplaced.length}</span>` })}
+  ${unplaced.length ? `${sect('No time yet', { nav: 'Unplaced', note: 'Logged for this day without a clock time — imported, or added after the fact.', right: `<span class="sect-v">${unplaced.length}</span>` })}
   <section class="card glass"><div class="list">${unplaced.map(u => `<div class="row">
     ${tile(u.icon, u.color)}<div class="grow tap" data-act="sheet" data-sheet="${u.sheet}" data-id="${esc(u.id)}" role="button"><div class="t">${esc(u.title)}</div><div class="d">${esc(u.sub)}</div></div>
     <button class="pill-btn" data-act="sheet" data-sheet="placeTime" data-id="${esc(u.id)}">Place</button></div>`).join('')}</div></section>` : ''}
 
-  ${sect('How the day went', { note: 'A line in your own words. The coach reads it at the evening review.' })}
+  ${sect('How the day went', { nav: 'Notes', note: 'A line in your own words. The coach reads it at the evening review.' })}
   <section class="card glass tap" data-act="sheet" data-sheet="dayNote" data-date="${date}" role="button">
     ${note?.text ? `<p class="day-note">${esc(note.text)}</p>` : `<div class="empty">Add a line about the day. The coach reads it at the evening review.</div>`}
   </section>`;

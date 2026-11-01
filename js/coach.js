@@ -241,7 +241,7 @@ function weeklyCard() {
 
 // The checkpoint notes sit above everything else on Today and the Day view.
 export function coachNotes(nudges) {
-  return nudges.length ? `${sect('Coach', { note: 'Checkpoints for today, at the times they matter.', open: true })}
+  return nudges.length ? `${sect('Coach', { nav: 'Coach', note: 'Checkpoints for today, at the times they matter.', open: true })}
   <section class="card glass"><div class="list">${nudges.map(n => `<div class="row">
     ${tile(n.ai ? 'sparkle' : 'bell', 'sleep')}<div class="grow"><div class="t">${time12(n.at)}</div><div class="d">${n.html}</div></div></div>`).join('')}</div></section>` : '';
 }
@@ -270,7 +270,7 @@ todaySections.push({
     if (new Date().getDay() === 0) makeProposals(`prop:w:${weekStart()}`, `The week is ending. Looking at how the last few weeks compare rather than at this week alone, suggest what I should change: a daily target that no longer fits, time I should put aside, or a long-term target worth setting.`);
     const open = openProposals();
     if (!open.length) return '';
-    return `${sect('Coach suggests', { note: 'Changes worth making, from how the last few weeks actually went.', right: `<span class="sect-v">${open.length}</span>` })}
+    return `${sect('Coach suggests', { nav: 'Ideas', note: 'Changes worth making, from how the last few weeks actually went.', right: `<span class="sect-v">${open.length}</span>` })}
       <section class="card glass">${open.map(p => `<div class="prop">
         <div class="prop-h">${tile('sparkle', 'sleep')}<div class="grow"><div class="t">${esc(p.title)}</div><div class="d">${esc(p.why)}</div></div></div>
         <div class="prop-btns"><button class="pill-btn go" data-act="acceptProposal" data-id="${p.id}">${icon('check')} Accept</button><button class="pill-btn" data-act="dismissProposal" data-id="${p.id}">Not now</button></div>

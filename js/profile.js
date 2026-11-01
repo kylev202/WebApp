@@ -93,7 +93,7 @@ function checkTiles(c) {
 export function healthProfileSection() {
   const c = latestCheck();
   const n = checks().length;
-  return `${sect('Health profile', { note: 'Who you are and what your health checks found. Every specialist and the assistant read this before they advise you; tell Ask about a new check and it lands here.', open: true })}
+  return `${sect('Health profile', { nav: 'Profile', note: 'Who you are and what your health checks found. Every specialist and the assistant read this before they advise you; tell Ask about a new check and it lands here.', open: true })}
   <section class="card glass hp-card">
     <div class="money-top"><div class="label-sm">Personal details</div><button class="pill-btn" data-act="sheet" data-sheet="profile">${icon('edit')} Edit</button></div>
     ${personalRows()}

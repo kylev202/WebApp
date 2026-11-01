@@ -188,7 +188,7 @@ function sleepCard(f) {
   }
   if (logged.length && logged.length < 7) notes.push(note('info', 'sleep', `${plural(logged.length, 'night')} logged out of the last 7; averages use only those.`));
 
-  return `${sect('The night before', { id: 'ov-sleep', note: `How you slept${f.live ? ' last night' : ''}, and how recovered that leaves you.`, right: toTab('sleep', 'Every night') })}
+  return `${sect('The night before', { nav: 'Sleep', id: 'ov-sleep', note: `How you slept${f.live ? ' last night' : ''}, and how recovered that leaves you.`, right: toTab('sleep', 'Every night') })}
   <section class="card glass">
     <div class="hv-top"><div><div class="label-sm">${f.live ? 'Last night' : 'Night before'}</div>
       <div class="big-xl">${f.sleep ? fmtHours(f.sleep.hours) : '–'}<small>${f.sleep ? `${time12(f.sleep.bed)} → ${time12(f.sleep.wake)}` : 'not logged'}</small></div></div>
@@ -248,7 +248,7 @@ function nutritionCard(f) {
   const rich = f.meals.filter(m => Number(m.protein) >= 25).length;
   if (f.meals.length >= 2) notes.push(note('muscle', 'move', `${rich} of ${f.meals.length} meals had 25 g or more protein${rich < f.meals.length ? '; spreading it evenly across meals helps muscle repair' : ''}.`));
 
-  return `${sect('What you have eaten', { id: 'ov-food', note: f.live ? 'Against your goal and against the hours of the day still left.' : 'Against your goal for that day.', right: toTab('diet', 'Meals') })}
+  return `${sect('What you have eaten', { nav: 'Food', id: 'ov-food', note: f.live ? 'Against your goal and against the hours of the day still left.' : 'Against your goal for that day.', right: toTab('diet', 'Meals') })}
   <section class="card glass">
     <div class="hv-top"><div><div class="label-sm">${f.live ? 'Eaten so far' : 'Eaten'}</div>
       <div class="big-xl">${fmt(f.kcal)}<small>of ${fmt(g.kcal)} kcal</small></div></div>
@@ -378,7 +378,7 @@ function trainingCard(f) {
     else notes.push(note('star', 'move', `This week’s ${r.perWeek} workouts are done.`));
   }
 
-  return `${sect('Training', { id: 'ov-training', note: 'The load you are carrying this week, and which muscles are still recovering.', right: toTab('gym', 'Gym') })}
+  return `${sect('Training', { nav: 'Training', id: 'ov-training', note: 'The load you are carrying this week, and which muscles are still recovering.', right: toTab('gym', 'Gym') })}
   <section class="card glass">
     <div class="head"><div class="title">${tile('dumbbell', 'move')}${f.live ? 'Today' : dayLabel(f.date)}</div>${chip(trainingLevel(f))}</div>
     ${main}
@@ -404,7 +404,7 @@ function logCard(f) {
   of('weight', f.date).forEach(w => items.push({ min: w.time ? toMin(w.time) : null, time: w.time ? time12(w.time) : '', area: 'move', t: 'Weigh-in', d: `${w.kg} kg`, sheet: 'weight', id: w.id }));
   // Things logged without a clock time (backdated, imported) go last rather than at a guessed hour.
   items.sort((a, b) => (a.min ?? DAY_END) - (b.min ?? DAY_END));
-  return `${sect('Everything logged', { id: 'ov-log', note: 'Every entry on this day, in the order it happened. Tap one to correct it.', right: `<span class="sect-v">${f.water ? `${plural(f.water, 'glass', 'glasses')} of water` : ''}</span>` })}
+  return `${sect('Everything logged', { nav: 'Log', id: 'ov-log', note: 'Every entry on this day, in the order it happened. Tap one to correct it.', right: `<span class="sect-v">${f.water ? `${plural(f.water, 'glass', 'glasses')} of water` : ''}</span>` })}
   <section class="card glass">${items.length ? `<div class="list">${items.map(it => `<div class="row tap" data-act="sheet" data-sheet="${it.sheet}" data-id="${it.id}" role="button">
     <div class="time">${it.time || '–'}</div><div class="bar" style="background:var(--${it.area})"></div>
     <div class="grow"><div class="t">${esc(it.t)}</div><div class="d">${it.d}</div></div></div>`).join('')}</div>`

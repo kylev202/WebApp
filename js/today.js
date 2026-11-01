@@ -74,7 +74,7 @@ function renderToday() {
   ${banners()}
   ${at('top')}
 
-  ${sect('Today', { note: 'Where the day stands against your goals. Tap any card to log.', open: true })}
+  ${sect('Today', { nav: 'Today', note: 'Where the day stands against your goals. Tap any card to log.', open: true })}
   ${workoutCard()}
 
   <div class="grid">
@@ -114,9 +114,9 @@ function renderToday() {
     }).join('')}</div>
   </section>
 
-  ${coming ? `${sect('Coming up', { note: 'What is left on the clock today and what falls due in the next few days.', right: '<a data-act="nav" data-to="plan">Plan</a>' })}${coming}` : ''}
+  ${coming ? `${sect('Coming up', { nav: 'Next', note: 'What is left on the clock today and what falls due in the next few days.', right: '<a data-act="nav" data-to="plan">Plan</a>' })}${coming}` : ''}
 
-  ${sect('Logged today', {
+  ${sect('Logged today', { nav: 'Food',
     note: meals.length ? 'Everything you have eaten today, in the order you logged it.' : 'Nothing eaten has been written down yet.',
     right: `<span class="sect-v">${meals.length ? `${fmt(kcal)} kcal · ${fmt(protein)} g P` : '0 meals'}</span>`,
   })}
@@ -127,7 +127,7 @@ function renderToday() {
   </section>
   <button class="btn soft" data-act="sheet" data-sheet="meal">${icon('plus')} Add a meal</button>
 
-  ${sect('The week behind you', { note: 'Daily averages and how each day compared with its goal — the longer view, after today.' })}
+  ${sect('The week behind you', { nav: 'Week', note: 'Daily averages and how each day compared with its goal — the longer view, after today.' })}
   <section class="card glass tap" data-act="nav" data-to="health">
     <div class="head"><div class="title">Last 7 days</div><div class="sub-note">% of goal ${icon('chevron')}</div></div>
     <div class="stats">

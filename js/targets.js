@@ -152,7 +152,7 @@ function targetRow(t) {
 
 export function targetsSection() {
   const list = targets();
-  return `${sect('Long-term targets', { note: 'The things you are working towards over months, and whether your pace gets you there.', right: '<a data-act="sheet" data-sheet="target">Add</a>' })}
+  return `${sect('Long-term targets', { nav: 'Targets', note: 'The things you are working towards over months, and whether your pace gets you there.', right: '<a data-act="sheet" data-sheet="target">Add</a>' })}
   <section class="card glass">${list.length
     ? `<div class="list">${list.slice(0, 5).map(targetRow).join('')}</div>`
     : `<div class="empty">No long-term targets yet. Add one and the coach will track your pace against it.</div>`}</section>`;

@@ -56,7 +56,7 @@ function healthDiet() {
       { aside: `${plural(ms.length, 'meal')} · ${fmt(sum(ms, 'kcal'))} kcal · ${fmt(sum(ms, 'protein'))} g protein` });
   }).join('');
   return `
-  ${sect('Today', { note: `Against your ${fmt(g.kcal)} kcal and ${g.protein} g protein targets.`, open: true })}
+  ${sect('Today', { nav: 'Today', note: `Against your ${fmt(g.kcal)} kcal and ${g.protein} g protein targets.`, open: true })}
   <section class="card glass">
     <div class="money-top"><div><div class="label-sm">Eaten today</div><div class="big-xl">${fmt(sum(meals, 'kcal'))}<small>of ${fmt(g.kcal)} kcal</small></div></div>
       <button class="pill-btn" data-act="sheet" data-sheet="meal">${icon('plus')} Meal</button></div>
@@ -66,12 +66,12 @@ function healthDiet() {
       ${macroBar('Fat', f, targets.fat, 'var(--diet)')}
     </div>
   </section>
-  ${sect('Today’s meals', { note: meals.length ? 'Tap a meal to edit it.' : 'Nothing written down yet today.', right: `<span class="sect-v">${plural(meals.length, 'meal')}</span>` })}
+  ${sect('Today’s meals', { nav: 'Meals', note: meals.length ? 'Tap a meal to edit it.' : 'Nothing written down yet today.', right: `<span class="sect-v">${plural(meals.length, 'meal')}</span>` })}
   <section class="card glass">${meals.length ? `<div class="list">${meals.map(mealRow).join('')}</div>`
     : '<div class="empty">Add your first meal of the day with ＋ Meal above.</div>'}</section>
-  ${sect('Report', { note: 'How you have actually eaten over the last weeks: averages, consistency and where the calories came from.' })}
+  ${sect('Report', { nav: 'Report', note: 'How you have actually eaten over the last weeks: averages, consistency and where the calories came from.' })}
   ${foldReport('diet', dietAnalytics())}
-  ${earlier ? `${sect('Earlier days', { note: 'The six days before today, newest first. Tap a day for its meals.' })}${earlier}` : ''}`;
+  ${earlier ? `${sect('Earlier days', { nav: 'Earlier', note: 'The six days before today, newest first. Tap a day for its meals.' })}${earlier}` : ''}`;
 }
 
 function macroBar(label, value, goal, color) {
@@ -80,9 +80,9 @@ function macroBar(label, value, goal, color) {
 
 function healthSleep() {
   const recent = of('sleep').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14);
-  return `${sect('Report', { note: 'Your last weeks of sleep: average against goal, debt, how steady your bedtime is and a score out of 100.', open: true })}
+  return `${sect('Report', { nav: 'Report', note: 'Your last weeks of sleep: average against goal, debt, how steady your bedtime is and a score out of 100.', open: true })}
   ${foldReport('sleep', sleepAnalytics(), { open: ['last-14-nights'] })}
-  ${recent.length ? `${sect('Every night', { note: 'The nights the report is built from, newest first. Tap one to correct it.' })}${fold('sleep:nights', 'Night by night', `<section class="card glass"><div class="list">${recent.map(s => `
+  ${recent.length ? `${sect('Every night', { nav: 'Nights', note: 'The nights the report is built from, newest first. Tap one to correct it.' })}${fold('sleep:nights', 'Night by night', `<section class="card glass"><div class="list">${recent.map(s => `
     <div class="row tap" data-act="sheet" data-sheet="sleep" data-id="${s.id}" role="button"><div class="bar" style="background:var(--sleep)"></div><div class="grow"><div class="t">${dayLabel(s.date)}</div><div class="d">${esc(s.bed)} → ${esc(s.wake)}</div></div>
     <div class="amt">${fmtHours(s.hours)}</div><button class="x-btn" data-act="del" data-id="${s.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>`, { aside: `last ${plural(recent.length, 'night')}` })}` : ''}`;
 }
@@ -90,9 +90,9 @@ function healthSleep() {
 function healthBody() {
   const ws = weights();
   return `
-  ${sect('Report', { note: 'Day-to-day water swings smoothed into a trend, read against a lean-bulk rate and your calories.', open: true })}
+  ${sect('Report', { nav: 'Report', note: 'Day-to-day water swings smoothed into a trend, read against a lean-bulk rate and your calories.', open: true })}
   ${foldReport('body', bodyAnalytics(), { keep: 2 })}
-  ${ws.length ? `${sect('Every weigh-in', { note: 'The raw readings behind the trend, newest first.' })}${fold('body:weighins', 'Weigh-ins', `<section class="card glass"><div class="list">${ws.slice().reverse().slice(0, 20).map(w => `
+  ${ws.length ? `${sect('Every weigh-in', { nav: 'Weigh-ins', note: 'The raw readings behind the trend, newest first.' })}${fold('body:weighins', 'Weigh-ins', `<section class="card glass"><div class="list">${ws.slice().reverse().slice(0, 20).map(w => `
     <div class="row tap" data-act="sheet" data-sheet="weight" data-id="${w.id}" role="button"><div class="bar" style="background:var(--move)"></div><div class="grow"><div class="t">${dayLabel(w.date)}</div></div>
     <div class="amt">${w.kg} kg</div><button class="x-btn" data-act="del" data-id="${w.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>`, { aside: `${plural(Math.min(20, ws.length), 'reading')}, newest first` })}` : ''}`;
 }

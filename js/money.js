@@ -246,11 +246,11 @@ function moneyOverview(m) {
   // one box. It is three cards now, under three headings: what the month adds up
   // to, how it is spread across the days, and where it is going.
   return `
-  ${sect('Accounts', { note: 'What is in each one right now — not tied to the month shown below.', open: true })}
+  ${sect('Accounts', { nav: 'Accounts', note: 'What is in each one right now — not tied to the month shown below.', open: true })}
   ${balanceCard()}
   <div class="row2"><button class="btn soft" data-act="sheet" data-sheet="txn" data-kind="expense">${icon('card')} Expense</button><button class="btn soft" data-act="sheet" data-sheet="txn" data-kind="income">${icon('coins')} Income</button></div>
 
-  ${sect(isNow ? 'This month' : monthLabel(m), { note: hasBudget ? `Spending so far against your ${money(st.budgetTotal, false)} budget, and the pace that would just use it up.` : 'Everything in and out this month. Set a budget and this gets a pace line to measure against.' })}
+  ${sect(isNow ? 'This month' : monthLabel(m), { nav: 'Month', note: hasBudget ? `Spending so far against your ${money(st.budgetTotal, false)} budget, and the pace that would just use it up.` : 'Everything in and out this month. Set a budget and this gets a pace line to measure against.' })}
   ${monthNav(m)}
   <section class="card glass">
     <div class="money-top"><div>${headline}</div>${tag}</div>
@@ -277,13 +277,13 @@ function moneyOverview(m) {
     <div class="legend-inline"><span><i class="dot" style="background:var(--money)"></i>Spent ${money(st.spent, false)}</span>${st.income ? `<span><i class="dot" style="background:var(--diet-ink)"></i>In ${money(st.income, false)}</span>` : ''}${hasBudget ? `<span><i class="dot dash-dot"></i>Pace ${money(pace[todayN - 1], false)}</span>` : ''}</div>
   </section>
 
-  ${run ? `${sect('Day by day', { note: 'One bar per day, so a single big day is obvious instead of hidden in the running total.', right: `<span class="sect-v">${money(perDay, false)}/day</span>` })}
+  ${run ? `${sect('Day by day', { nav: 'Daily', note: 'One bar per day, so a single big day is obvious instead of hidden in the running total.', right: `<span class="sect-v">${money(perDay, false)}/day</span>` })}
   <section class="card glass">
     ${barRow({ values: daily, color: 'var(--money)', now: isNow ? todayN - 1 : -1, titles: daily.map((v, i) => (v == null ? '' : `${shortDate(`${m}-${String(i + 1).padStart(2, '0')}`)}: ${money(v)}`)) })}
     <p class="note" style="margin:8px 0 0">${money(perDay, false)} a day so far${busiest >= 0 && daily[busiest] ? ` · biggest was ${money(daily[busiest], false)} on ${shortDate(`${m}-${String(busiest + 1).padStart(2, '0')}`)}` : ''}${isNow ? ` · on pace for ${money(projected, false)} by the ${n}th` : ''}${hasBudget && isNow ? (st.left > 0 ? ` · ${money(st.left / Math.max(1, daysLeft || 1), false)} a day left to stay inside the budget` : ` · ${money(-st.left, false)} over already`) : ''}</p>
   </section>` : ''}
 
-  ${sect('Where it goes', { note: 'This month split up two ways: by what you bought, and by which account paid for it.' })}
+  ${sect('Where it goes', { nav: 'Where', note: 'This month split up two ways: by what you bought, and by which account paid for it.' })}
   <div class="section-label">Budgets <a data-act="sheet" data-sheet="budgets">Edit</a></div>
   <section class="card glass"><div class="budget">${cats.map(k => {
     const spent = st.byCat[k] ?? 0, cap = Number(b[k]) || 0, c = CATEGORIES[k];
@@ -297,12 +297,12 @@ function moneyOverview(m) {
       ${cap ? `<div class="left ${over ? 'late' : ''}">${over ? `${money(spent - cap, false)} over` : `${money(cap - spent, false)} left`}</div>` : `<div class="left">${st.spent ? `${Math.round((spent / st.spent) * 100)}% of this month` : 'no budget set'}</div>`}</div></div>`;
   }).join('') || '<div class="empty">Set budgets to track each category.</div>'}</div></section>
   ${splitCard(st)}
-  ${upcoming.length ? `${sect('Coming up', { note: 'Bills falling due in the next fortnight. Tap Paid to log one and roll its date forward.', right: '<a data-act="moneyTab" data-tab="bills">All bills</a>' })}<section class="card glass"><div class="list">${upcoming.map(billRow).join('')}</div></section>` : ''}
-  ${st.list.length ? `${sect('Recent activity', { note: 'The last few transactions, newest first.', right: '<a data-act="moneyTab" data-tab="activity">All</a>' })}<section class="card glass"><div class="list">${st.list.slice(0, 5).map(txnRow).join('')}</div></section>` : ''}`;
+  ${upcoming.length ? `${sect('Coming up', { nav: 'Bills', note: 'Bills falling due in the next fortnight. Tap Paid to log one and roll its date forward.', right: '<a data-act="moneyTab" data-tab="bills">All bills</a>' })}<section class="card glass"><div class="list">${upcoming.map(billRow).join('')}</div></section>` : ''}
+  ${st.list.length ? `${sect('Recent activity', { nav: 'Recent', note: 'The last few transactions, newest first.', right: '<a data-act="moneyTab" data-tab="activity">All</a>' })}<section class="card glass"><div class="list">${st.list.slice(0, 5).map(txnRow).join('')}</div></section>` : ''}`;
 }
 
 // The report is the only tab that looks past this month, so it says so up front.
-const moneyReport = () => `${sect('Report', { note: 'Every category against its own baseline, what recurs, your savings rate and how long the cash would last.', open: true })}
+const moneyReport = () => `${sect('Report', { nav: 'Report', note: 'Every category against its own baseline, what recurs, your savings rate and how long the cash would last.', open: true })}
   ${foldReport('money', moneyAnalytics())}`;
 
 function moneyActivity(m) {
@@ -312,7 +312,7 @@ function moneyActivity(m) {
   const days = [...new Set(list.map(t => t.date))];
   const bal = balances();
   const out = spentIn(list), inn = incomeIn(list);
-  return `${sect(isNow ? 'This month' : monthLabel(m), { note: 'Every transaction, grouped by the day it happened. Pick an account to narrow it down.', open: true })}
+  return `${sect(isNow ? 'This month' : monthLabel(m), { nav: 'Month', note: 'Every transaction, grouped by the day it happened. Pick an account to narrow it down.', open: true })}
   ${monthNav(m)}
   <div class="chips-filter">${[['all', 'All'], ...Object.entries(ACCOUNTS).filter(([k]) => k !== 'savings').map(([k, a]) => [k, a.label])].map(([k, l]) => `<button class="chip-btn ${filter === k ? 'on' : 'soft'}" data-act="acct" data-a="${k}">${l}</button>`).join('')}
     ${actions.importCsv ? `<button class="chip-btn soft" data-act="importCsv">${icon('upload')} Import CSV</button>` : ''}</div>
@@ -320,7 +320,7 @@ function moneyActivity(m) {
     <div class="big-md">${hasBalances() ? money(filter === 'all' ? netWorth() : bal[filter], false) : '—'}</div></div>
     <div class="io"><span class="in">+${money(inn, false)}</span><span class="out">−${money(out, false)}</span></div></div>
     <p class="note" style="margin:6px 0 0">${plural(list.length, 'transaction')} this month${filter === 'all' ? '' : ` through ${ACCOUNTS[filter].label}`}.</p></section>
-  ${days.length ? `${sect('Day by day', { note: 'Newest first. The figure beside each day is what it cost you, or earned you, on balance.' })}${days.map(d => {
+  ${days.length ? `${sect('Day by day', { nav: 'Days', note: 'Newest first. The figure beside each day is what it cost you, or earned you, on balance.' })}${days.map(d => {
     const dl = list.filter(t => t.date === d);
     const net = dl.reduce((s, t) => s + (t.kind === 'income' ? 1 : t.kind === 'expense' ? -1 : 0) * Number(t.amount), 0);
     return `<div class="section-label">${dayLabel(d)} <span>${net >= 0 ? '+' : '−'}${money(Math.abs(net))}</span></div><section class="card glass"><div class="list">${dl.map(txnRow).join('')}</div></section>`;
@@ -338,18 +338,18 @@ function billRow(x) {
 function moneyBills() {
   const list = bills();
   const monthly = list.reduce((s, x) => s + Number(x.amount) * PER_MONTH[x.cycle], 0);
-  return `${sect('What it costs you', { note: 'Every cycle converted to a monthly figure, so one bill can be compared with another.', open: true })}
+  return `${sect('What it costs you', { nav: 'Monthly', note: 'Every cycle converted to a monthly figure, so one bill can be compared with another.', open: true })}
   <section class="card glass">
     <div class="money-top"><div><div class="label-sm">Bills & subscriptions</div><div class="big-xl">${money(monthly, false)}<small>a month</small></div></div>
     <button class="pill-btn" data-act="sheet" data-sheet="bill">${icon('plus')} Add</button></div>
     <p class="note" style="margin:8px 0 0">${plural(list.length, 'item')} · ${money(monthly * 12, false)} a year. Tap Paid to log it and roll the date forward.</p></section>
-  ${list.length ? `${sect('Due next', { note: 'In the order they fall due.', right: `<span class="sect-v">${plural(list.length, 'bill')}</span>` })}
+  ${list.length ? `${sect('Due next', { nav: 'Due', note: 'In the order they fall due.', right: `<span class="sect-v">${plural(list.length, 'bill')}</span>` })}
   <section class="card glass"><div class="list">${list.map(billRow).join('')}</div></section>` : ''}`;
 }
 
 function moneySavings() {
   const gs = goalsList();
-  return `${sect('Savings goals', { note: gs.length ? 'What you have put aside against what you are aiming at, and when this pace gets you there.' : 'Nothing set up yet. A goal turns a number into a date.', open: true })}
+  return `${sect('Savings goals', { nav: 'Goals', note: gs.length ? 'What you have put aside against what you are aiming at, and when this pace gets you there.' : 'Nothing set up yet. A goal turns a number into a date.', open: true })}
   ${gs.map(g => {
     const pct = Math.min(100, (Number(g.saved) / Number(g.target)) * 100);
     // Saving pace since the first deposit (at least one month, so one deposit isn't over-weighted).

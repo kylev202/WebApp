@@ -314,12 +314,12 @@ export function planStudy() {
   }
   const rest = list.slice(1);
   return `
-  ${list.length ? `${sect('Next deadline', { note: 'The one closest to now, with the work it still needs.', open: true })}${hero(list[0])}` : ''}
-  ${rest.length ? `${sect('After that', { note: 'Everything else on the books, soonest first.', right: '<a data-act="sheet" data-sheet="assessment">Add</a>' })}
+  ${list.length ? `${sect('Next deadline', { nav: 'Next', note: 'The one closest to now, with the work it still needs.', open: true })}${hero(list[0])}` : ''}
+  ${rest.length ? `${sect('After that', { nav: 'After', note: 'Everything else on the books, soonest first.', right: '<a data-act="sheet" data-sheet="assessment">Add</a>' })}
     <section class="card glass"><div class="list">${rest.map(assessRow).join('')}</div></section>` : ''}
-  ${late.length ? `${sect('Past due', { note: 'Mark these submitted, or move the date, and they drop out of the countdown.', right: `<span class="sect-v">${late.length}</span>` })}
+  ${late.length ? `${sect('Past due', { nav: 'Late', note: 'Mark these submitted, or move the date, and they drop out of the countdown.', right: `<span class="sect-v">${late.length}</span>` })}
     <section class="card glass"><div class="list">${late.map(assessRow).join('')}</div></section>` : ''}
-  ${list.length ? `${sect('The plan', { note: 'Study sessions worked back from each deadline into the free hours on your days.' })}${diaryCard()}` : ''}
+  ${list.length ? `${sect('The plan', { nav: 'Plan', note: 'Study sessions worked back from each deadline into the free hours on your days.' })}${diaryCard()}` : ''}
   ${freeCard()}`;
 }
 

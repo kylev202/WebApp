@@ -51,6 +51,8 @@ export function render({ enter = false, dir = 0 } = {}) {
   }
   main.innerHTML = `<div class="screen">${html}</div>`;
   makeFocusable(main);
+  buildSectionNav();
+  measureDock();
   document.body.classList.toggle('fullscreen', FULLSCREEN.has(route));
   document.querySelectorAll('.tab[data-to]').forEach(t => {
     t.classList.toggle('active', t.dataset.to === route);
@@ -67,6 +69,95 @@ export function render({ enter = false, dir = 0 } = {}) {
   // An after-render hook that throws must not take the screen down with it.
   afterRender.forEach(fn => { try { fn(route); } catch (err) { console.error('Loop: after-render hook failed', err); } });
 }
+
+// ---------- section bar ----------
+// A screen is a stack of sections (see sect()). Folding them away behind tabs or
+// summaries hides what is in them — you cannot tell a section's contents from a
+// closed block — so the screen stays whole and scrollable and gets a bar naming
+// every section on it. The bar rides in the same pinned dock as the sub-tabs:
+// those choose which screen you are on, this chooses where in it you land. It
+// marks the section you are reading and jumps to any of the others.
+//
+// It is built from the rendered page, so a screen only needs sect() to get one;
+// there is no list to keep in step with the markup.
+
+// Once a page has bottomed out, its last sections can never be scrolled up to
+// the bar, so a tap on one of those is remembered and the bar marks what was
+// asked for rather than whatever happens to sit under the line.
+let jumped = null, jumpedAt = 0;
+
+function buildSectionNav() {
+  const screen = main.querySelector('.screen');
+  const sects = [...main.querySelectorAll('.sect')];
+  // A bar listing one destination is just the heading again.
+  if (!screen || sects.length < 2) return;
+  const ids = sects.map((el, i) => {
+    // Some sections already carry an id that a tile jumps to; keep it.
+    if (!el.id) el.id = `sect-${i}`;
+    return el.id;
+  });
+  const labels = sects.map((el, i) => el.dataset.nav || el.querySelector('h2')?.textContent || `Section ${i + 1}`);
+  jumped = null;
+  jumpedAt = 0;
+  const nav = document.createElement('nav');
+  nav.className = 'subnav';
+  nav.setAttribute('aria-label', 'Sections on this screen');
+  nav.innerHTML = `<div class="subnav-in">${ids.map((id, i) =>
+    `<button class="sn" data-act="jump" data-to="${id}" data-i="${i}">${esc(labels[i])}</button>`).join('')}</div>`;
+  // Into the sub-tab dock where there is one, so the two bars pin as one block;
+  // otherwise the bar gets a dock of its own to pin in.
+  const dock = screen.querySelector('.seg-dock');
+  if (dock) dock.append(nav);
+  else {
+    const own = document.createElement('div');
+    own.className = 'seg-dock';
+    own.append(nav);
+    const after = [...screen.children].filter(k => k.tagName === 'HEADER' || k.classList.contains('seg')).pop();
+    const mark = document.createElement('div');
+    mark.className = 'dock-mark';
+    mark.setAttribute('aria-hidden', 'true');
+    if (after) after.after(mark, own);
+    else screen.prepend(mark, own);
+  }
+  markSection();
+}
+
+// Anything jumped to has to clear the pinned bars, and how tall they are depends
+// on the screen: sub-tabs, a section bar, both or neither. Measuring beats a
+// magic number that goes stale the moment a row is added.
+function measureDock() {
+  const dock = main.querySelector('.seg-dock');
+  document.documentElement.style.setProperty('--dock-h', `${dock ? Math.round(dock.getBoundingClientRect().height) : 0}px`);
+}
+window.addEventListener('resize', measureDock);
+
+// Which section you are reading: the last one whose heading has come up under
+// the pinned bars.
+function markSection() {
+  const nav = main.querySelector('.subnav');
+  if (!nav) return;
+  // The margin clears the gap a jump leaves, so landing on a section always
+  // marks that section and never the one above it.
+  const line = nav.getBoundingClientRect().bottom + 40;
+  const sects = [...main.querySelectorAll('.sect')];
+  let active = 0;
+  sects.forEach((el, i) => { if (el.getBoundingClientRect().top <= line) active = i; });
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+    // Bottomed out: honour the tap that brought us here, else the last section.
+    active = jumped ?? sects.length - 1;
+  } else if (Date.now() - jumpedAt > 1200) {
+    // Forget the tap once its scroll has settled mid-page. The test is on time,
+    // not position, because a smooth scroll passes through the middle of the
+    // page on its way down.
+    jumped = null;
+  }
+  nav.querySelectorAll('.sn').forEach((b, i) => {
+    const on = i === active;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-current', on ? 'true' : 'false');
+  });
+}
+window.addEventListener('scroll', markSection, { passive: true });
 
 // Tappable cards and rows are divs; give them a button role and a tab stop so
 // VoiceOver and a keyboard can reach them (app.js turns Enter/Space into a tap).
@@ -321,8 +412,10 @@ export const header = (title, sub, right = '') => `<header><div class="grow"><di
 // smaller label for a group *inside* a band (a day of meals, a weekday of
 // classes), so the two levels no longer look alike.
 // open: the first section of a screen, with nothing above it to divide from.
-export const sect = (title, { note = '', right = '', open = false, id = '' } = {}) =>
-  `<div class="sect${open ? ' open' : ''}"${id ? ` id="${id}"` : ''}><div class="sect-h"><h2>${esc(title)}</h2>${right}</div>${note ? `<p class="sect-n">${note}</p>` : ''}</div>`;
+// nav:  a shorter name for the section bar, so every section on a screen fits
+//       across the bar at once instead of running off the edge.
+export const sect = (title, { note = '', right = '', open = false, id = '', nav = '' } = {}) =>
+  `<div class="sect${open ? ' open' : ''}"${id ? ` id="${id}"` : ''}${nav ? ` data-nav="${esc(nav)}"` : ''}><div class="sect-h"><h2>${esc(title)}</h2>${right}</div>${note ? `<p class="sect-n">${note}</p>` : ''}</div>`;
 // A row of sub-tabs. dock: it pins under the title bar while the page scrolls, so
 // switching sub-tab never means scrolling back to the top first, and a sideways
 // swipe anywhere on the page moves to the next one (see the swipe handler below).
@@ -390,12 +483,16 @@ main.addEventListener('touchend', e => {
   switchTab(key, next.dataset.tab, dx < 0 ? 1 : -1);
 }, { passive: true });
 
-// Tap a summary tile to go to the section that explains it.
+// Tap a summary tile, or a name in the section bar, to go to that section.
 actions.jump = el => {
   const target = document.getElementById(el.dataset.to);
   if (!target) return;
   haptic();
+  if (el.dataset.i) { jumped = Number(el.dataset.i); jumpedAt = Date.now(); }
   target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  // Mark it at once, and again once the scroll has come to rest.
+  markSection();
+  setTimeout(markSection, 600);
 };
 
 // ---------- folds ----------

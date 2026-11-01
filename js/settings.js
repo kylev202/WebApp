@@ -21,7 +21,7 @@ function renderSettings() {
 
   ${displaySection()}
 
-  ${sect('Daily goals', { note: 'The numbers every card in the app is measured against.' })}
+  ${sect('Daily goals', { nav: 'Goals', note: 'The numbers every card in the app is measured against.' })}
   <form class="card glass" data-form="goals">
     ${goalsSuggestion()}
     <div class="row2">
@@ -33,7 +33,7 @@ function renderSettings() {
     <button class="btn">Save goals</button>
   </form>
 
-  ${sect('Habits', { note: 'The circles on Today. Keep it to the few you will actually tap.' })}
+  ${sect('Habits', { nav: 'Habits', note: 'The circles on Today. Keep it to the few you will actually tap.' })}
   <section class="card glass">
     <div class="list">${habits().map(h => `<div class="row">${tile(h.icon, 'diet')}<div class="grow"><div class="t">${esc(h.name)}</div></div>
       <button class="x-btn" data-act="delHabit" data-id="${esc(h.id)}" aria-label="Remove habit">${icon('close')}</button></div>`).join('')}</div>
@@ -46,7 +46,7 @@ function renderSettings() {
 
   ${settingsSections.map(s => s()).join('')}
 
-  ${sect('Backup', { note: 'Nothing leaves this iPhone unless you save a copy yourself.' })}
+  ${sect('Backup', { nav: 'Backup', note: 'Nothing leaves this iPhone unless you save a copy yourself.' })}
   <section class="card glass">
     <p class="note">Your data lives only on this iPhone. Save a backup to <b>iCloud Drive</b> weekly: tap Back up → <b>Save to Files</b> → iCloud Drive.</p>
     <p class="note">Last backup: <b>${lastBackup ? new Date(lastBackup).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' }) : 'never'}</b></p>
@@ -54,7 +54,7 @@ function renderSettings() {
     <p class="note" id="persist-note" style="margin:10px 0 0"></p>
   </section>
 
-  ${sect('Danger zone', { note: 'This cannot be undone. Back up first.' })}
+  ${sect('Danger zone', { nav: 'Danger', note: 'This cannot be undone. Back up first.' })}
   <section class="card glass"><button class="btn danger" data-act="erase">${icon('trash')} Erase all data</button></section>`;
 }
 screens.settings = renderSettings;

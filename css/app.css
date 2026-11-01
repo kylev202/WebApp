@@ -1619,8 +1619,29 @@ body:has(.seg-dock) .topbar { border-bottom-color: transparent; }
 .scrolled .seg-dock::before { opacity: 1; }
 .seg-dock .seg { background: rgba(0,0,0,.05); }
 .seg-dock .seg button { min-height: 36px; }
-/* Anything a tile or link jumps to lands below the bar and the pinned tabs. */
-.sect, [id^="ov-"] { scroll-margin-top: calc(env(safe-area-inset-top) + 100px); }
+
+/* The section bar: every section of the current screen, named, in the dock
+   under the sub-tabs. Nothing is folded away behind it — it says what the
+   screen holds before you scroll, marks where you are, and jumps to the rest.
+   A flat row of names, not a second segmented control: the pills above choose
+   the screen, these choose where in it you land. */
+.subnav { margin-top: 5px; }
+/* Wraps rather than scrolling sideways, so every name is on show at once. */
+.subnav-in { display: flex; flex-wrap: wrap; gap: 4px; }
+.sn {
+  white-space: nowrap; font-size: calc(11.5px * var(--ts)); font-weight: 600; color: var(--text-3);
+  padding: 5px 10px; border-radius: 9px; min-height: 28px;
+  transition: background .2s, color .2s;
+}
+.sn.on { background: var(--sleep-bg); color: var(--sleep-ink); }
+.sn:active { opacity: .55; }
+/* On its own (Today, Settings) the dock holds only this bar, so it needs no
+   room above the pills it does not have. */
+.seg-dock:not(:has(.seg)) { padding-top: 2px; }
+.seg-dock:not(:has(.seg)) .subnav { margin-top: 0; }
+/* Anything a tile or link jumps to lands below the title bar and everything
+   pinned under it, whose height core.js measures into --dock-h. */
+.sect, [id^="ov-"] { scroll-margin-top: calc(env(safe-area-inset-top) + 52px + var(--dock-h, 48px)); }
 
 /* A sub-tab changed sideways slides in from that side; the title and the tabs stay put. */
 .enter[data-dir] .screen > header, .enter[data-dir] .screen > .seg-dock, .enter[data-dir] .screen > .dock-mark { animation: none; }

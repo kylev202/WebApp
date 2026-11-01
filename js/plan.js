@@ -208,7 +208,7 @@ function planAgenda() {
   const sel = ui.planDay ?? dayKey();
   const items = agendaFor(sel);
   return `${planCalendar(sel)}
-  ${sect(dayLabel(sel), {
+  ${sect(dayLabel(sel), { nav: 'Day',
     note: `${toDate(sel).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })} — classes, shifts, events and anything falling due, in clock order.`,
     right: `<span class="sect-v">${items.length ? plural(items.length, 'item') : 'clear'}</span>`,
   })}
@@ -223,19 +223,19 @@ function planUni() {
   // reading of them. The analysis used to come first, so the tab opened on a
   // chart about units you had to scroll down to see.
   return `
-  ${sect('Your units', { note: 'What you are enrolled in this semester, and how much of each is marked so far.', right: '<a data-act="sheet" data-sheet="course">Add</a>', open: true })}
+  ${sect('Your units', { nav: 'Units', note: 'What you are enrolled in this semester, and how much of each is marked so far.', right: '<a data-act="sheet" data-sheet="course">Add</a>', open: true })}
   <section class="card glass">${cs.length ? `<div class="list">${cs.map(c => {
     const r = courseResult(c.id);
     return `<div class="row tap" data-act="sheet" data-sheet="courseDetail" data-id="${c.id}" role="button">${tile('book', c.color ?? 'school')}
       <div class="grow"><div class="t">${esc(c.code)} · ${esc(c.name)}</div><div class="d">${c.credits || 6} credit points · ${r.weightDone}% marked</div></div>
       ${r.average != null ? `<span class="tag" style="background:var(--${c.color}-bg);color:var(--${c.color}-ink)">${band(r.average)} ${fmt(r.average)}</span>` : '<span class="chev">' + icon('chevron') + '</span>'}</div>`;
   }).join('')}</div>` : '<div class="empty">No units yet. Add the ones you are taking this semester.</div>'}</section>
-  ${sect('Timetable', { note: 'Your repeating weekly classes. These appear in the agenda automatically.', right: '<a data-act="sheet" data-sheet="cls">Add class</a>' })}
+  ${sect('Timetable', { nav: 'Timetable', note: 'Your repeating weekly classes. These appear in the agenda automatically.', right: '<a data-act="sheet" data-sheet="cls">Add class</a>' })}
   <section class="card glass">${byDay.length ? byDay.map(d => `<div class="tt-day"><div class="label-sm">${d.name}</div><div class="list">${d.list.map(c => {
     const course = courseById(c.courseId);
     return `<div class="row tap" data-act="sheet" data-sheet="cls" data-id="${c.id}" role="button"><div class="time">${time12(c.start)}</div><div class="bar" style="background:var(--${course.color ?? 'school'})"></div><div class="grow"><div class="t">${esc(course.code)} ${esc(c.kind)}</div><div class="d">${time12(c.start)}–${time12(c.end)}${c.room ? ` · ${esc(c.room)}` : ''}</div></div></div>`;
   }).join('')}</div></div>`).join('') : '<div class="empty">Add your weekly classes and they appear in your agenda automatically.</div>'}</section>
-  ${sect('Marks report', { note: 'What you have scored against what each piece was worth, and what the rest still has to score.' })}
+  ${sect('Marks report', { nav: 'Marks', note: 'What you have scored against what each piece was worth, and what the rest still has to score.' })}
   ${foldReport('uni', uniAnalytics())}`;
 }
 
@@ -252,7 +252,7 @@ function planWork() {
   const unpaid = invoices().filter(i => i.status !== 'paid');
   const overdue = unpaid.filter(i => invoiceStatus(i) === 'overdue');
   return `
-  ${sect('Part-time work', { note: 'Hours and expected pay for the week you are in, then the shifts still to come.', open: true })}
+  ${sect('Part-time work', { nav: 'Shifts', note: 'Hours and expected pay for the week you are in, then the shifts still to come.', open: true })}
   <section class="card glass">
     <div class="head"><div class="title">${tile(many ? 'briefcase' : js[0].icon, 'work')}${many ? 'Part-time jobs' : esc(js[0].name)}</div><button class="sub-note" data-act="sheet" data-sheet="jobs">${many ? plural(js.length, 'job') : 'Jobs &amp; pay'} ${icon('chevron')}</button></div>
     <div class="calc-result"><div><span>This week</span><b>${fmt1(hours)} h</b></div><div><span>Expected pay</span><b>${money(pay, false)}</b></div><div><span>Shifts</span><b>${thisWeek.length}</b></div></div>
@@ -269,7 +269,7 @@ function planWork() {
     <div class="time">${dayLabel(s.date).replace('Tomorrow', 'Tmrw')}</div><div class="bar" style="background:var(--${j.color})"></div><div class="grow"><div class="t">${time12(s.start)}–${time12(s.end)}</div><div class="d">${many ? `${esc(j.name)} · ` : ''}${fmt1(shiftHours(s))} h · ${money(shiftRate(s), false)}/h</div></div><div class="amt">${money(shiftPay(s), false)}</div></div>`;
   }).join('')}</div></section>` : ''}
 
-  ${sect('Client work', { note: 'Where each project stands and what is still owed to you.' })}
+  ${sect('Client work', { nav: 'Clients', note: 'Where each project stands and what is still owed to you.' })}
   <section class="card glass">
     <div class="head"><div class="title">${tile('laptop', 'work')}Freelance web</div><button class="sub-note" data-act="sheet" data-sheet="client">${plural(clients().length, 'client')} ${icon('chevron')}</button></div>
     <div class="calc-result"><div><span>Active projects</span><b>${ps.filter(p => p.status === 'active').length}</b></div><div><span>Unpaid</span><b>${money(unpaid.reduce((t, i) => t + Number(i.amount), 0), false)}</b></div><div><span>Overdue</span><b ${overdue.length ? 'class="late"' : ''}>${overdue.length}</b></div></div>
@@ -304,17 +304,17 @@ function planTasks() {
   ].filter(([, list]) => list.length);
   const done = all.filter(x => x.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)).slice(0, 8);
   return `
-  ${sect('Add a task', { note: 'Type it, pick a day and an area, and it lands in the right group below.', open: true })}
+  ${sect('Add a task', { nav: 'Add', note: 'Type it, pick a day and an area, and it lands in the right group below.', open: true })}
   <form class="card glass quick-task" data-form="quickTask">
     <div class="qt-row"><input class="input-x" name="title" placeholder="Add a task…" required maxlength="80" autocomplete="off" aria-label="Task">
       <button class="qt-add" aria-label="Add task">${icon('plus')}</button></div>
     ${dateField('due', '', { none: true })}
     ${chips('area', Object.entries(AREAS).map(([k, a]) => [k, a.label, a.icon, a.color]), 'life', { cls: 'scroll' })}
   </form>
-  ${sect('Still to do', { note: 'Grouped by when they are due — overdue first, undated last.', right: `<span class="sect-v">${open.length ? plural(open.length, 'task') : 'all clear'}</span>` })}
+  ${sect('Still to do', { nav: 'To do', note: 'Grouped by when they are due — overdue first, undated last.', right: `<span class="sect-v">${open.length ? plural(open.length, 'task') : 'all clear'}</span>` })}
   ${groups.length ? groups.map(([name, list]) => `<div class="section-label">${name} <span>${list.length}</span></div><section class="card glass"><div class="list">${list.map(taskRow).join('')}</div></section>`).join('')
     : `<section class="card glass soon">${tile('check', 'diet', 'xl')}<p>All clear. Add a task above.</p></section>`}
-  ${done.length ? `${sect('Done', { note: 'The last few you finished, newest first.' })}<section class="card glass"><div class="list">${done.map(taskRow).join('')}</div></section>` : ''}`;
+  ${done.length ? `${sect('Done', { nav: 'Done', note: 'The last few you finished, newest first.' })}<section class="card glass"><div class="list">${done.map(taskRow).join('')}</div></section>` : ''}`;
 }
 
 // ---------- Today sections ----------
