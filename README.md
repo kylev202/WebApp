@@ -6,7 +6,7 @@ The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups a
 
 ## What's in v4
 
-- **Gym (new):** pick a routine (Push/Pull/Legs, Upper/Lower, Full body or a body-part split) and edit every day, exercise, set and rep range. Start the next day from Today, log each set (kg × reps) with last session shown beside it, and tick sets off.
+- **Gym (new):** pick a routine (Push/Leg/Pull, Upper/Lower, Full body or a body-part split) and edit every day, exercise, set and rep range. Start the next day from Today, log each set (kg × reps) with last session shown beside it, and tick sets off.
   - **Smart weights:** double progression. Beat last time by a rep; when every set hits the top of the range, Loop tells you to add weight.
   - **PRs:** heavier weight or higher estimated 1-rep max triggers a trophy and confetti.
   - **Rest timer** starts on each ticked set and chimes when it's time to go again.

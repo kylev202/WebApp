@@ -350,11 +350,11 @@ export const REP_PRESETS = [
 
 export const TEMPLATES = {
   ppl: {
-    name: 'Push / Pull / Legs', perWeek: 6, blurb: 'Classic bodybuilding split. Run it 3 or 6 days a week.',
+    name: 'Push / Leg / Pull', perWeek: 6, blurb: 'The default split: push, leg, pull. Run it 3 or 6 days a week.',
     days: [
-      { id: 'push', name: 'Push', exercises: [ex('bench', 4, 6, 8), ex('ohp', 3, 8, 10), ex('incline_db', 3, 8, 12), ex('lateral_raise', 3, 12, 15), ex('pushdown', 3, 10, 12), ex('dips', 2, 8, 12)] },
-      { id: 'pull', name: 'Pull', exercises: [ex('deadlift', 3, 5, 6), ex('pullup', 4, 6, 10), ex('row', 3, 8, 10), ex('face_pull', 3, 12, 15), ex('db_curl', 3, 10, 12), ex('hammer', 2, 10, 12)] },
-      { id: 'legs', name: 'Legs', exercises: [ex('squat', 4, 6, 8), ex('rdl', 3, 8, 10), ex('leg_press', 3, 10, 12), ex('leg_curl', 3, 10, 12), ex('calf_raise', 4, 10, 15)] },
+      { id: 'push', name: 'Push', exercises: [ex('machine_fly', 4, 6, 8), ex('incline_db', 4, 8, 10), ex('cable_fly', 3, 8, 10), ex('bench', 3, 12, 15), ex('pushdown', 3, 10, 12), ex('face_pull', 3, 12, 15), ex('lateral_raise', 3, 12, 15)] },
+      { id: 'legs', name: 'Leg', exercises: [ex('leg_ext', 3, 10, 12), ex('leg_curl', 3, 10, 12), ex('leg_press', 4, 8, 10), ex('leg_press_calf', 4, 10, 15), ex('crunch', 3, 15, 20)] },
+      { id: 'pull', name: 'Pull', exercises: [ex('seated_row', 4, 8, 10), ex('lat_pulldown', 3, 8, 10), ex('row', 3, 8, 10), ex('preacher', 3, 10, 12), ex('hammer', 3, 10, 12)] },
     ],
   },
   ul: {

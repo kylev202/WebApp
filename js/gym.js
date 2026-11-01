@@ -346,7 +346,7 @@ export function workoutCard() {
   const next = nextDay(); // null when the routine has no days left
   if (!r || !next) {
     return `<section class="card glass wk-card tap" data-act="nav" data-to="health">${tile('dumbbell', 'move', 'lg')}
-      <div class="grow"><div class="label-sm">Gym</div><div class="t">${r ? 'Add a day to your routine' : 'Set up your routine'}</div><div class="d">Push/Pull/Legs, Upper/Lower or Full body</div></div><div class="chev">${icon('chevron')}</div></section>`;
+      <div class="grow"><div class="label-sm">Gym</div><div class="t">${r ? 'Add a day to your routine' : 'Set up your routine'}</div><div class="d">Push/Leg/Pull, Upper/Lower or Full body</div></div><div class="chev">${icon('chevron')}</div></section>`;
   }
   return `<section class="card glass wk-card">${bodyPair(dayLoad(next), topLoad(dayLoad(next)), { cls: 'bm-row' })}
     <div class="grow tap" data-act="nav" data-to="health"><div class="label-sm">Next workout</div><div class="t">${esc(next.name)}</div><div class="d">${plural(next.exercises.length, 'exercise')} · ${plural(next.exercises.reduce((t, x) => t + x.sets, 0), 'set')}</div></div>
