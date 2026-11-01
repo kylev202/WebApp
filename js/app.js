@@ -18,6 +18,7 @@ import './coach.js';
 import './planner.js';
 import './day.js';
 import { handleOAuthRedirect, startConnections } from './connect.js';
+import { applyDisplay } from './display.js';
 
 const soon = (title, ic, area, text) => () => `${header(title, 'Coming soon')}
   <section class="card glass soon">${tile(ic, area, 'xl')}<p>${text}</p></section>`;
@@ -62,7 +63,12 @@ document.addEventListener('keydown', e => {
 
 // Compact blurred title bar once the large title scrolls away.
 const topbar = document.getElementById('topbar');
-window.addEventListener('scroll', () => topbar.classList.toggle('show', window.scrollY > 48), { passive: true });
+window.addEventListener('scroll', () => {
+  const scrolled = window.scrollY > 48;
+  topbar.classList.toggle('show', scrolled);
+  // The pinned sub-tabs grow a frosted backing once there is content under them.
+  document.body.classList.toggle('scrolled', scrolled);
+}, { passive: true });
 window.addEventListener('resize', () => moveTabIndicator(true));
 
 function route() {
@@ -81,7 +87,9 @@ document.addEventListener('visibilitychange', () => {
 
 document.querySelectorAll('[data-icon]').forEach(el => { el.outerHTML = icon(el.dataset.icon); });
 
+applyDisplay(); // the iPhone's text size, before the stored choice has loaded
 await openStore();
+applyDisplay();
 await handleOAuthRedirect();
 route();
 startConnections();

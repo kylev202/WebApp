@@ -5,8 +5,9 @@ import { icon, tile, HABIT_ICONS } from './icons.js';
 import { screens, actions, forms, afterRender, render, toast, haptic, header, sect, go } from './core.js';
 import { goals, habits, DEFAULT_GOALS } from './data.js';
 import { healthProfileSection, goalsSuggestion } from './profile.js';
+import { displaySection } from './display.js';
 
-export const VERSION = '4.7.0';
+export const VERSION = '5.0.0';
 // Later versions add their own settings cards (AI key, connections...).
 export const settingsSections = [];
 
@@ -17,6 +18,8 @@ function renderSettings() {
   <section class="card glass brand"><img src="icons/icon-192.png" alt="" width="52" height="52"><div><div class="t">Loop</div><div class="d">Version ${VERSION} · data stays on this iPhone</div></div></section>
 
   ${healthProfileSection()}
+
+  ${displaySection()}
 
   ${sect('Daily goals', { note: 'The numbers every card in the app is measured against.' })}
   <form class="card glass" data-form="goals">

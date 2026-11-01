@@ -86,12 +86,12 @@ function weightLevel(f) {
 function pillars(f) {
   const plan = f.live ? active()?.name ?? nextDay()?.name : null;
   return [
-    { label: 'Sleep', ic: 'moon', area: 'sleep', value: f.sleep ? fmtHours(f.sleep.hours) : '–', lvl: sleepLevel(f) },
-    { label: 'Calories', ic: 'diet', area: 'diet', value: f.kcal ? fmt(f.kcal) : '–', unit: f.kcal ? 'kcal' : '', lvl: paceLevel(f.kcal, f.g.kcal, f, { over: 1.15 }) },
-    { label: 'Protein', ic: 'shaker', area: 'move', value: f.protein ? fmt(f.protein) : '–', unit: f.protein ? 'g' : '', lvl: paceLevel(f.protein, f.g.protein, f) },
-    { label: 'Water', ic: 'drop', area: 'work', value: `${fmt(f.water)} / ${f.g.water}`, lvl: paceLevel(f.water, f.g.water, f) },
-    { label: 'Training', ic: 'dumbbell', area: 'move', value: f.trained[0]?.name ?? plan ?? '–', lvl: trainingLevel(f) },
-    { label: 'Weight', ic: 'scale', area: 'move', value: f.weigh ? String(f.weigh.kg) : '–', unit: f.weigh ? 'kg' : '', lvl: weightLevel(f) },
+    { jump: 'sleep', label: 'Sleep', ic: 'moon', area: 'sleep', value: f.sleep ? fmtHours(f.sleep.hours) : '–', lvl: sleepLevel(f) },
+    { jump: 'food', label: 'Calories', ic: 'diet', area: 'diet', value: f.kcal ? fmt(f.kcal) : '–', unit: f.kcal ? 'kcal' : '', lvl: paceLevel(f.kcal, f.g.kcal, f, { over: 1.15 }) },
+    { jump: 'food', label: 'Protein', ic: 'shaker', area: 'move', value: f.protein ? fmt(f.protein) : '–', unit: f.protein ? 'g' : '', lvl: paceLevel(f.protein, f.g.protein, f) },
+    { jump: 'water', label: 'Water', ic: 'drop', area: 'work', value: `${fmt(f.water)} / ${f.g.water}`, lvl: paceLevel(f.water, f.g.water, f) },
+    { jump: 'training', label: 'Training', ic: 'dumbbell', area: 'move', value: f.trained[0]?.name ?? plan ?? '–', lvl: trainingLevel(f) },
+    { jump: 'water', label: 'Weight', ic: 'scale', area: 'move', value: f.weigh ? String(f.weigh.kg) : '–', unit: f.weigh ? 'kg' : '', lvl: weightLevel(f) },
   ];
 }
 
@@ -142,10 +142,10 @@ function heroCard(f, ps) {
     <div class="label-sm">${dayLabel(f.date)} · ${f.live ? `as of ${time12(nowHHMM())}` : 'whole day'}</div>
     <div class="hv-headline">${headline(ps, f)}</div>
     <p class="hv-summary">${summary(f, ps)}</p>
-    <div class="hv-pillars">${ps.map(p => `<div class="hv-pillar lv-${p.lvl[0]}">
+    <div class="hv-pillars">${ps.map(p => `<button class="hv-pillar lv-${p.lvl[0]}" data-act="jump" data-to="ov-${p.jump}" aria-label="${esc(`${p.label}: ${p.value}${p.unit ? ` ${p.unit}` : ''}, ${p.lvl[1]}. Show details`)}">
       <div class="l" style="--pc:var(--${p.area}-ink)">${icon(p.ic)}${p.label}</div>
       <div class="v">${esc(p.value)}${p.unit ? `<small>${p.unit}</small>` : ''}</div>
-      <div class="s">${p.lvl[1]}</div></div>`).join('')}</div>
+      <div class="s">${p.lvl[1]}</div></button>`).join('')}</div>
   </section>`;
 }
 
@@ -188,7 +188,7 @@ function sleepCard(f) {
   }
   if (logged.length && logged.length < 7) notes.push(note('info', 'sleep', `${plural(logged.length, 'night')} logged out of the last 7; averages use only those.`));
 
-  return `${sect('The night before', { note: `How you slept${f.live ? ' last night' : ''}, and how recovered that leaves you.`, right: toTab('sleep', 'Every night') })}
+  return `${sect('The night before', { id: 'ov-sleep', note: `How you slept${f.live ? ' last night' : ''}, and how recovered that leaves you.`, right: toTab('sleep', 'Every night') })}
   <section class="card glass">
     <div class="hv-top"><div><div class="label-sm">${f.live ? 'Last night' : 'Night before'}</div>
       <div class="big-xl">${f.sleep ? fmtHours(f.sleep.hours) : '–'}<small>${f.sleep ? `${time12(f.sleep.bed)} → ${time12(f.sleep.wake)}` : 'not logged'}</small></div></div>
@@ -248,7 +248,7 @@ function nutritionCard(f) {
   const rich = f.meals.filter(m => Number(m.protein) >= 25).length;
   if (f.meals.length >= 2) notes.push(note('muscle', 'move', `${rich} of ${f.meals.length} meals had 25 g or more protein${rich < f.meals.length ? '; spreading it evenly across meals helps muscle repair' : ''}.`));
 
-  return `${sect('What you have eaten', { note: f.live ? 'Against your goal and against the hours of the day still left.' : 'Against your goal for that day.', right: toTab('diet', 'Meals') })}
+  return `${sect('What you have eaten', { id: 'ov-food', note: f.live ? 'Against your goal and against the hours of the day still left.' : 'Against your goal for that day.', right: toTab('diet', 'Meals') })}
   <section class="card glass">
     <div class="hv-top"><div><div class="label-sm">${f.live ? 'Eaten so far' : 'Eaten'}</div>
       <div class="big-xl">${fmt(f.kcal)}<small>of ${fmt(g.kcal)} kcal</small></div></div>
@@ -378,7 +378,7 @@ function trainingCard(f) {
     else notes.push(note('star', 'move', `This week’s ${r.perWeek} workouts are done.`));
   }
 
-  return `${sect('Training', { note: 'The load you are carrying this week, and which muscles are still recovering.', right: toTab('gym', 'Gym') })}
+  return `${sect('Training', { id: 'ov-training', note: 'The load you are carrying this week, and which muscles are still recovering.', right: toTab('gym', 'Gym') })}
   <section class="card glass">
     <div class="head"><div class="title">${tile('dumbbell', 'move')}${f.live ? 'Today' : dayLabel(f.date)}</div>${chip(trainingLevel(f))}</div>
     ${main}
@@ -404,7 +404,7 @@ function logCard(f) {
   of('weight', f.date).forEach(w => items.push({ min: w.time ? toMin(w.time) : null, time: w.time ? time12(w.time) : '', area: 'move', t: 'Weigh-in', d: `${w.kg} kg`, sheet: 'weight', id: w.id }));
   // Things logged without a clock time (backdated, imported) go last rather than at a guessed hour.
   items.sort((a, b) => (a.min ?? DAY_END) - (b.min ?? DAY_END));
-  return `${sect('Everything logged', { note: 'Every entry on this day, in the order it happened. Tap one to correct it.', right: `<span class="sect-v">${f.water ? `${plural(f.water, 'glass', 'glasses')} of water` : ''}</span>` })}
+  return `${sect('Everything logged', { id: 'ov-log', note: 'Every entry on this day, in the order it happened. Tap one to correct it.', right: `<span class="sect-v">${f.water ? `${plural(f.water, 'glass', 'glasses')} of water` : ''}</span>` })}
   <section class="card glass">${items.length ? `<div class="list">${items.map(it => `<div class="row tap" data-act="sheet" data-sheet="${it.sheet}" data-id="${it.id}" role="button">
     <div class="time">${it.time || '–'}</div><div class="bar" style="background:var(--${it.area})"></div>
     <div class="grow"><div class="t">${esc(it.t)}</div><div class="d">${it.d}</div></div></div>`).join('')}</div>`
@@ -432,7 +432,7 @@ export function overviewTab() {
   return `${heroCard(f, ps)}
   ${sleepCard(f)}
   ${nutritionCard(f)}
-  <div class="grid">${waterCard(f)}${bodyCard(f)}</div>
+  <div class="grid" id="ov-water">${waterCard(f)}${bodyCard(f)}</div>
   ${trainingCard(f)}
   ${logCard(f)}`;
 }

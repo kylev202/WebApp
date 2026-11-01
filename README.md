@@ -4,6 +4,18 @@ My personal life manager for iPhone: diet, gym, sleep, uni, work and money in on
 
 The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups are in [`design/`](design/).
 
+## What's new in v5: built for the big iPhones
+
+Every Health tab had grown into a long scroll of analytics and text (Diet ran to about seven screens). v5 restructures the screens around **glance first, depth on tap**, tuned for a one-handed 6.7" iPhone 15 / 16 Pro Max.
+
+- **Reports fold into a verdict list.** The headline card of each report stays open; every other section (Consistency, Protein per meal, Meal timing, Relative strength, Volume by muscle, Savings rate, Cash runway, Marks against weight…) becomes one row with its time span and its status chip — *Above range*, *Excellent*, *+14%*, *6.1 months* — so the collapsed list reads as a checklist. Tap a row to open it; what you open or close is remembered on the phone. Older workouts, earlier days of meals, every night and every weigh-in fold the same way. Diet went from ~6,700 px to ~2,000; Gym, Sleep and Body by half or more.
+- **Specialists are a strip, not a wall.** Each tab shows its specialist as a short card: who, their verdict, any alert, a three-line summary and **Full consult** / **Ask**. The whole consult (forecasts, findings, plan, red flags, the letter) opens as a sheet. On Overview the GP shows the wellbeing index as a ring and your care team as four tappable avatars with a status dot each.
+- **Sub-tabs stay pinned.** On Health, Money and Plan the sub-tab switcher sticks under the title bar while you scroll, so switching never means scrolling back up; switching from deep in a tab opens the next one at its top.
+- **Swipe between sub-tabs** anywhere on the page (Health → Overview, Gym, Diet, Sleep, Body), with a slide from that side. The calendar, timeline drags, inputs and anything that scrolls sideways keep their own gestures.
+- **Overview tiles jump.** The six status tiles (sleep, calories, protein, water, training, weight) take you to the section that explains them.
+- **Accessibility:** text now follows the iPhone's own **Text Size** (Settings → Display & Brightness), or pick one in **Settings → Display & accessibility** (Default, Large, Larger, Largest) with a live preview. The smallest text (9–10px) was raised to 10–11px, tertiary text contrast raised from about 3:1 to 4:1, and on Pro Max-width screens everything reads 4% larger. **Increase contrast** and **Reduce transparency** follow the iPhone's Accessibility settings automatically or can be switched on for Loop alone. Sub-tabs are announced as tabs, folds as expandable buttons, and the overview tiles say their value and status to VoiceOver.
+- **App readiness:** launch screens for iPhone 16 Pro Max, 15/16 Plus & Pro Max, 16 Pro, 15 Pro and 14 (no more white flash on open), numbers are no longer auto-linked as phone numbers or dates, and the manifest gains an id, portrait orientation, categories and shortcuts.
+
 ## What's in v4
 
 - **Gym (new):** pick a routine (Push/Leg/Pull, Upper/Lower, Full body or a body-part split) and edit every day, exercise, set and rep range. Start the next day from Today, log each set (kg × reps) with last session shown beside it, and tick sets off.
@@ -99,7 +111,7 @@ python3 -m http.server 8000
 | `index.html` | App shell and tab bar |
 | `css/app.css` | Styles (pastel glass theme) |
 | `js/app.js` | Entry point: event delegation, routing, boot |
-| `js/core.js` | Shared shell: registries, render, sheets, toasts, haptics, confetti |
+| `js/core.js` | Shared shell: registries, render, sheets, toasts, haptics, confetti, folds, pinned sub-tabs and swipe |
 | `js/icons.js` | Loop's duotone icon set |
 | `js/util.js`, `js/data.js` | Helpers and data selectors |
 | `js/today.js`, `js/health.js`, `js/gym.js`, `js/settings.js` | Screens and their sheets/actions |
@@ -113,6 +125,7 @@ python3 -m http.server 8000
 | `js/store.js` | IndexedDB storage, backup export/import |
 | `js/charts.js` | SVG line charts and sparklines |
 | `js/fx.js` | Motion that needs JS: the liquid tab pill, sliding calendar weeks |
+| `js/display.js` | Display & accessibility: text size (follows iPhone Text Size), contrast, transparency |
 | `sw.js` | Offline cache (bump `CACHE` when releasing) |
 | `manifest.webmanifest`, `icons/` | Home Screen install and icons |
 | `design/icon.html` | Icon source (render with Playwright at any size) |

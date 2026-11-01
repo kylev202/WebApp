@@ -35,9 +35,13 @@ function brokenScreen(route, err) {
     <button class="btn soft" data-act="nav" data-to="settings">${icon('gear')} Open Settings</button></section>`;
 }
 
-export function render({ enter = false } = {}) {
+// dir: 1 or -1 when a sub-tab was changed sideways, so the new content slides in
+// from that side instead of rising (the title and the tab switcher stay still).
+export function render({ enter = false, dir = 0 } = {}) {
   const route = screens[ui.route] ? ui.route : 'today';
   main.classList.toggle('enter', enter && !reduceMotion);
+  if (dir) main.dataset.dir = dir > 0 ? 'r' : 'l';
+  else delete main.dataset.dir;
   let html;
   try {
     html = screens[route]();
@@ -289,8 +293,137 @@ export const header = (title, sub, right = '') => `<header><div class="grow"><di
 // smaller label for a group *inside* a band (a day of meals, a weekday of
 // classes), so the two levels no longer look alike.
 // open: the first section of a screen, with nothing above it to divide from.
-export const sect = (title, { note = '', right = '', open = false } = {}) =>
-  `<div class="sect${open ? ' open' : ''}"><div class="sect-h"><h2>${esc(title)}</h2>${right}</div>${note ? `<p class="sect-n">${note}</p>` : ''}</div>`;
-export const seg = (key, options, current) => `<div class="seg wide">${options.map(([k, label]) =>
-  `<button class="${current === k ? 'on' : ''}" data-act="segTab" data-key="${key}" data-tab="${k}">${label}</button>`).join('')}</div>`;
-actions.segTab = el => { ui.tab[el.dataset.key] = el.dataset.tab; render({ enter: true }); };
+export const sect = (title, { note = '', right = '', open = false, id = '' } = {}) =>
+  `<div class="sect${open ? ' open' : ''}"${id ? ` id="${id}"` : ''}><div class="sect-h"><h2>${esc(title)}</h2>${right}</div>${note ? `<p class="sect-n">${note}</p>` : ''}</div>`;
+// A row of sub-tabs. dock: it pins under the title bar while the page scrolls, so
+// switching sub-tab never means scrolling back to the top first, and a sideways
+// swipe anywhere on the page moves to the next one (see the swipe handler below).
+export const seg = (key, options, current, { dock = false } = {}) => {
+  const html = `<div class="seg wide" role="tablist">${options.map(([k, label]) =>
+    `<button role="tab" aria-selected="${current === k}" class="${current === k ? 'on' : ''}" data-act="segTab" data-key="${key}" data-tab="${k}">${label}</button>`).join('')}</div>`;
+  return dock ? `<div class="dock-mark" aria-hidden="true"></div><div class="seg-dock" data-swipe="${key}">${html}</div>` : html;
+};
+
+// Where the docked switcher sits once it is pinned: just under the compact title bar.
+const dockTop = () => {
+  const mark = main.querySelector('.dock-mark');
+  if (!mark) return null;
+  const pinned = parseFloat(getComputedStyle(main.querySelector('.seg-dock')).top) || 0;
+  return mark.getBoundingClientRect().top + window.scrollY - pinned;
+};
+
+export function switchTab(key, to, dir = 0) {
+  if (!to || ui.tab[key] === to) return;
+  // Scrolled far down a long tab: the next one opens at its top, with the
+  // switcher still pinned, rather than at whatever depth the last one was read to.
+  const top = dockTop();
+  const deep = top != null && window.scrollY > top;
+  ui.tab[key] = to;
+  render({ enter: true, dir });
+  if (deep) window.scrollTo(0, top);
+}
+actions.segTab = el => {
+  const btns = [...(el.closest('.seg')?.querySelectorAll('[data-tab]') ?? [])];
+  const from = btns.findIndex(b => b.classList.contains('on')), to = btns.indexOf(el);
+  switchTab(el.dataset.key, el.dataset.tab, from >= 0 && to >= 0 && from !== to ? Math.sign(to - from) : 0);
+};
+
+// Swipe sideways on a page with a docked switcher to step through its sub-tabs,
+// the way you page through Health on a big phone without reaching for the top.
+// Anything that already uses a sideways gesture keeps it: the calendar, the
+// timeline's drag handles, sliders and inputs, and anything that scrolls sideways.
+const OWN_GESTURE = '[data-cal], [data-drag], [data-resize], input, textarea, select, .no-swipe';
+function scrollsSideways(el) {
+  for (; el && el !== main; el = el.parentElement) {
+    if (el.scrollWidth > el.clientWidth + 2 && /auto|scroll/.test(getComputedStyle(el).overflowX)) return true;
+  }
+  return false;
+}
+let swipe = null;
+main.addEventListener('touchstart', e => {
+  swipe = null;
+  const t = e.touches[0];
+  if (e.touches.length !== 1 || ui.sheet || t.clientX < 24 || t.clientX > window.innerWidth - 24) return;
+  const dock = main.querySelector('.seg-dock[data-swipe]');
+  if (!dock || e.target.closest(OWN_GESTURE) || scrollsSideways(e.target)) return;
+  swipe = { x: t.clientX, y: t.clientY, t: Date.now(), key: dock.dataset.swipe };
+}, { passive: true });
+main.addEventListener('touchend', e => {
+  if (!swipe) return;
+  const t = e.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
+  const { key, t: t0 } = swipe;
+  swipe = null;
+  if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2 || Date.now() - t0 > 800) return;
+  const btns = [...main.querySelectorAll(`.seg-dock[data-swipe="${key}"] [data-tab]`)];
+  const i = btns.findIndex(b => b.classList.contains('on'));
+  const next = btns[i + (dx < 0 ? 1 : -1)];
+  if (!next) return;
+  haptic();
+  switchTab(key, next.dataset.tab, dx < 0 ? 1 : -1);
+}, { passive: true });
+
+// Tap a summary tile to go to the section that explains it.
+actions.jump = el => {
+  const target = document.getElementById(el.dataset.to);
+  if (!target) return;
+  haptic();
+  target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+};
+
+// ---------- folds ----------
+// A long report reads as a short list of what it covers, each with its verdict;
+// tap one to open it. The first card of a report stays open, because that is
+// the headline. What you open (or close) is remembered on this phone.
+const FOLD_KEY = 'loop.folds';
+const foldState = (() => { try { return JSON.parse(localStorage.getItem(FOLD_KEY)) ?? {}; } catch { return {}; } })();
+document.addEventListener('toggle', e => {
+  const el = e.target;
+  if (!el.matches?.('details[data-fold]')) return;
+  foldState[el.dataset.fold] = el.open;
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify(foldState)); } catch { /* private mode: remembered until reload */ }
+}, true);
+
+const stripTags = s => String(s).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+const slug = s => stripTags(s).toLowerCase().replace(/&[a-z#0-9]+;/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const CHIP_RE = /<span class="hv-chip lv-[\w-]+">[^<]*<\/span>/;
+
+// solo: the fold wraps one card under that card's own title, so the card's
+// heading is hidden while it is open instead of being said twice.
+export function fold(id, title, body, { aside = '', chip = '', lead = '', open = false, solo = false } = {}) {
+  const isOpen = foldState[id] ?? open;
+  return `<details class="fold${solo ? ' solo' : ''}" data-fold="${esc(id)}"${isOpen ? ' open' : ''}>
+    <summary class="fold-h">${lead}<span class="fold-t"><b>${title}</b>${aside ? `<small>${aside}</small>` : ''}</span>${chip}<span class="fold-c" aria-hidden="true">${icon('chevron')}</span></summary>
+    <div class="fold-b">${body}</div></details>`;
+}
+
+// Turn a report (a run of section labels and cards) into folds. A section label
+// and the cards under it fold together under the label's name; a card on its
+// own folds under its own title. The first `keep` pieces stay as they are.
+export function foldReport(scope, html, { keep = 1, open = [] } = {}) {
+  const parts = String(html).split(/(?=<div class="section-label">|<section class="card)/).map(p => p.trim()).filter(Boolean);
+  const groups = [];
+  let cur = null;
+  for (const p of parts) {
+    if (p.startsWith('<div class="section-label">')) groups.push(cur = { label: p, cards: [] });
+    else if (cur) cur.cards.push(p);
+    else groups.push({ label: null, cards: [p] });
+  }
+  return groups.map((g, i) => {
+    const body = g.cards.join('\n');
+    if (i < keep || !body) return (g.label ?? '') + body;
+    let title = '', aside = '', lead = '';
+    if (g.label) {
+      const inner = g.label.match(/^<div class="section-label">([\s\S]*?)<\/div>/)?.[1] ?? '';
+      const m = inner.match(/^([\s\S]*?)\s*<span>([\s\S]*)<\/span>\s*$/);
+      [title, aside] = m ? [m[1], m[2]] : [inner, ''];
+    } else {
+      const t = body.match(/<div class="title">([\s\S]*?)<\/div>/);
+      if (!t) return body;
+      lead = t[1].match(/^<span class="tile[^"]*"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '';
+      title = stripTags(t[1].slice(lead.length));
+      aside = stripTags(body.slice(t.index, t.index + 400).match(/<div class="sub-note">([\s\S]*?)<\/div>/)?.[1] ?? '');
+    }
+    const id = `${scope}:${slug(title)}`;
+    return fold(id, title, body, { aside, lead, solo: !g.label, chip: body.match(CHIP_RE)?.[0] ?? '', open: open.includes(slug(title)) });
+  }).join('\n');
+}

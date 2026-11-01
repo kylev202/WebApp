@@ -2,7 +2,7 @@
 import { addEntry, updateEntry, putEntry, removeEntry } from './store.js';
 import { esc, dayKey, lastDays, longDate, dayLabel, fmt, fmtHours, timeOf, time12, avgLogged, sum, num, plural } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sect, sheetForm, dateField, readDate } from './core.js';
+import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sect, sheetForm, dateField, readDate, fold, foldReport } from './core.js';
 import { goals, of, byId, waterOn, sleepOn, weights, weeklyRate, bulkStatus, macroTargets, sleepHours, recentMeals } from './data.js';
 import { gymTab } from './gym.js';
 import { overviewTab, overviewHeader } from './overview.js';
@@ -31,12 +31,12 @@ const HEALTH_SUB = {
 
 function renderHealth() {
   const tab = ui.tab.health ?? 'overview';
-  const body = { overview: overviewTab, gym: () => gymTab(gymAnalytics()), diet: healthDiet, sleep: healthSleep, body: healthBody }[tab]();
+  const body = { overview: overviewTab, gym: () => gymTab(foldReport('gym', gymAnalytics())), diet: healthDiet, sleep: healthSleep, body: healthBody }[tab]();
   const top = tab === 'overview' ? overviewHeader() : header('Health', HEALTH_SUB[tab] ?? longDate());
   // Each tab has its own specialist, who reads that tab's data first. The GP reads
   // everything, so it sits on today's overview (a past day is a record, not a consult).
   const doc = tab === 'overview' && ui.tab.healthDate ? '' : consultCard(tab);
-  return `${top}${seg('health', [['overview', 'Overview'], ['gym', 'Gym'], ['diet', 'Diet'], ['sleep', 'Sleep'], ['body', 'Body']], tab)}${doc}${body}`;
+  return `${top}${seg('health', [['overview', 'Overview'], ['gym', 'Gym'], ['diet', 'Diet'], ['sleep', 'Sleep'], ['body', 'Body']], tab, { dock: true })}${doc}${body}`;
 }
 screens.health = renderHealth;
 
@@ -49,10 +49,11 @@ function healthDiet() {
   // Today's number, then the meals that made it, then the report, then the days
   // before. The meals used to sit under the multi-week report, so checking what
   // you had an hour ago meant scrolling past four charts to get to it.
-  const earlier = lastDays(7).slice(0, -1).reverse().map(d => {
+  const earlier = lastDays(7).slice(0, -1).reverse().map((d, i) => {
     const ms = of('meal', d);
     if (!ms.length) return '';
-    return `<div class="section-label">${dayLabel(d)} <span>${fmt(sum(ms, 'kcal'))} kcal · ${fmt(sum(ms, 'protein'))} g P</span></div><section class="card glass"><div class="list">${ms.map(mealRow).join('')}</div></section>`;
+    return fold(`diet:day:${i}`, dayLabel(d), `<section class="card glass"><div class="list">${ms.map(mealRow).join('')}</div></section>`,
+      { aside: `${plural(ms.length, 'meal')} · ${fmt(sum(ms, 'kcal'))} kcal · ${fmt(sum(ms, 'protein'))} g protein` });
   }).join('');
   return `
   ${sect('Today', { note: `Against your ${fmt(g.kcal)} kcal and ${g.protein} g protein targets.`, open: true })}
@@ -69,8 +70,8 @@ function healthDiet() {
   <section class="card glass">${meals.length ? `<div class="list">${meals.map(mealRow).join('')}</div>`
     : '<div class="empty">Add your first meal of the day with ＋ Meal above.</div>'}</section>
   ${sect('Report', { note: 'How you have actually eaten over the last weeks: averages, consistency and where the calories came from.' })}
-  ${dietAnalytics()}
-  ${earlier ? `${sect('Earlier days', { note: 'The six days before today, newest first.' })}${earlier}` : ''}`;
+  ${foldReport('diet', dietAnalytics())}
+  ${earlier ? `${sect('Earlier days', { note: 'The six days before today, newest first. Tap a day for its meals.' })}${earlier}` : ''}`;
 }
 
 function macroBar(label, value, goal, color) {
@@ -80,20 +81,20 @@ function macroBar(label, value, goal, color) {
 function healthSleep() {
   const recent = of('sleep').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14);
   return `${sect('Report', { note: 'Your last weeks of sleep: average against goal, debt, how steady your bedtime is and a score out of 100.', open: true })}
-  ${sleepAnalytics()}
-  ${recent.length ? `${sect('Every night', { note: 'The nights the report is built from, newest first. Tap one to correct it.', right: `<span class="sect-v">${plural(recent.length, 'night')}</span>` })}<section class="card glass"><div class="list">${recent.map(s => `
+  ${foldReport('sleep', sleepAnalytics(), { open: ['last-14-nights'] })}
+  ${recent.length ? `${sect('Every night', { note: 'The nights the report is built from, newest first. Tap one to correct it.' })}${fold('sleep:nights', 'Night by night', `<section class="card glass"><div class="list">${recent.map(s => `
     <div class="row tap" data-act="sheet" data-sheet="sleep" data-id="${s.id}" role="button"><div class="bar" style="background:var(--sleep)"></div><div class="grow"><div class="t">${dayLabel(s.date)}</div><div class="d">${esc(s.bed)} → ${esc(s.wake)}</div></div>
-    <div class="amt">${fmtHours(s.hours)}</div><button class="x-btn" data-act="del" data-id="${s.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>` : ''}`;
+    <div class="amt">${fmtHours(s.hours)}</div><button class="x-btn" data-act="del" data-id="${s.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>`, { aside: `last ${plural(recent.length, 'night')}` })}` : ''}`;
 }
 
 function healthBody() {
   const ws = weights();
   return `
   ${sect('Report', { note: 'Day-to-day water swings smoothed into a trend, read against a lean-bulk rate and your calories.', open: true })}
-  ${bodyAnalytics()}
-  ${ws.length ? `${sect('Every weigh-in', { note: 'The raw readings behind the trend, newest first.', right: `<span class="sect-v">${plural(ws.length, 'weigh-in')}</span>` })}<section class="card glass"><div class="list">${ws.slice().reverse().slice(0, 20).map(w => `
+  ${foldReport('body', bodyAnalytics(), { keep: 2 })}
+  ${ws.length ? `${sect('Every weigh-in', { note: 'The raw readings behind the trend, newest first.' })}${fold('body:weighins', 'Weigh-ins', `<section class="card glass"><div class="list">${ws.slice().reverse().slice(0, 20).map(w => `
     <div class="row tap" data-act="sheet" data-sheet="weight" data-id="${w.id}" role="button"><div class="bar" style="background:var(--move)"></div><div class="grow"><div class="t">${dayLabel(w.date)}</div></div>
-    <div class="amt">${w.kg} kg</div><button class="x-btn" data-act="del" data-id="${w.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>` : ''}`;
+    <div class="amt">${w.kg} kg</div><button class="x-btn" data-act="del" data-id="${w.id}" aria-label="Delete">${icon('close')}</button></div>`).join('')}</div></section>`, { aside: `${plural(Math.min(20, ws.length), 'reading')}, newest first` })}` : ''}`;
 }
 
 // ---------- sheets ----------

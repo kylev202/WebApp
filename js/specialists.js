@@ -10,7 +10,7 @@
 import { state, setKV } from './store.js';
 import { esc, uid, dayKey, addDays, daysBetween, shortDate, toDate, fmt, fmt1, fmtHours, time12, fromMin, toMin, mean, sum, plural, clamp, lastDays } from './util.js';
 import { icon, tile } from './icons.js';
-import { sheets, actions, forms, ui, render, refreshSheet, closeSheet, toast, haptic, closeBtn } from './core.js';
+import { sheets, actions, forms, ui, render, refreshSheet, closeSheet, toast, haptic, closeBtn, switchTab } from './core.js';
 import { goals, of, sleepOn, waterOn, kcalOn, ageOf, heightInfo } from './data.js';
 import { sleepFacts, bodyFacts } from './analytics.js';
 import { dietFacts } from './diet-analytics.js';
@@ -627,7 +627,6 @@ export const consultFor = key => CONSULTS[key]?.();
 // ============================================================
 // RENDERING
 // ============================================================
-const open = () => (ui.consultOpen ??= {});
 const avatar = (d, cls = '') => `<div class="cs-avatar ${cls}" style="--dc:var(--${d.area});--dc-bg:var(--${d.area}-bg);--dc-ink:var(--${d.area}-ink)" aria-hidden="true">${initials(d.name)}<i>${icon('medical')}</i></div>`;
 const chipHtml = ([lv, text]) => `<span class="hv-chip lv-${lv}">${text}</span>`;
 const fmtAI = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/^[-•*] (.+)$/gm, '• $1').replace(/\n/g, '<br>');
@@ -638,48 +637,62 @@ function predHtml(p) {
     <p class="cs-why"><b>Why:</b> ${p.why}</p>${p.lever ? `<p class="cs-lever">${icon('target')}<span>${p.lever}</span></p>` : ''}</div>`;
 }
 
+// On the tab itself a specialist is a short strip: who, their verdict, the one
+// alert that matters, and two ways in. The full consult used to open every
+// Health tab and filled most of the first screen before any of your own
+// numbers; it now opens as a sheet, where it has the room to be read.
 export function consultCard(key) {
   const d = DOCTORS[key];
   let c;
   try { c = consultFor(key); } catch (err) { console.error('Loop: consult failed', key, err); return ''; }
   if (!c) return '';
-  const isOpen = !!open()[key];
-  const letter = consultLetters()[`${key}:${dayKey()}`];
-  const team = key === 'overview' && c.team?.length ? `<div class="cs-team">${c.team.map(x => `<button class="cs-member" data-act="segTab" data-key="health" data-tab="${x.k}">${avatar(DOCTORS[x.k], 'sm')}<div class="grow"><div class="t">${DOCTORS[x.k].short}</div><div class="d">${DOCTORS[x.k].role}</div></div>${chipHtml(x.c.level)}</button>`).join('')}</div>` : '';
-  const shown = c.predictions.slice(0, 2);
-  return `<section class="card glass consult" style="--dc:var(--${d.area});--dc-bg:var(--${d.area}-bg);--dc-ink:var(--${d.area}-ink)">
-    <div class="cs-head">${avatar(d)}<div class="grow"><div class="cs-name">${d.name}</div><div class="cs-role">${d.role} · consult ${shortDate(dayKey())}</div></div>${chipHtml(c.level)}</div>
-    ${key === 'overview' && c.index != null ? `<div class="cs-index"><div class="big-xl">${c.index}<small>/ 100 wellbeing index</small></div><div class="track"><div class="fill" style="width:${c.index}%"></div></div></div>` : ''}
-    <p class="cs-impression">${c.impression}</p>
-    ${c.alerts.length ? `<div class="cs-alert">${icon('alert')}<div>${c.alerts[0]}${c.alerts.length > 1 ? ` <small>+${c.alerts.length - 1} more in the full consult</small>` : ''}</div></div>` : ''}
+  const team = key === 'overview' && c.team?.length ? `<div class="cs-team-row" role="list" aria-label="Your care team">${c.team.map(x => `<button role="listitem" class="cs-mate lv-${x.c.level[0]}" data-act="segTab" data-key="health" data-tab="${x.k}" aria-label="${esc(`${DOCTORS[x.k].short}, ${DOCTORS[x.k].tab}: ${plain(x.c.level[1])}`)}">${avatar(DOCTORS[x.k], 'sm')}<span>${DOCTORS[x.k].tab}</span></button>`).join('')}</div>` : '';
+  const extra = [c.findings.length && plural(c.findings.length, 'finding'), c.predictions.length && plural(c.predictions.length, 'forecast'), c.plan.length && `${c.plan.length}-step plan`].filter(Boolean).join(' · ');
+  return `<section class="card glass consult cs-strip" style="--dc:var(--${d.area});--dc-bg:var(--${d.area}-bg);--dc-ink:var(--${d.area}-ink)">
+    <div class="cs-head">${avatar(d)}<div class="grow"><div class="cs-name">${d.name}</div><div class="cs-role">${d.role}</div></div>
+      ${key === 'overview' && c.index != null ? `<div class="cs-score" role="img" aria-label="Wellbeing index ${c.index} out of 100" style="--p:${c.index}"><b>${c.index}</b></div>` : chipHtml(c.level)}</div>
+    <p class="cs-impression clamp">${c.impression}</p>
+    ${c.alerts.length ? `<div class="cs-alert">${icon('alert')}<div>${c.alerts[0]}${c.alerts.length > 1 ? ` <small>+${c.alerts.length - 1} more in the consult</small>` : ''}</div></div>` : ''}
     ${team}
-    ${shown.length ? `<div class="cs-label">${icon('chart')}What I expect</div><div class="cs-preds">${shown.map(predHtml).join('')}</div>` : ''}
-    <details class="cs-more" data-consult="${key}" ${isOpen ? 'open' : ''}>
-      <summary><span>${isOpen ? 'Hide full consult' : 'Full consult'}</span><small>${[c.findings.length && plural(c.findings.length, 'finding'), c.predictions.length > shown.length && `${plural(c.predictions.length - shown.length, 'more forecast')}`, c.plan.length && `${c.plan.length}-step plan`].filter(Boolean).join(' · ')}</small>${icon('chevron')}</summary>
-      ${letter ? `<div class="cs-letter"><div class="cs-label">${icon('sparkle')}Consult letter</div><p>${fmtAI(letter)}</p></div>` : ''}
-      ${c.findings.length ? `<div class="cs-label">${icon('search')}What I see</div><ul class="cs-findings">${c.findings.map(x => `<li>${icon(x.ic)}<div><div>${x.html}</div>${x.why ? `<small>${x.why}</small>` : ''}</div></li>`).join('')}</ul>` : ''}
-      ${c.predictions.length > shown.length ? `<div class="cs-label">${icon('chart')}More forecasts</div><div class="cs-preds">${c.predictions.slice(shown.length).map(predHtml).join('')}</div>` : ''}
-      ${c.plan.length ? `<div class="cs-label">${icon('list')}My plan for you</div><ol class="cs-plan">${c.plan.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
-      ${c.alerts.length || c.flags.length ? `<div class="cs-label">${icon('alert')}See someone in person if</div><ul class="cs-flags">${c.alerts.map(x => `<li class="hot">${x}</li>`).join('')}${c.flags.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
-      ${c.gaps.length ? `<div class="cs-label">${icon('info')}What would sharpen this</div><ul class="cs-gaps">${c.gaps.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
-      ${c.followUp ? `<p class="cs-follow">${icon('calendar')}<span>${c.followUp}</span></p>` : ''}
-    </details>
     <div class="cs-actions">
-      <button class="btn soft" data-act="sheet" data-sheet="specialist" data-spec="${key}">${icon('sparkle')} Ask ${d.short}</button>
-      ${hasAI() ? `<button class="pill-btn" data-act="consultLetter" data-spec="${key}" ${letterPending.has(key) ? 'disabled' : ''}>${letterPending.has(key) ? 'Writing…' : letter ? 'Rewrite letter' : 'Write my letter'}</button>` : ''}
+      <button class="btn soft" data-act="sheet" data-sheet="consult" data-spec="${key}">${icon('medical')} Full consult</button>
+      <button class="btn soft cs-ask" data-act="sheet" data-sheet="specialist" data-spec="${key}" aria-label="Ask ${esc(d.short)}">${icon('sparkle')} Ask</button>
     </div>
-    <p class="cs-disc">An AI specialist reading your logs: guidance, not a diagnosis.</p>
+    ${extra ? `<p class="cs-disc">${extra} · guidance from your logs, not a diagnosis</p>` : ''}
   </section>`;
 }
 
-// <details> toggles natively; remember it so a redraw doesn't snap it shut.
-document.addEventListener('toggle', e => {
-  const el = e.target;
-  if (!el.matches?.('details[data-consult]')) return;
-  open()[el.dataset.consult] = el.open;
-  const s = el.querySelector('summary > span');
-  if (s) s.textContent = el.open ? 'Hide full consult' : 'Full consult';
-}, true);
+// The full consult, in a sheet.
+sheets.consult = ({ spec }) => {
+  const key = DOCTORS[spec] ? spec : 'overview';
+  const d = DOCTORS[key];
+  let c;
+  try { c = consultFor(key); } catch (err) { console.error('Loop: consult failed', key, err); }
+  if (!c) return `<h2>${d.short} ${closeBtn}</h2><p class="note">Not enough data for a consult yet.</p>`;
+  const letter = consultLetters()[`${key}:${dayKey()}`];
+  const team = key === 'overview' && c.team?.length ? `<div class="cs-team">${c.team.map(x => `<button class="cs-member" data-act="consultTeam" data-tab="${x.k}">${avatar(DOCTORS[x.k], 'sm')}<div class="grow"><div class="t">${DOCTORS[x.k].short}</div><div class="d">${DOCTORS[x.k].role}</div></div>${chipHtml(x.c.level)}</button>`).join('')}</div>` : '';
+  return `<h2>Consult · ${shortDate(dayKey())} ${closeBtn}</h2>
+  <div class="cs-sheet consult" style="--dc:var(--${d.area});--dc-bg:var(--${d.area}-bg);--dc-ink:var(--${d.area}-ink)">
+    <div class="cs-sheet-head">${avatar(d)}<div class="grow"><div class="cs-name">${d.name}</div><div class="cs-role">${d.role}</div></div>${chipHtml(c.level)}</div>
+    ${key === 'overview' && c.index != null ? `<div class="cs-index"><div class="big-xl">${c.index}<small>/ 100 wellbeing index</small></div><div class="track"><div class="fill" style="width:${c.index}%"></div></div></div>` : ''}
+    <p class="cs-impression">${c.impression}</p>
+    ${c.alerts.length ? `<div class="cs-alert">${icon('alert')}<div>${c.alerts.join('<br>')}</div></div>` : ''}
+    ${team}
+    ${letter ? `<div class="cs-letter"><div class="cs-label">${icon('sparkle')}Consult letter</div><p>${fmtAI(letter)}</p></div>` : ''}
+    ${c.predictions.length ? `<div class="cs-label">${icon('chart')}What I expect</div><div class="cs-preds">${c.predictions.map(predHtml).join('')}</div>` : ''}
+    ${c.findings.length ? `<div class="cs-label">${icon('search')}What I see</div><ul class="cs-findings">${c.findings.map(x => `<li>${icon(x.ic)}<div><div>${x.html}</div>${x.why ? `<small>${x.why}</small>` : ''}</div></li>`).join('')}</ul>` : ''}
+    ${c.plan.length ? `<div class="cs-label">${icon('list')}My plan for you</div><ol class="cs-plan">${c.plan.map(x => `<li>${x}</li>`).join('')}</ol>` : ''}
+    ${c.alerts.length || c.flags.length ? `<div class="cs-label">${icon('alert')}See someone in person if</div><ul class="cs-flags">${c.alerts.map(x => `<li class="hot">${x}</li>`).join('')}${c.flags.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+    ${c.gaps.length ? `<div class="cs-label">${icon('info')}What would sharpen this</div><ul class="cs-gaps">${c.gaps.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+    ${c.followUp ? `<p class="cs-follow">${icon('calendar')}<span>${c.followUp}</span></p>` : ''}
+    <div class="cs-actions cs-actions-sheet">
+      <button class="btn soft" data-act="sheet" data-sheet="specialist" data-spec="${key}">${icon('sparkle')} Ask ${d.short}</button>
+      ${hasAI() ? `<button class="pill-btn" data-act="consultLetter" data-spec="${key}" ${letterPending.has(key) ? 'disabled' : ''}>${letterPending.has(key) ? 'Writing…' : letter ? 'Rewrite letter' : 'Write my letter'}</button>` : ''}
+    </div>
+    <p class="cs-disc">An AI specialist reading your logs: guidance, not a diagnosis. For anything urgent call 000.</p>
+  </div>`;
+};
+actions.consultTeam = el => { closeSheet(); switchTab('health', el.dataset.tab); };
 
 // ============================================================
 // AI: consult letters and the specialist chat
@@ -735,8 +748,8 @@ ${JSON.stringify(snapshot())}`;
 async function writeLetter(key) {
   if (!hasAI() || letterPending.has(key)) return;
   letterPending.add(key);
-  open()[key] = true;
   render();
+  if (ui.sheet === 'consult') refreshSheet();
   try {
     const res = await generate({ system: specialistPrompt(key), contents: [{ role: 'user', parts: [{ text: 'Write my consult letter for today, addressed to me. Four short paragraphs: (1) your assessment in plain words, (2) your forecasts for the next 2–8 weeks with how confident you are and why, (3) your plan, as 3–5 specific actions, (4) what to watch for and when to see someone in person. Under 220 words. No headings, no sign-off line.' }] }] });
     const text = aiText(res);
@@ -749,6 +762,7 @@ async function writeLetter(key) {
   }
   letterPending.delete(key);
   render();
+  if (ui.sheet === 'consult') refreshSheet();
 }
 
 async function sendSpec(key, text) {

@@ -2,7 +2,7 @@
 import { state, addEntry, updateEntry, setKV } from './store.js';
 import { esc, dayKey, addDays, toDate, monthKey, monthDays, dayLabel, shortDate, money, moneyShort, num, plural, daysBetween } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, ui, render, closeSheet, toast, haptic, closeBtn, header, seg, sect, removeWithUndo, chips, dateField, readDate } from './core.js';
+import { screens, sheets, actions, forms, previews, ui, render, closeSheet, toast, haptic, closeBtn, header, seg, sect, removeWithUndo, chips, dateField, readDate, foldReport } from './core.js';
 import { lineChart, barRow, niceMax } from './charts.js';
 import { of, byId } from './data.js';
 import { todaySections } from './today.js';
@@ -150,7 +150,7 @@ function renderMoney() {
   const m = ui.month ?? monthKey();
   const body = { overview: moneyOverview, report: moneyReport, activity: moneyActivity, bills: moneyBills, savings: moneySavings }[tab](m);
   return `${header('Money', (MONEY_SUB[tab] ?? MONEY_SUB.overview)(m), `<button class="icon-btn glass" data-act="sheet" data-sheet="txn" aria-label="Add transaction">${icon('plus')}</button>`)}
-    ${seg('money', [['overview', 'Overview'], ['report', 'Report'], ['activity', 'Activity'], ['bills', 'Bills'], ['savings', 'Savings']], tab)}${body}`;
+    ${seg('money', [['overview', 'Overview'], ['report', 'Report'], ['activity', 'Activity'], ['bills', 'Bills'], ['savings', 'Savings']], tab, { dock: true })}${body}`;
 }
 screens.money = renderMoney;
 
@@ -303,7 +303,7 @@ function moneyOverview(m) {
 
 // The report is the only tab that looks past this month, so it says so up front.
 const moneyReport = () => `${sect('Report', { note: 'Every category against its own baseline, what recurs, your savings rate and how long the cash would last.', open: true })}
-  ${moneyAnalytics()}`;
+  ${foldReport('money', moneyAnalytics())}`;
 
 function moneyActivity(m) {
   const filter = ui.acct ?? 'all';
