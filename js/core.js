@@ -246,14 +246,16 @@ export function chips(name, options, current, { cols = 0, cls = '' } = {}) {
   return `<div class="pick ${cls}"${cols ? ` style="--cols:${cols}"` : ''}>${options.map(([v, label, ic, area]) => `<label class="pk"${area ? ` style="--pk:var(--${area}-ink);--pkb:var(--${area}-bg);--pkc:var(--${area})"` : ''}><input type="radio" name="${name}" value="${esc(v)}" ${String(current ?? '') === String(v) ? 'checked' : ''}><span>${ic ? icon(ic) : ''}<em>${esc(label)}</em></span></label>`).join('')}</div>`;
 }
 
-// Date as chips: Today / Tomorrow (or Yesterday for past things) / Pick date. past: dates can't be in the future.
-export function dateField(name, value, { none = false, past = false } = {}) {
-  const t = dayKey(), other = addDays(t, past ? -1 : 1);
-  const presets = [...(none ? [['', 'No date']] : []), [t, 'Today'], [other, past ? 'Yesterday' : 'Tomorrow']];
+// Date as chips: Today / Tomorrow (or Yesterday for past things) / Pick date.
+// past: dates can't be in the future. both: Yesterday and Tomorrow, no limit —
+// for things that are sometimes a record and sometimes a plan, like a block.
+export function dateField(name, value, { none = false, past = false, both = false } = {}) {
+  const t = dayKey(), other = addDays(t, past && !both ? -1 : 1);
+  const presets = [...(none ? [['', 'No date']] : []), ...(both ? [[addDays(t, -1), 'Yesterday']] : []), [t, 'Today'], [other, past && !both ? 'Yesterday' : 'Tomorrow']];
   const v = value ?? (none ? '' : t);
   const custom = !presets.some(([d]) => d === v);
   return `<div class="pick date-pick">${presets.map(([d, label]) => `<label class="pk"><input type="radio" name="${name}" value="${d}" ${!custom && v === d ? 'checked' : ''}><span><em>${label}</em></span></label>`).join('')}
-    <label class="pk pk-date"><input type="radio" name="${name}" value="custom" ${custom ? 'checked' : ''}><span>${icon('calendar')}<em class="pk-date-text">${custom ? shortDate(v) : 'Pick date'}</em><input type="date" class="pk-date-in" name="${name}Custom" value="${custom ? esc(v) : ''}" ${past ? `max="${t}"` : ''} aria-label="Pick a date"></span></label></div>`;
+    <label class="pk pk-date"><input type="radio" name="${name}" value="custom" ${custom ? 'checked' : ''}><span>${icon('calendar')}<em class="pk-date-text">${custom ? shortDate(v) : 'Pick date'}</em><input type="date" class="pk-date-in" name="${name}Custom" value="${custom ? esc(v) : ''}" ${past && !both ? `max="${t}"` : ''} aria-label="Pick a date"></span></label></div>`;
 }
 export const readDate = (f, name) => (f.get(name) === 'custom' ? f.get(`${name}Custom`) || null : f.get(name) || null);
 

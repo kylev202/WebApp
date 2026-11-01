@@ -33,6 +33,9 @@ export const BLOCK_KINDS = {
   chores: { label: 'Chores', icon: 'home', color: 'diet' },
   social: { label: 'Social', icon: 'users', color: 'move' },
   rest: { label: 'Rest', icon: 'leaf', color: 'diet' },
+  // Training is logged as a workout, with its sets; this is the hour put aside
+  // for it, which is what a plan for a day needs and a set log can't be.
+  gym: { label: 'Gym', icon: 'dumbbell', color: 'move' },
 };
 export const kindOf = k => BLOCK_KINDS[k] ?? BLOCK_KINDS.study;
 export const blocks = () => of('block');

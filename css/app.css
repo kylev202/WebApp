@@ -860,7 +860,19 @@ a.btn { text-decoration: none; }
 .tl-d-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .tl-block.dragging, .tl-dot.dragging { z-index: 8; overflow: visible; transform: scale(1.03); box-shadow: 0 10px 24px rgba(0,0,0,.18); }
-.tl-block.dragging::after, .tl-dot.dragging::after { content: attr(data-at); position: absolute; left: 50%; top: -10px; transform: translateX(-50%); font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--text); color: #fff; white-space: nowrap; }
+.tl-block.resizing { z-index: 8; overflow: visible; box-shadow: 0 0 0 2px var(--c), 0 8px 20px rgba(0,0,0,.14); }
+.tl-block.dragging::after, .tl-dot.dragging::after, .tl-block.resizing::after { content: attr(data-at); position: absolute; left: 50%; top: -10px; transform: translateX(-50%); font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--text); color: #fff; white-space: nowrap; z-index: 9; }
+
+/* Grips at a block's edges: drag one to change when the block ends (or starts)
+   without opening anything. Wider than they look, because a thumb is. */
+.tl-grip { position: absolute; left: 0; right: 0; height: 15px; cursor: ns-resize; touch-action: none; }
+.tl-grip.top { top: -2px; }
+.tl-grip.bot { bottom: -2px; }
+.tl-grip::after { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 26px; height: 3px; border-radius: 999px; background: currentColor; opacity: .3; }
+.tl-grip.top::after { top: 4px; }
+.tl-grip.bot::after { bottom: 4px; }
+.tl-block.resizing .tl-grip::after { opacity: .85; }
+.tl-stop, .tl-tick { z-index: 2; }
 
 .tl-now { position: absolute; left: 0; right: 0; z-index: 5; pointer-events: none; }
 .tl-now::after { content: ''; position: absolute; left: 46px; right: 0; top: 0; border-top: 1.5px solid var(--move); }
@@ -869,6 +881,16 @@ a.btn { text-decoration: none; }
 .tl-pin .i { width: 11px; height: 11px; }
 
 .tl-feet { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,.05); }
+
+/* The day plan's handle: make one, make another, take it away. */
+.plan-card .btn-row { margin-top: 12px; }
+.plan-card .btn-row .icon-btn { flex: none; width: 48px; height: 48px; border-radius: 16px; }
+.plan-card .btn.danger { flex: none; padding: 0 18px; width: auto; }
+.pc-sum { font-size: 13px; line-height: 1.5; color: var(--text-2); margin: 8px 0 0; }
+.plan-card .note .i { width: 12px; height: 12px; vertical-align: -2px; }
+.pc-spin { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--sleep-bg); border-top-color: var(--sleep); animation: pc-spin .7s linear infinite; }
+@keyframes pc-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pc-spin { animation-duration: 2s; } }
 .day-note { font-size: 13px; line-height: 1.5; }
 .opt { font-weight: 500; color: var(--text-3); }
 .pill-btn.hot { background: var(--move-bg); color: var(--move-ink); }

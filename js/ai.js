@@ -131,6 +131,7 @@ Rules:
 - When asked to plan (study plan, week plan, gym routine), create the items with tools (add_event, add_task, log_block, create_routine) and summarise.
 - A stretch of time spent on something (study, revision, reading, freelance coding, admin, chores, social, rest) is a BLOCK, not an event: use log_block for "I studied 2 til 4", start_block/stop_block for "starting now" / "done", and log_block with planned=true to lay out a plan the user will tick off. Keep add_event for appointments and anything with other people.
 - Loop draws the day on a timeline, so pass a 'time' on log_meal and log_expense whenever the user says or implies when it happened. Without one, anything logged today is placed at the moment they told you.
+${promptSections.map(fn => { try { return fn(); } catch { return ''; } }).filter(Boolean).join('\n')}
 
 YOUR STANDING NOTES ABOUT ME (written by you, rewritten weekly — treat as what you already know, and prefer the DATA below where they disagree):
 ${state.kv.coachProfile?.text || '(nothing yet)'}
@@ -140,12 +141,19 @@ ${JSON.stringify(snapshot())}`;
 }
 
 // ---------- tools ----------
-const S = (type, description, extra = {}) => ({ type, description, ...extra });
-const DATE = S('string', 'YYYY-MM-DD, default today');
-const TIME = d => S('string', `${d}, 24h HH:MM`);
-const obj = (properties, required = []) => ({ type: 'object', properties, required });
+// Feature modules add their own: planner.js pushes the day-planning tools here
+// rather than being imported, so the registry stays a one-way street (a module
+// may depend on the AI client; the client depends on none of them).
+export const extraTools = [];   // () => declaration[] | declaration
+export const extraRun = {};     // name -> (args) => { result, card }
+export const promptSections = []; // () => string, appended to the system prompt
 
-export const tools = () => [
+export const S = (type, description, extra = {}) => ({ type, description, ...extra });
+export const DATE = S('string', 'YYYY-MM-DD, default today');
+export const TIME = d => S('string', `${d}, 24h HH:MM`);
+export const obj = (properties, required = []) => ({ type: 'object', properties, required });
+
+const baseTools = () => [
   { name: 'log_meal', description: 'Log food or drink the user ate.', parameters: obj({ name: S('string', 'Short meal name'), kcal: S('number', 'Calories'), protein_g: S('number', 'Protein grams'), carbs_g: S('number', 'Carb grams'), fat_g: S('number', 'Fat grams'), date: DATE, time: TIME('When they ate it, if they said or it can be inferred') }, ['name', 'kcal', 'protein_g']) },
   { name: 'log_water', description: 'Add glasses of water (250 ml each).', parameters: obj({ glasses: S('number', 'Number of glasses') }, ['glasses']) },
   { name: 'log_sleep', description: 'Log a night of sleep.', parameters: obj({ bed: TIME('Bed time'), wake: TIME('Wake time'), date: S('string', 'The morning they woke up, YYYY-MM-DD') }, ['bed', 'wake']) },
@@ -176,6 +184,8 @@ export const tools = () => [
   { name: 'log_income', description: 'Log money the user received.', parameters: obj({ amount: S('number', 'AUD amount'), source: S('string', 'From whom'), category: S('string', `One of: ${Object.keys(INCOME).join(', ')}`), account: S('string', 'westpac, revolut or cash'), date: DATE }, ['amount', 'category']) },
   { name: 'set_goals', description: 'Change daily goals.', parameters: obj({ kcal: S('number', 'Calories'), protein: S('number', 'Protein g'), water: S('number', 'Glasses'), sleep: S('number', 'Hours') }) },
 ];
+
+export const tools = () => [...baseTools(), ...extraTools.flatMap(t => (typeof t === 'function' ? t() : t))];
 
 const validDate = d => (/^\d{4}-\d{2}-\d{2}$/.test(d ?? '') ? d : dayKey());
 const validTime = t => (/^\d{1,2}:\d{2}$/.test(t ?? '') ? t.padStart(5, '0') : null);
@@ -357,7 +367,8 @@ const RUN = {
 
 export async function runTool(name, args) {
   try {
-    return (await RUN[name]?.(args ?? {})) ?? { result: { ok: false, error: `Unknown tool ${name}` } };
+    const fn = RUN[name] ?? extraRun[name];
+    return (await fn?.(args ?? {})) ?? { result: { ok: false, error: `Unknown tool ${name}` } };
   } catch (err) {
     return { result: { ok: false, error: String(err.message ?? err) } };
   }

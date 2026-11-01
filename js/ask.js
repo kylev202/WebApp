@@ -13,7 +13,7 @@ const SUGGESTIONS = [
   ['diet', 'diet', '3 eggs, 2 toast and a protein shake for breakfast'],
   ['dumbbell', 'move', 'Bench 3x8 at 60, incline db 3x10 at 22'],
   ['card', 'money', 'Spent $18.50 on lunch at uni'],
-  ['calendar', 'school', 'Plan study blocks for my exams this week'],
+  ['calendar', 'school', 'Plan my day tomorrow around my shift'],
   ['chart', 'diet', 'How is my bulk going?'],
   ['coffee', 'work', 'Add a shift Saturday 9 to 3'],
 ];
