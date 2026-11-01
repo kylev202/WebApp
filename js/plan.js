@@ -179,7 +179,7 @@ function calCell(d, sel, month) {
   const its = agendaFor(d);
   const areas = [...new Set(its.map(i => i.area))].slice(0, 3);
   const cls = ['day', d === sel && 'on', d === dayKey() && 'today', month && monthKey(d) !== month && 'off'].filter(Boolean).join(' ');
-  return `<button class="${cls}" data-act="planDay" data-d="${d}" aria-pressed="${d === sel}" aria-label="${dayLabel(d)}${its.length ? `, ${plural(its.length, 'item')}` : ''}">
+  return `<button class="${cls}" data-act="planPick" data-d="${d}" aria-pressed="${d === sel}" aria-label="${dayLabel(d)}${its.length ? `, ${plural(its.length, 'item')}` : ''}">
     ${month ? '' : `<span>${initial(d)}</span>`}<b>${toDate(d).getDate()}</b>
     <i>${areas.map(a => `<em style="background:var(--${a})"></em>`).join('')}</i></button>`;
 }
@@ -554,7 +554,9 @@ document.addEventListener('click', e => {
 });
 
 Object.assign(actions, {
-  planDay: el => { ui.planDay = el.dataset.d; ui.pulse = '[data-cal] .day.on b'; haptic(); render(); },
+  // Named planPick, not planDay: day.js owns actions.planDay (run the AI planner)
+  // and loads later, so the shared registry would otherwise overwrite this one.
+  planPick: el => { ui.planDay = el.dataset.d; ui.pulse = '[data-cal] .day.on b'; haptic(); render(); },
   planStep: el => calStep(Number(el.dataset.d)),
   planToday: () => { ui.planDay = dayKey(); haptic(); render(); },
   async planExpand() { await setKV('planMonthView', !monthView()); haptic(); render(); },
