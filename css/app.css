@@ -906,7 +906,9 @@ a.btn { text-decoration: none; }
 .day-note { font-size: 13px; line-height: 1.5; }
 .opt { font-weight: 500; color: var(--text-3); }
 .pill-btn.hot { background: var(--move-bg); color: var(--move-ink); }
-textarea.input-x { font: inherit; resize: vertical; line-height: 1.45; }
+/* font-family, not the `font` shorthand: the shorthand would reset font-size
+   back to the inherited 14px and iOS would zoom the page on focus. */
+textarea.input-x { font-family: inherit; font-size: 16px; resize: vertical; line-height: 1.45; }
 
 /* ---------- v9 Targets and coach proposals ---------- */
 .track.tgt { margin-top: 6px; }
