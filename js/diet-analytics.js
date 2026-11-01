@@ -27,7 +27,7 @@ const bandOf = min => {
 };
 
 // ---------- the numbers ----------
-function dietFacts() {
+export function dietFacts() {
   const g = goals();
   const today = dayKey();
   const dayOf = d => {

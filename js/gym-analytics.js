@@ -15,9 +15,9 @@ import { chip, note, notes, signed, fmtMins, stat, section, sd, slope, dayNo } f
 // ---------- training theory, in constants ----------
 // Weekly hard sets per muscle: below MEV little grows, MEV–MRV is the productive
 // range, past MRV recovery usually fails before the muscle does.
-const MEV = 10, MAV = 18, MRV = 22;
+export const MEV = 10, MAV = 18, MRV = 22;
 // Acute:chronic workload ratio — the window where adaptation is high and injury risk low.
-const ACWR_OK = [0.8, 1.3];
+export const ACWR_OK = [0.8, 1.3];
 
 // Movement pattern per exercise, read off the muscles it works, so a move added
 // to the library is classified without a second table to keep in step.
@@ -45,7 +45,7 @@ const STANDARDS = {
   front_squat: [0.6, 1.0, 1.4, 2.0, 2.4],
   hip_thrust: [1.0, 1.5, 2.0, 2.75, 3.25],
 };
-const LEVELS = ['Untrained', 'Beginner', 'Novice', 'Intermediate', 'Advanced', 'Elite'];
+export const LEVELS = ['Untrained', 'Beginner', 'Novice', 'Intermediate', 'Advanced', 'Elite'];
 const LEVEL_LV = ['low', 'low', 'ok', 'good', 'good', 'good'];
 const FEMALE = 0.73;
 
@@ -63,7 +63,7 @@ const repsOf = w => w.exercises.reduce((t, x) => t + x.sets.reduce((s, y) => s +
 const tonnes = v => (v >= 1000 ? `${fmt1(v / 1000)} t` : `${fmt(v)} kg`);
 
 // ---------- the numbers ----------
-function gymFacts() {
+export function gymFacts() {
   const all = workouts();                 // newest first
   const today = dayKey();
   const w0 = weekStart();
@@ -195,7 +195,7 @@ function gymFacts() {
 // ---------- training status ----------
 // Volume trend and strength trend together: load alone cannot tell hard work that
 // is paying off from hard work that is digging a hole.
-function status(f) {
+export function status(f) {
   if (f.gap == null || f.gap > 14) return { key: 'detraining', lvl: ['low', 'Detraining'], text: 'No session in over two weeks. Strength starts to slide after about 10 days; restart at roughly 80% of your old loads.' };
   if (f.acwr == null) return { key: 'building', lvl: ['none', 'Building a baseline'], text: 'Four weeks of logged sessions unlock load tracking, training status and trend lines.' };
   const s = f.idxDelta;

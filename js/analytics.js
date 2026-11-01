@@ -15,7 +15,7 @@ import { chip, note, notes, signed, fmtMins, stat, section, meter, sd, slope, da
 // Bedtimes counted from noon so 11:30pm and 12:30am sit an hour apart, not 23.
 const bedMin = s => { const m = toMin(s.bed); return m < 12 * 60 ? m + 1440 : m; };
 
-function sleepFacts() {
+export function sleepFacts() {
   const g = goals();
   const today = dayKey();
   const nights = n => Array.from({ length: n }, (_, i) => addDays(today, i - (n - 1)));
@@ -152,16 +152,11 @@ export function sleepAnalytics() {
 // Lean-bulk band: 0.25–0.5% of body weight a week, same as the rest of the app.
 const BAND = [0.25, 0.5];
 
-export function bodyAnalytics() {
+// The numbers behind the Body report, shared with the body-composition specialist.
+export function bodyFacts() {
   const ws = weights();
   const latest = ws.at(-1);
-  if (!latest) {
-    return `<section class="card glass">
-      <div class="money-top"><div><div class="label-sm">Body composition</div><div class="big-md" style="color:var(--text-3)">No weigh-ins yet</div></div>
-        <button class="pill-btn" data-act="sheet" data-sheet="weight">${icon('plus')} Weigh-in</button></div>
-      <p class="note" style="margin:8px 0 0">Weigh in a few times a week. Loop smooths out day-to-day water swings into a real trend, then reads your rate of gain against a lean-bulk band, your calories and your projected weight.</p>
-    </section>`;
-  }
+  if (!latest) return null;
   const today = dayKey();
   const g = goals();
   const kg = latest.kg;
@@ -187,16 +182,6 @@ export function bodyAnalytics() {
   const rate = weeklyRate();
   const pctRate = rate != null ? (rate / kg) * 100 : null;
 
-  let lvl = ['none', 'Need 2+ weeks of data'];
-  if (pctRate != null) lvl = pctRate < 0 ? ['low', 'Losing weight'] : pctRate < BAND[0] ? ['ok', 'Gaining slowly'] : pctRate > BAND[1] ? ['ok', 'Gaining fast'] : ['good', 'Lean-bulk pace'];
-
-  // Gauge from −0.5% to +1.0% of body weight a week, with the lean-bulk band shaded.
-  const lo = -0.5, hi = 1.0, pos = v => clamp(((v - lo) / (hi - lo)) * 100, 0, 100);
-  const gauge = pctRate == null ? '' : `<div class="an-gauge" role="img" aria-label="Weekly rate against the lean-bulk band">
-      <div class="band" style="left:${pos(BAND[0])}%;width:${pos(BAND[1]) - pos(BAND[0])}%"></div>
-      <i class="zero" style="left:${pos(0)}%"></i><i class="mark" style="left:${pos(pctRate)}%"></i></div>
-    <div class="an-scale"><span>−0.5%</span><span style="left:${pos(0)}%">0</span><span class="band-l" style="left:${(pos(BAND[0]) + pos(BAND[1])) / 2}%">lean bulk ${BAND[0]}–${BAND[1]}%</span><span>+1%</span></div>`;
-
   // Energy: what the scale says you are in surplus by, against what your food log says.
   const kcalFromScale = rate != null ? (rate * 7700) / 7 : null; // ~7700 kcal per kg of body mass
   const logged14 = Array.from({ length: 14 }, (_, i) => kcalOn(addDays(today, -i))).filter(Boolean);
@@ -214,8 +199,32 @@ export function bodyAnalytics() {
   const gaps = last28.slice(1).map((w, i) => daysBetween(last28[i].date, w.date));
   const lastGap = daysBetween(latest.date, today);
   const range30 = ws.filter(w => w.date > addDays(today, -30)).map(w => w.kg);
-
   const proj = fit28 ? n => kg + (fit28.perWeek * n) : null;
+  return { ws, latest, today, g, kg, profile, trend, recent, trendSeries, c7, c30, c90, fit28, fit84, rate, pctRate, kcalFromScale, intake, maint, kcalFromLog, height, bmi, bmiCat, hr, last28, resid, gaps, lastGap, range30, proj, BAND };
+}
+
+export function bodyAnalytics() {
+  const ws = weights();
+  const latest = ws.at(-1);
+  if (!latest) {
+    return `<section class="card glass">
+      <div class="money-top"><div><div class="label-sm">Body composition</div><div class="big-md" style="color:var(--text-3)">No weigh-ins yet</div></div>
+        <button class="pill-btn" data-act="sheet" data-sheet="weight">${icon('plus')} Weigh-in</button></div>
+      <p class="note" style="margin:8px 0 0">Weigh in a few times a week. Loop smooths out day-to-day water swings into a real trend, then reads your rate of gain against a lean-bulk band, your calories and your projected weight.</p>
+    </section>`;
+  }
+  const { today, kg, trend, recent, trendSeries, c7, c30, c90, fit28, fit84, rate, pctRate, kcalFromScale, intake, kcalFromLog, bmi, bmiCat, hr, resid, lastGap, range30, proj } = bodyFacts();
+
+  let lvl = ['none', 'Need 2+ weeks of data'];
+  if (pctRate != null) lvl = pctRate < 0 ? ['low', 'Losing weight'] : pctRate < BAND[0] ? ['ok', 'Gaining slowly'] : pctRate > BAND[1] ? ['ok', 'Gaining fast'] : ['good', 'Lean-bulk pace'];
+
+  // Gauge from −0.5% to +1.0% of body weight a week, with the lean-bulk band shaded.
+  const lo = -0.5, hi = 1.0, pos = v => clamp(((v - lo) / (hi - lo)) * 100, 0, 100);
+  const gauge = pctRate == null ? '' : `<div class="an-gauge" role="img" aria-label="Weekly rate against the lean-bulk band">
+      <div class="band" style="left:${pos(BAND[0])}%;width:${pos(BAND[1]) - pos(BAND[0])}%"></div>
+      <i class="zero" style="left:${pos(0)}%"></i><i class="mark" style="left:${pos(pctRate)}%"></i></div>
+    <div class="an-scale"><span>−0.5%</span><span style="left:${pos(0)}%">0</span><span class="band-l" style="left:${(pos(BAND[0]) + pos(BAND[1])) / 2}%">lean bulk ${BAND[0]}–${BAND[1]}%</span><span>+1%</span></div>`;
+
   const insights = [];
   if (pctRate != null) {
     const [bl, bh] = [kg * BAND[0] / 100, kg * BAND[1] / 100];

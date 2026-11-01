@@ -9,6 +9,7 @@ import { overviewTab, overviewHeader } from './overview.js';
 import { sleepAnalytics, bodyAnalytics } from './analytics.js';
 import { dietAnalytics } from './diet-analytics.js';
 import { gymAnalytics } from './gym-analytics.js';
+import { consultCard } from './specialists.js';
 
 export function mealRow(m) {
   return `<div class="row tap" data-act="sheet" data-sheet="meal" data-id="${m.id}" role="button">
@@ -21,7 +22,10 @@ function renderHealth() {
   const tab = ui.tab.health ?? 'overview';
   const body = { overview: overviewTab, gym: () => gymTab(gymAnalytics()), diet: healthDiet, sleep: healthSleep, body: healthBody }[tab]();
   const top = tab === 'overview' ? overviewHeader() : header('Health', longDate());
-  return `${top}${seg('health', [['overview', 'Overview'], ['gym', 'Gym'], ['diet', 'Diet'], ['sleep', 'Sleep'], ['body', 'Body']], tab)}${body}`;
+  // Each tab has its own specialist, who reads that tab's data first. The GP reads
+  // everything, so it sits on today's overview (a past day is a record, not a consult).
+  const doc = tab === 'overview' && ui.tab.healthDate ? '' : consultCard(tab);
+  return `${top}${seg('health', [['overview', 'Overview'], ['gym', 'Gym'], ['diet', 'Diet'], ['sleep', 'Sleep'], ['body', 'Body']], tab)}${doc}${body}`;
 }
 screens.health = renderHealth;
 
