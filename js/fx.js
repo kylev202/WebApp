@@ -18,26 +18,31 @@ function animate(el, frames, opts) {
 }
 
 // The tab pill travels like a drop of liquid: its leading edge stretches ahead to
-// the new tab, the rest catches up and it wobbles as it settles.
-let pillAnim = null;
-export function slidePill(el, from, to) {
+// the new tab, the rest catches up and it wobbles as it settles. The bottom tab
+// bar and every row of sub-tabs at the top use this same motion; `key` keeps
+// each bar's animation its own, so one never cancels the other.
+const pillAnims = new Map();
+export function slidePill(el, from, to, key = 'tabbar') {
   if (!canAnimate || from.x === to.x) return;
   // Tapped again mid-slide: carry on from where the pill is now, not where it was headed.
-  if (pillAnim?.playState === 'running') {
-    const cs = getComputedStyle(el);
-    from = { x: new DOMMatrix(cs.transform).e, w: parseFloat(cs.width) };
-    pillAnim.cancel();
+  const prev = pillAnims.get(key);
+  if (prev?.playState === 'running') {
+    if (prev.effect?.target === el) {
+      const cs = getComputedStyle(el);
+      from = { x: new DOMMatrix(cs.transform).e, w: parseFloat(cs.width) };
+    }
+    prev.cancel();
   }
   const fromR = from.x + from.w, toR = to.x + to.w;
   const [l, r] = to.x > from.x
     ? [from.x + (to.x - from.x) * 0.3, toR]
     : [to.x, fromR + (toR - fromR) * 0.3];
   const frame = (x, w, sy = 1) => ({ transform: `translateX(${x}px) scaleY(${sy})`, width: `${w}px` });
-  pillAnim = animate(el, [
+  pillAnims.set(key, animate(el, [
     { ...frame(from.x, from.w), easing: 'cubic-bezier(.45,0,.55,1)' },
     { ...frame(l, r - l, 0.8), offset: 0.36, easing: ease('spring-soft') },
     frame(to.x, to.w),
-  ], { duration: 640 });
+  ], { duration: 640 }));
 }
 
 // Slide new content in from the side with a springy settle (calendar weeks).

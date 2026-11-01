@@ -59,6 +59,7 @@ export function render({ enter = false, dir = 0 } = {}) {
   });
   document.getElementById('topbar-title').textContent = TITLES[route] ?? '';
   moveTabIndicator();
+  moveSegIndicators();
   if (ui.pulse) {
     main.querySelectorAll(ui.pulse).forEach(el => el.classList.add('pop'));
     ui.pulse = null;
@@ -90,6 +91,33 @@ export function moveTabIndicator(instant = false) {
   if (pill && !instant) slidePill(ind, pill, to);
   pill = to;
 }
+
+// The sub-tabs at the top get the same liquid pill as the tab bar. A screen is
+// redrawn from scratch on every change, so each row's last position is kept by
+// its key and the new pill slides over from there. Only a real move hops the
+// label; a redraw for some other reason leaves the pill where it is.
+const segPills = {};
+export function moveSegIndicators() {
+  main.querySelectorAll('.seg[data-seg]').forEach(row => {
+    const ind = row.querySelector('.seg-ind'), on = row.querySelector('button.on');
+    if (!ind) return;
+    if (!on) { ind.style.opacity = '0'; return; }
+    const key = row.dataset.seg, to = { x: on.offsetLeft, w: on.offsetWidth }, from = segPills[key];
+    ind.style.opacity = '1';
+    ind.style.width = `${to.w}px`;
+    ind.style.transform = `translateX(${to.x}px)`;
+    if (from && from.x !== to.x) {
+      slidePill(ind, from, to, `seg:${key}`);
+      on.classList.add('hop');
+    }
+    segPills[key] = to;
+  });
+}
+// A rotation or a text-size change moves every tab: place the pills afresh, without a slide.
+window.addEventListener('resize', () => {
+  for (const k of Object.keys(segPills)) delete segPills[k];
+  moveSegIndicators();
+});
 
 // ---------- sheets ----------
 export function openSheet(name, params = {}) {
@@ -299,7 +327,7 @@ export const sect = (title, { note = '', right = '', open = false, id = '' } = {
 // switching sub-tab never means scrolling back to the top first, and a sideways
 // swipe anywhere on the page moves to the next one (see the swipe handler below).
 export const seg = (key, options, current, { dock = false } = {}) => {
-  const html = `<div class="seg wide" role="tablist">${options.map(([k, label]) =>
+  const html = `<div class="seg wide" role="tablist" data-seg="${key}"><span class="seg-ind" aria-hidden="true"></span>${options.map(([k, label]) =>
     `<button role="tab" aria-selected="${current === k}" class="${current === k ? 'on' : ''}" data-act="segTab" data-key="${key}" data-tab="${k}">${label}</button>`).join('')}</div>`;
   return dock ? `<div class="dock-mark" aria-hidden="true"></div><div class="seg-dock" data-swipe="${key}">${html}</div>` : html;
 };

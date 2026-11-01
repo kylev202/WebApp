@@ -7,7 +7,7 @@ import { goals, habits, DEFAULT_GOALS } from './data.js';
 import { healthProfileSection, goalsSuggestion } from './profile.js';
 import { displaySection } from './display.js';
 
-export const VERSION = '5.0.0';
+export const VERSION = '5.0.1';
 // Later versions add their own settings cards (AI key, connections...).
 export const settingsSections = [];
 
