@@ -25,6 +25,10 @@ async function call(path, body) {
   return data;
 }
 
+// An alias Google keeps pointed at a current model: the safety net when the
+// stored name dies and the model list can't be read.
+const FALLBACK_MODEL = 'gemini-flash-latest';
+
 // Pick the newest general "Flash" model this key can use (names change often).
 export async function listModels() {
   const data = await call('models?pageSize=200');
@@ -37,7 +41,34 @@ export function bestModel(names) {
   const version = n => parseFloat(n.match(/gemini-(\d+(?:\.\d+)?)/)?.[1] ?? 0);
   const stable = names.filter(n => !/preview/.test(n) && !/latest/.test(n));
   const pool = stable.length ? stable : names.filter(n => !/latest/.test(n));
-  return pool.sort((a, b) => version(b) - version(a) || a.length - b.length)[0] ?? 'gemini-flash-latest';
+  return pool.sort((a, b) => version(b) - version(a) || a.length - b.length)[0] ?? FALLBACK_MODEL;
+}
+
+// Google retires model names, sometimes mid-conversation: the one chosen when the
+// key was connected starts answering "no longer available to new users". Spot that,
+// pick a live one and retry, so Ask carries on instead of printing Google's raw
+// message and leaving the fix to a Refresh in Settings.
+const RETIRED = /no longer available|not found|is not supported|not supported for|deprecat|has been (?:retired|removed)|does not exist/i;
+export const isRetiredModel = err => RETIRED.test(String(err?.message ?? err ?? ''));
+
+// The error usually names its own replacement: "...use models/gemini-3.8-flash...".
+function namedReplacement(message, stale) {
+  const names = [...String(message).matchAll(/models\/(gemini-[a-z0-9][a-z0-9.-]*)/gi)].map(m => m[1]);
+  return names.reverse().find(n => n !== stale) ?? null;
+}
+
+// Find a model that still works and remember it on this device.
+export async function repickModel(err) {
+  const s = aiSettings();
+  const stale = s.model;
+  const fresh = (await listModels().catch(() => [])).filter(n => n !== stale);
+  const named = namedReplacement(err?.message ?? err ?? '', stale);
+  const pick = fresh.length
+    ? (named && fresh.includes(named) ? named : bestModel(fresh))
+    : (named ?? (stale === FALLBACK_MODEL ? null : FALLBACK_MODEL));
+  if (!pick || pick === stale) throw err; // nothing better to try — let the chat say so
+  await setKV('ai', { ...s, ...(fresh.length ? { models: fresh } : {}), model: pick });
+  return pick;
 }
 
 // Gemini 2.5 and newer think before they answer, and the thinking comes out of
@@ -48,20 +79,30 @@ export function bestModel(names) {
 let noThinking = true;
 
 export async function generate({ system, contents, tools }) {
-  const model = aiSettings().model || 'gemini-flash-latest';
   const body = {
     systemInstruction: { parts: [{ text: system }] },
     contents,
     ...(tools ? { tools: [{ functionDeclarations: tools }], toolConfig: { functionCallingConfig: { mode: 'AUTO' } } } : {}),
     generationConfig: { temperature: 0.4, maxOutputTokens: 8192, ...(noThinking ? { thinkingConfig: { thinkingBudget: 0 } } : {}) },
   };
+  // Read the model each time: a retry below may have changed it.
+  const send = () => call(`models/${aiSettings().model || FALLBACK_MODEL}:generateContent`, body);
+  const attempt = async () => {
+    try {
+      return await send();
+    } catch (err) {
+      if (!noThinking || !/thinking|thought/i.test(String(err.message ?? err))) throw err;
+      noThinking = false; // this model always thinks; let it, the cap is big enough
+      delete body.generationConfig.thinkingConfig;
+      return send();
+    }
+  };
   try {
-    return await call(`models/${model}:generateContent`, body);
+    return await attempt();
   } catch (err) {
-    if (!noThinking || !/thinking|thought/i.test(String(err.message ?? err))) throw err;
-    noThinking = false; // this model always thinks; let it, the cap is big enough
-    delete body.generationConfig.thinkingConfig;
-    return call(`models/${model}:generateContent`, body);
+    if (!isRetiredModel(err)) throw err;
+    await repickModel(err); // the stored name is dead — switch to a live one and go again
+    return attempt();
   }
 }
 

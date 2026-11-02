@@ -3,7 +3,7 @@ import { state, setKV } from './store.js';
 import { esc, uid, timeOf, dayKey, dayLabel } from './util.js';
 import { icon, tile } from './icons.js';
 import { screens, actions, forms, afterRender, ui, render, openSheet, toast, haptic, confetti, header } from './core.js';
-import { aiSettings, hasAI, listModels, bestModel, generate, systemPrompt, tools, runTool, undoCard } from './ai.js';
+import { aiSettings, hasAI, listModels, bestModel, isRetiredModel, generate, systemPrompt, tools, runTool, undoCard } from './ai.js';
 import { settingsSections } from './settings.js';
 
 const chat = () => state.kv.chat ?? [];
@@ -115,7 +115,7 @@ function friendlyError(err) {
   if (/api key not valid|API_KEY_INVALID|permission/i.test(m)) return 'That API key doesn’t work. Check it in Settings → AI assistant.';
   if (/quota|rate|429|exhausted/i.test(m)) return 'The free Gemini limit is used up for now. Try again in a minute.';
   if (/failed to fetch|network|load failed/i.test(m)) return 'I can’t reach Gemini right now. Check your connection and try again.';
-  if (/not found|is not supported/i.test(m)) return 'This Gemini model isn’t available any more. Open Settings → AI assistant and tap Refresh models.';
+  if (isRetiredModel(m)) return 'Google has retired the Gemini model Loop was using, and I couldn’t find a replacement this key can use. Open Settings → AI assistant and tap Refresh.';
   return `Something went wrong: ${m}`;
 }
 
@@ -136,6 +136,7 @@ export async function sendMessage(text, image) {
   text = String(text ?? '').trim();
   if (busy || (!text && !image)) return;
   busy = true;
+  const modelBefore = aiSettings().model;
   const msgs = [...chat(), { id: uid(), role: 'user', text: text || 'What is in this photo? Log it if it is food, a roster or a receipt.', photo: !!image, ts: Date.now() }];
   state.kv.chat = msgs;
   ui.askPhoto = null;
@@ -176,6 +177,11 @@ export async function sendMessage(text, image) {
     // Whatever happened, the composer has to come back: a stuck flag left Ask
     // showing "Thinking…" with the input disabled until the app was restarted.
     busy = false;
+    // Google retired the model mid-chat and ai.js moved to a live one. Say so
+    // once, so the switch isn't a silent change to what's answering.
+    if (aiSettings().model && aiSettings().model !== modelBefore) {
+      toast(`Gemini retired that model — now using ${aiSettings().model}`, { icon: 'sparkle', ms: 4000 });
+    }
   }
   await setKV('chat', msgs.slice(-60));
   render();
