@@ -2,7 +2,7 @@
 import { state, addEntry, updateEntry, removeEntry, setKV } from './store.js';
 import { esc, uid, pad, dayKey, addDays, addMonths, toDate, weekStart, monthKey, monthDays, monthName, dayLabel, shortDate, longDate, initial, time12, toMin, nowHHMM, fmt, fmt1, money, num, plural, daysBetween } from './util.js';
 import { icon, tile } from './icons.js';
-import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sect, removeWithUndo, chips, dateField, readDate, toggle, afterRender, foldReport } from './core.js';
+import { screens, sheets, actions, forms, previews, ui, render, openSheet, closeSheet, toast, haptic, closeBtn, header, seg, sect, removeWithUndo, chips, dateField, readDate, toggle, afterRender } from './core.js';
 import { of, byId } from './data.js';
 import { lineChart } from './charts.js';
 import { todaySections } from './today.js';
@@ -236,7 +236,7 @@ function planUni() {
     return `<div class="row tap" data-act="sheet" data-sheet="cls" data-id="${c.id}" role="button"><div class="time">${time12(c.start)}</div><div class="bar" style="background:var(--${course.color ?? 'school'})"></div><div class="grow"><div class="t">${esc(course.code)} ${esc(c.kind)}</div><div class="d">${time12(c.start)}–${time12(c.end)}${c.room ? ` · ${esc(c.room)}` : ''}</div></div></div>`;
   }).join('')}</div></div>`).join('') : '<div class="empty">Add your weekly classes and they appear in your agenda automatically.</div>'}</section>
   ${sect('Marks report', { nav: 'Marks', note: 'What you have scored against what each piece was worth, and what the rest still has to score.' })}
-  ${foldReport('uni', uniAnalytics())}`;
+  ${uniAnalytics()}`;
 }
 
 function planWork() {

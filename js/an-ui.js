@@ -9,7 +9,9 @@ export const notes = items => (items.length ? `<ul class="hv-notes">${items.join
 export const signed = (n, d = 1) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(d)}`;
 export const fmtMins = m => { m = Math.round(m); return m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${String(m % 60).padStart(2, '0')}m` : ''}` : `${m} min`; };
 export const stat = (l, v, sub = '') => `<div class="stat"><div class="l">${l}</div><div class="v">${v}${sub ? `<span> ${sub}</span>` : ''}</div></div>`;
-export const section = (title, aside = '') => `<div class="section-label">${title}${aside ? ` <span>${aside}</span>` : ''}</div>`;
+// nav: a short name for the section bar, used where a screen is one long report
+// and its group labels are what the bar points at (see buildSectionNav).
+export const section = (title, aside = '', nav = '') => `<div class="section-label"${nav ? ` data-nav="${nav}"` : ''}>${title}${aside ? ` <span>${aside}</span>` : ''}</div>`;
 export const meter = (label, pct, text, color) => `<div class="macro an-meter"><span>${label}</span><div class="track"><div class="fill" style="width:${clamp(pct, 0, 100)}%;background:${color}"></div></div><b>${text}</b></div>`;
 export const sd = xs => (xs.length >= 3 ? Math.sqrt(mean(xs.map(x => (x - mean(xs)) ** 2))) : null);
 

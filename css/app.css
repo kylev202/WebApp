@@ -1626,22 +1626,45 @@ body:has(.seg-dock) .topbar { border-bottom-color: transparent; }
    A flat row of names, not a second segmented control: the pills above choose
    the screen, these choose where in it you land. */
 .subnav { margin-top: 5px; }
-/* Wraps rather than scrolling sideways, so every name is on show at once. */
-.subnav-in { display: flex; flex-wrap: wrap; gap: 4px; }
-.sn {
-  white-space: nowrap; font-size: calc(11.5px * var(--ts)); font-weight: 600; color: var(--text-3);
-  padding: 5px 10px; border-radius: 9px; min-height: 28px;
-  transition: background .2s, color .2s;
+/* Wraps rather than scrolling sideways, so every name is on show at once; the
+   row-gap leaves room for the tap area below, so two rows never catch each
+   other's taps. */
+.subnav-in { position: relative; display: flex; flex-wrap: wrap; column-gap: 4px; row-gap: 14px; }
+/* One pill travels between the names, the way it does in the tab bar and the
+   sub-tabs above — in both directions here, because the row wraps. */
+.sn-ind {
+  position: absolute; top: 0; left: 0; z-index: 0; opacity: 0; border-radius: 10px;
+  background: var(--sleep-bg); box-shadow: inset 0 0 0 1px rgba(255,255,255,.7);
+  transition: transform .5s var(--spring-soft), width .4s var(--spring-soft), height .2s, opacity .2s;
 }
-.sn.on { background: var(--sleep-bg); color: var(--sleep-ink); }
+.sn {
+  position: relative; z-index: 1;
+  white-space: nowrap; font-size: calc(11.5px * var(--ts)); font-weight: 600; color: var(--text-3);
+  padding: 5px 10px; border-radius: 10px; min-height: 28px;
+  transition: color .25s, opacity .2s;
+}
+/* Colour, not weight: a bolder name would re-wrap the row as you scroll. */
+.sn.on { color: var(--sleep-ink); }
 .sn:active { opacity: .55; }
+.sn:focus-visible { outline: 2px solid var(--sleep-ink); outline-offset: 1px; }
+/* A name is small on purpose — a whole screen's worth has to fit across the bar
+   — so its tap area reaches past it, to a thumb's size, without moving a pixel. */
+.sn::after { content: ""; position: absolute; inset: -6px -2px; }
+/* How far down the screen you have read, along the foot of the dock. A long
+   section gives no sense of place on its own; this does, in 2px. */
+.seg-dock::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; pointer-events: none;
+  background: linear-gradient(90deg, var(--sleep), var(--move)); border-radius: 0 2px 2px 0;
+  transform: scaleX(var(--read, 0)); transform-origin: left; opacity: 0; transition: opacity .3s;
+}
+.scrolled .seg-dock:has(.subnav)::after { opacity: .9; }
 /* On its own (Today, Settings) the dock holds only this bar, so it needs no
    room above the pills it does not have. */
 .seg-dock:not(:has(.seg)) { padding-top: 2px; }
 .seg-dock:not(:has(.seg)) .subnav { margin-top: 0; }
 /* Anything a tile or link jumps to lands below the title bar and everything
    pinned under it, whose height core.js measures into --dock-h. */
-.sect, [id^="ov-"] { scroll-margin-top: calc(env(safe-area-inset-top) + 52px + var(--dock-h, 48px)); }
+.sect, .section-label, [id^="ov-"] { scroll-margin-top: calc(env(safe-area-inset-top) + 52px + var(--dock-h, 48px)); }
 
 /* A sub-tab changed sideways slides in from that side; the title and the tabs stay put. */
 .enter[data-dir] .screen > header, .enter[data-dir] .screen > .seg-dock, .enter[data-dir] .screen > .dock-mark { animation: none; }
@@ -1649,31 +1672,6 @@ body:has(.seg-dock) .topbar { border-bottom-color: transparent; }
 .enter[data-dir="l"] .screen > .seg-dock ~ * { animation-name: slide-from-l; }
 @keyframes slide-from-r { from { opacity: 0; transform: translateX(40px); } }
 @keyframes slide-from-l { from { opacity: 0; transform: translateX(-40px); } }
-
-/* Folds: a long report as a list of what it covers, each with its verdict. */
-.fold > summary { list-style: none; }
-.fold > summary::-webkit-details-marker { display: none; }
-.fold-h {
-  display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 12px 10px 14px; cursor: pointer;
-  border-radius: 18px; background: rgba(255,255,255,.58); border: 1px solid rgba(255,255,255,.85);
-  box-shadow: inset 0 1px 0 #fff, 0 4px 18px -12px rgba(60,60,100,.18);
-  backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
-  transition: transform .18s cubic-bezier(.3,1.4,.5,1), background .2s;
-}
-.fold-h:active { transform: scale(.985); background: rgba(255,255,255,.75); }
-.fold-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.fold-t b { font-size: calc(14.5px * var(--ts)); font-weight: 650; letter-spacing: -.01em; }
-.fold-t small { font-size: calc(11.5px * var(--ts)); color: var(--text-3); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fold-h .hv-chip { flex: none; max-width: 46%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fold-c { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.04); color: var(--text-3); }
-.fold-c .i { width: 15px; height: 15px; transform: rotate(90deg); transition: transform .35s var(--spring-soft); }
-.fold[open] > .fold-h { background: rgba(255,255,255,.4); box-shadow: none; }
-.fold[open] > .fold-h .fold-c .i { transform: rotate(-90deg); }
-.fold-b { display: flex; flex-direction: column; gap: 12px; padding-top: 10px; }
-.fold-b > .section-label:first-child { display: none; }
-.fold[open] > .fold-b { animation: fold-in .45s cubic-bezier(.2,.9,.3,1) both; }
-@keyframes fold-in { from { opacity: 0; transform: translateY(-8px); } }
-.fold + .fold { margin-top: -4px; }
 
 /* Specialists: a short strip on the tab, the whole consult in a sheet. */
 .cs-strip .cs-impression.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-top: 10px; }
@@ -1705,22 +1703,22 @@ button.hv-pillar:active { transform: scale(.96); }
 
 /* Increase contrast: follows the iPhone setting, or Settings → Display. */
 .hc { --text-2: rgba(28,28,30,.86); --text-3: rgba(28,28,30,.76); --glass: rgba(255,255,255,.93); --stroke: rgba(0,0,0,.14); }
-.hc .glass, .hc .fold-h { border-color: rgba(0,0,0,.16); box-shadow: none; }
+.hc .glass { border-color: rgba(0,0,0,.16); box-shadow: none; }
 .hc .hv-chip, .hc .chip { box-shadow: inset 0 0 0 1px currentColor; }
 .hc .seg button.on { box-shadow: inset 0 0 0 1.5px var(--text); }
+.hc .sn-ind { box-shadow: inset 0 0 0 1.5px var(--text); }
+.hc .sn.on { color: var(--text); }
 .hc .blob { opacity: .25; }
 /* Reduce transparency: solid surfaces instead of frosted glass. */
 .rt { --glass: rgba(255,255,255,.97); }
-.rt .glass, .rt .topbar, .rt .tabbar, .rt .seg-dock::before, .rt .fold-h, .rt .toast { backdrop-filter: none; -webkit-backdrop-filter: none; }
+.rt .glass, .rt .topbar, .rt .tabbar, .rt .seg-dock::before, .rt .toast { backdrop-filter: none; -webkit-backdrop-filter: none; }
 .rt .topbar, .rt .seg-dock::before { background: #f8f8fb; }
-.rt .fold-h { background: #fff; }
 .rt .blob { display: none; }
 
 /* Display settings */
 .ts-sample { margin: 4px 0 12px; padding: 12px 14px; border-radius: 16px; background: rgba(255,255,255,.7); }
 .ts-sample b { display: block; font-size: calc(15px * var(--ts)); }
 .ts-sample span { font-size: calc(12px * var(--ts)); color: var(--text-2); }
-.fold.solo > .fold-b > .card:first-child > .head:first-child { display: none; }
 .cs-strip .cs-actions .btn.cs-ask { width: auto; }
 .cs-strip .cs-actions .btn:first-child { min-width: 0; white-space: nowrap; }
 

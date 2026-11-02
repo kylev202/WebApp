@@ -247,7 +247,7 @@ function baselineCard(f) {
   if (f.noSpend) ins.push(note('calendar', 'sleep', `<b>${plural(f.noSpend, 'no-spend day')}</b> out of the last ${WIN}. They are the cheapest habit there is.`));
   if (f.biggest) ins.push(note('card', 'money', `Biggest single expense was <b>${money(Number(f.biggest.amount))}</b>${f.biggest.merchant ? ` at ${esc(f.biggest.merchant)}` : ''} on ${shortDate(f.biggest.date)}.`));
 
-  return `${section('Spend against baseline', `${WIN} days vs ${f.baseReady ? `${fmt1(f.baseWeeks)} weeks` : 'no baseline'}`)}
+  return `${section('Spend against baseline', `${WIN} days vs ${f.baseReady ? `${fmt1(f.baseWeeks)} weeks` : 'no baseline'}`, 'Spending')}
   <section class="card glass">
     <div class="hv-top"><div><div class="label-sm">Spent in the last 4 weeks</div>
       <div class="big-xl">${money(f.spent, false)}${f.baseSpend != null ? `<small>baseline ${money(f.baseSpend, false)}</small>` : ''}</div></div>
@@ -266,7 +266,7 @@ function baselineCard(f) {
 function recurringCard(f) {
   const r = f.recurring;
   if (!r.items.length) {
-    return `${section('Recurring costs')}
+    return `${section('Recurring costs', '', 'Recurring')}
     <section class="card glass">
       <div class="head"><div class="title">${tile('repeat', 'sleep')}Recurring costs</div></div>
       <p class="note" style="margin:0">Nothing repeating found yet. Add your rent, phone, gym and subscriptions on the Bills tab and this card tracks what they cost a month, what they cost six months ago, and anything that crept up in between.</p>
@@ -297,7 +297,7 @@ function recurringCard(f) {
   const yearly = r.items.filter(x => x.every > 180);
   if (yearly.length) ins.push(note('calendar', 'school', `${plural(yearly.length, 'yearly charge')} (${yearly.slice(0, 2).map(x => esc(x.name)).join(', ')}) spread out to ${money(sum(yearly.map(x => x.now)), false)} a month here, so one big invoice does not read as a spike.`));
 
-  return `${section('Recurring costs', 'per month')}
+  return `${section('Recurring costs', 'per month', 'Recurring')}
   <section class="card glass">
     <div class="hv-top"><div><div class="label-sm">Charging you every cycle</div>
       <div class="big-xl">${money(r.monthlyNow, false)}<small>${money(r.monthlyNow * 12, false)} a year</small></div></div>${chip(lvl)}</div>
@@ -344,7 +344,7 @@ function savingsCard(f) {
   if (f.toGoals > 0) ins.push(note('target', 'sleep', `<b>${money(f.toGoals, false)} a month</b> of it goes into savings goals. Money moved on purpose is the part that survives the month.`));
   else if (f.net > 50) ins.push(note('target', 'sleep', `You are keeping ${money(f.net, false)} a month but none of it is assigned to a savings goal. Money without a name tends to get spent.`));
 
-  return `${section('Savings rate', 'last 3 months')}
+  return `${section('Savings rate', 'last 3 months', 'Savings')}
   <section class="card glass">
     <div class="head"><div class="title">${tile('piggy', 'sleep')}Of what comes in, what stays</div>${chip(lvl)}</div>
     <div class="an-score"><div class="big-xl">${rate != null ? `${Math.round(rate)}%` : '–'}<small>${money(f.net, false)} a month</small></div>
@@ -370,7 +370,7 @@ function savingsCard(f) {
 // Cash runway: how long the money on hand covers the way you actually live.
 function runwayCard(f) {
   if (f.spendable == null) {
-    return `${section('Cash runway')}
+    return `${section('Cash runway', '', 'Runway')}
     <section class="card glass">
       <div class="money-top"><div><div class="label-sm">Cash runway</div><div class="big-md" style="color:var(--text-3)">Balances not set up</div></div>
         <button class="pill-btn" data-act="sheet" data-sheet="balances">${icon('plus')} Set up</button></div>
@@ -400,7 +400,7 @@ function runwayCard(f) {
     ins.push(note('bolt', 'school', `Trimming <b>${money(cut, false)} a month</b> of flexible spending lowers the burn to ${money(f.burn - cut, false)} and stretches the same cash to <b>${fmt1(f.spendable / (f.burn - cut))} months</b>.`));
   }
 
-  return `${section('Cash runway', `at ${money(f.burn, false)} a month`)}
+  return `${section('Cash runway', `at ${money(f.burn, false)} a month`, 'Runway')}
   <section class="card glass">
     <div class="hv-top"><div><div class="label-sm">Spendable cash would last</div>
       <div class="big-xl">${f.runway != null ? fmt1(f.runway) : '–'}<small>months · ${money(f.spendable, false)} on hand</small></div></div>${chip(lvl)}</div>

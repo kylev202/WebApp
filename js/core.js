@@ -71,12 +71,13 @@ export function render({ enter = false, dir = 0 } = {}) {
 }
 
 // ---------- section bar ----------
-// A screen is a stack of sections (see sect()). Folding them away behind tabs or
-// summaries hides what is in them — you cannot tell a section's contents from a
-// closed block — so the screen stays whole and scrollable and gets a bar naming
-// every section on it. The bar rides in the same pinned dock as the sub-tabs:
-// those choose which screen you are on, this chooses where in it you land. It
-// marks the section you are reading and jumps to any of the others.
+// A screen is a stack of sections (see sect()). Nothing on a screen folds away
+// behind a summary — a closed block tells you nothing about what is inside it —
+// so every screen stays whole and scrollable and gets a bar naming the sections
+// on it. The bar rides in the same pinned dock as the sub-tabs: those choose
+// which screen you are on, this chooses where in it you land. It says what the
+// screen holds before you scroll, marks the section you are reading, shows how
+// far down it you are, and jumps to any of the others.
 //
 // It is built from the rendered page, so a screen only needs sect() to get one;
 // there is no list to keep in step with the markup.
@@ -85,24 +86,41 @@ export function render({ enter = false, dir = 0 } = {}) {
 // the bar, so a tap on one of those is remembered and the bar marks what was
 // asked for rather than whatever happens to sit under the line.
 let jumped = null, jumpedAt = 0;
+// The marked chip. -1 means the bar was just built (or the row has re-wrapped),
+// so the pill is placed where it belongs instead of sliding there from nowhere.
+let snActive = -1;
+// What the bar on this screen is pointing at: its chapters, or — on a screen
+// that is one long read with no chapters of its own, like the money report —
+// the labels of the groups inside it.
+let snSel = '.sect';
 
 function buildSectionNav() {
   const screen = main.querySelector('.screen');
-  const sects = [...main.querySelectorAll('.sect')];
+  let marks = [...main.querySelectorAll('.sect')];
+  snSel = '.sect';
+  if (marks.length < 2) {
+    marks = [...main.querySelectorAll('.section-label')];
+    snSel = '.section-label';
+  }
+  snActive = -1;
   // A bar listing one destination is just the heading again.
-  if (!screen || sects.length < 2) return;
-  const ids = sects.map((el, i) => {
+  if (!screen || marks.length < 2) return;
+  const ids = marks.map((el, i) => {
     // Some sections already carry an id that a tile jumps to; keep it.
     if (!el.id) el.id = `sect-${i}`;
     return el.id;
   });
-  const labels = sects.map((el, i) => el.dataset.nav || el.querySelector('h2')?.textContent || `Section ${i + 1}`);
+  // A group label carries its own aside in a <span>; only the name goes in the bar.
+  const labels = marks.map((el, i) => el.dataset.nav || el.querySelector('h2')?.textContent
+    || el.firstChild?.textContent?.trim() || `Section ${i + 1}`);
   jumped = null;
   jumpedAt = 0;
   const nav = document.createElement('nav');
   nav.className = 'subnav';
   nav.setAttribute('aria-label', 'Sections on this screen');
-  nav.innerHTML = `<div class="subnav-in">${ids.map((id, i) =>
+  // The pill sits under the chips, so it can travel between them rather than a
+  // background switching off one chip and on under another.
+  nav.innerHTML = `<div class="subnav-in"><span class="sn-ind" aria-hidden="true"></span>${ids.map((id, i) =>
     `<button class="sn" data-act="jump" data-to="${id}" data-i="${i}">${esc(labels[i])}</button>`).join('')}</div>`;
   // Into the sub-tab dock where there is one, so the two bars pin as one block;
   // otherwise the bar gets a dock of its own to pin in.
@@ -129,7 +147,24 @@ function measureDock() {
   const dock = main.querySelector('.seg-dock');
   document.documentElement.style.setProperty('--dock-h', `${dock ? Math.round(dock.getBoundingClientRect().height) : 0}px`);
 }
-window.addEventListener('resize', measureDock);
+
+// The marked chip gets the same liquid pill as the tab bar and the sub-tabs. It
+// travels in two directions, because the bar wraps: a chip on a second row is
+// reached by dropping to it, not only by sliding along.
+function moveSectionPill(nav, btn, instant) {
+  const ind = nav.querySelector('.sn-ind');
+  if (!ind) return;
+  if (!btn) { ind.style.opacity = '0'; return; }
+  if (instant) ind.style.transition = 'none';
+  ind.style.opacity = '1';
+  ind.style.width = `${btn.offsetWidth}px`;
+  ind.style.height = `${btn.offsetHeight}px`;
+  ind.style.transform = `translate(${btn.offsetLeft}px, ${btn.offsetTop}px)`;
+  if (instant) {
+    void ind.offsetWidth; // take this move at once; animate the next one
+    ind.style.transition = '';
+  }
+}
 
 // Which section you are reading: the last one whose heading has come up under
 // the pinned bars.
@@ -139,25 +174,68 @@ function markSection() {
   // The margin clears the gap a jump leaves, so landing on a section always
   // marks that section and never the one above it.
   const line = nav.getBoundingClientRect().bottom + 40;
-  const sects = [...main.querySelectorAll('.sect')];
+  const sects = [...main.querySelectorAll(snSel)];
   let active = 0;
   sects.forEach((el, i) => { if (el.getBoundingClientRect().top <= line) active = i; });
-  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
-    // Bottomed out: honour the tap that brought us here, else the last section.
-    active = jumped ?? sects.length - 1;
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  const atEnd = window.scrollY >= max - 4;
+  if (atEnd && jumped != null) {
+    // A section at the foot of the page can never be scrolled up to the bar, and
+    // on a screen that fits on the phone none of them can. Either way the tap
+    // that brought us here is the answer, not whatever sits under the line.
+    active = jumped;
+  } else if (atEnd && max > 8) {
+    active = sects.length - 1;
   } else if (Date.now() - jumpedAt > 1200) {
     // Forget the tap once its scroll has settled mid-page. The test is on time,
     // not position, because a smooth scroll passes through the middle of the
     // page on its way down.
     jumped = null;
   }
-  nav.querySelectorAll('.sn').forEach((b, i) => {
+  const chips = [...nav.querySelectorAll('.sn')];
+  chips.forEach((b, i) => {
     const on = i === active;
     b.classList.toggle('on', on);
     b.setAttribute('aria-current', on ? 'true' : 'false');
+    // Only the marked chip is a tab stop: the bar is one control to tab onto,
+    // and the arrow keys move along it from there.
+    b.tabIndex = on ? 0 : -1;
   });
+  if (active !== snActive) {
+    moveSectionPill(nav, chips[active], snActive < 0 || reduceMotion);
+    snActive = active;
+  }
+  // A section can be long, so the bar also says how far down the screen you are:
+  // a hairline along the foot of the dock, filling as you read.
+  nav.closest('.seg-dock')?.style.setProperty('--read', max > 8 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0);
 }
-window.addEventListener('scroll', markSection, { passive: true });
+
+// Marking is throttled to one pass a frame: a screen can hold a dozen sections
+// and each pass measures every one of them.
+let snFrame = 0;
+function onSectionScroll() {
+  if (snFrame) return;
+  snFrame = requestAnimationFrame(() => { snFrame = 0; markSection(); });
+}
+window.addEventListener('scroll', onSectionScroll, { passive: true });
+// A turn or a text-size change re-wraps the bar, which moves every chip: the
+// dock is measured again and the pill re-placed where it now sits.
+window.addEventListener('resize', () => { measureDock(); snActive = -1; markSection(); });
+
+// The bar is one tab stop, walked with the arrow keys like a real tab row.
+document.addEventListener('keydown', e => {
+  const btn = e.target.closest?.('.sn');
+  if (!btn || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+  const chips = [...btn.closest('.subnav').querySelectorAll('.sn')];
+  const at = chips.indexOf(btn);
+  const to = e.key === 'Home' ? 0 : e.key === 'End' ? chips.length - 1
+    : Math.min(chips.length - 1, Math.max(0, at + (e.key === 'ArrowRight' ? 1 : -1)));
+  if (to === at) return;
+  e.preventDefault();
+  chips[to].tabIndex = 0;
+  chips[to].focus();
+  chips[to].click();
+});
 
 // Tappable cards and rows are divs; give them a button role and a tab stop so
 // VoiceOver and a keyboard can reach them (app.js turns Enter/Space into a tap).
@@ -494,61 +572,3 @@ actions.jump = el => {
   markSection();
   setTimeout(markSection, 600);
 };
-
-// ---------- folds ----------
-// A long report reads as a short list of what it covers, each with its verdict;
-// tap one to open it. The first card of a report stays open, because that is
-// the headline. What you open (or close) is remembered on this phone.
-const FOLD_KEY = 'loop.folds';
-const foldState = (() => { try { return JSON.parse(localStorage.getItem(FOLD_KEY)) ?? {}; } catch { return {}; } })();
-document.addEventListener('toggle', e => {
-  const el = e.target;
-  if (!el.matches?.('details[data-fold]')) return;
-  foldState[el.dataset.fold] = el.open;
-  try { localStorage.setItem(FOLD_KEY, JSON.stringify(foldState)); } catch { /* private mode: remembered until reload */ }
-}, true);
-
-const stripTags = s => String(s).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-const slug = s => stripTags(s).toLowerCase().replace(/&[a-z#0-9]+;/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-const CHIP_RE = /<span class="hv-chip lv-[\w-]+">[^<]*<\/span>/;
-
-// solo: the fold wraps one card under that card's own title, so the card's
-// heading is hidden while it is open instead of being said twice.
-export function fold(id, title, body, { aside = '', chip = '', lead = '', open = false, solo = false } = {}) {
-  const isOpen = foldState[id] ?? open;
-  return `<details class="fold${solo ? ' solo' : ''}" data-fold="${esc(id)}"${isOpen ? ' open' : ''}>
-    <summary class="fold-h">${lead}<span class="fold-t"><b>${title}</b>${aside ? `<small>${aside}</small>` : ''}</span>${chip}<span class="fold-c" aria-hidden="true">${icon('chevron')}</span></summary>
-    <div class="fold-b">${body}</div></details>`;
-}
-
-// Turn a report (a run of section labels and cards) into folds. A section label
-// and the cards under it fold together under the label's name; a card on its
-// own folds under its own title. The first `keep` pieces stay as they are.
-export function foldReport(scope, html, { keep = 1, open = [] } = {}) {
-  const parts = String(html).split(/(?=<div class="section-label">|<section class="card)/).map(p => p.trim()).filter(Boolean);
-  const groups = [];
-  let cur = null;
-  for (const p of parts) {
-    if (p.startsWith('<div class="section-label">')) groups.push(cur = { label: p, cards: [] });
-    else if (cur) cur.cards.push(p);
-    else groups.push({ label: null, cards: [p] });
-  }
-  return groups.map((g, i) => {
-    const body = g.cards.join('\n');
-    if (i < keep || !body) return (g.label ?? '') + body;
-    let title = '', aside = '', lead = '';
-    if (g.label) {
-      const inner = g.label.match(/^<div class="section-label">([\s\S]*?)<\/div>/)?.[1] ?? '';
-      const m = inner.match(/^([\s\S]*?)\s*<span>([\s\S]*)<\/span>\s*$/);
-      [title, aside] = m ? [m[1], m[2]] : [inner, ''];
-    } else {
-      const t = body.match(/<div class="title">([\s\S]*?)<\/div>/);
-      if (!t) return body;
-      lead = t[1].match(/^<span class="tile[^"]*"[^>]*>[\s\S]*?<\/span>/)?.[0] ?? '';
-      title = stripTags(t[1].slice(lead.length));
-      aside = stripTags(body.slice(t.index, t.index + 400).match(/<div class="sub-note">([\s\S]*?)<\/div>/)?.[1] ?? '');
-    }
-    const id = `${scope}:${slug(title)}`;
-    return fold(id, title, body, { aside, lead, solo: !g.label, chip: body.match(CHIP_RE)?.[0] ?? '', open: open.includes(slug(title)) });
-  }).join('\n');
-}
