@@ -12,11 +12,16 @@ import { previews, sect, chips, toggle, toast } from './core.js';
 
 const root = document.documentElement;
 const SIZES = [['auto', 'Match iPhone'], ['1', 'Default'], ['1.1', 'Large'], ['1.2', 'Larger'], ['1.3', 'Largest']];
+const THEMES = [['auto', 'Match iPhone'], ['light', 'Light'], ['dark', 'Dark']];
+// The address bar and the status bar behind the app have to be told the
+// colour too, or a dark screen opens behind a light strip.
+const THEME_COLOR = { light: '#f8f6f2', dark: '#121113' };
 const media = q => window.matchMedia?.(q) ?? { matches: false, addEventListener() {} };
 const moreContrast = media('(prefers-contrast: more)');
 const lessTransparency = media('(prefers-reduced-transparency: reduce)');
+const prefersDark = media('(prefers-color-scheme: dark)');
 
-export const displayPrefs = () => ({ text: 'auto', contrast: false, solid: false, ...state.kv.display });
+export const displayPrefs = () => ({ text: 'auto', theme: 'auto', contrast: false, solid: false, ...state.kv.display });
 
 // The iPhone's text size as a multiple of the default. Never below 1: the layout
 // is already compact, and inputs must stay at 16px or iOS zooms into them.
@@ -34,6 +39,20 @@ function iphoneScale() {
 export function applyDisplay(p = displayPrefs()) {
   const scale = p.text === 'auto' ? iphoneScale() : Number(p.text) || 1;
   root.style.setProperty('--ts-u', String(Math.round(scale * 100) / 100));
+  // 'auto' leaves the attribute off, so the stylesheet's own
+  // prefers-color-scheme rules decide; light or dark pins it.
+  if (p.theme === 'light' || p.theme === 'dark') root.dataset.theme = p.theme;
+  else delete root.dataset.theme;
+  // Mirrored into localStorage so the inline script in index.html can set the
+  // theme before the first paint; the stored preference itself lives in
+  // IndexedDB with everything else, which can only be read asynchronously.
+  try { localStorage.setItem('loop-theme', p.theme); } catch { /* private mode */ }
+  const dark = p.theme === 'dark' || (p.theme !== 'light' && prefersDark.matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.remove());
+  const meta = document.createElement('meta');
+  meta.name = 'theme-color';
+  meta.content = THEME_COLOR[dark ? 'dark' : 'light'];
+  document.head.append(meta);
   root.classList.toggle('hc', !!p.contrast || moreContrast.matches);
   root.classList.toggle('rt', !!p.solid || lessTransparency.matches);
 }
@@ -41,15 +60,18 @@ export function applyDisplay(p = displayPrefs()) {
 // The iPhone settings can change while Loop is in the background.
 moreContrast.addEventListener?.('change', () => applyDisplay());
 lessTransparency.addEventListener?.('change', () => applyDisplay());
+prefersDark.addEventListener?.('change', () => applyDisplay());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') applyDisplay(); });
 
 export function displaySection() {
   const p = displayPrefs();
   const auto = Math.round(iphoneScale() * 100);
   const sizes = SIZES.map(([v, label]) => [v, v === 'auto' ? `${label}${auto > 100 ? ` · ${auto}%` : ''}` : label]);
-  return `${sect('Display & accessibility', { nav: 'Display', note: 'Text size follows your iPhone unless you choose one here. Motion follows Reduce Motion in iPhone Settings.' })}
+  return `${sect('Display & accessibility', { nav: 'Display', note: 'Appearance and text size follow your iPhone unless you choose them here. Motion follows Reduce Motion in iPhone Settings.' })}
   <form class="card glass" data-form="display">
-    <div class="label-sm">Text size</div>
+    <div class="label-sm">Appearance</div>
+    ${chips('theme', THEMES, p.theme, { cls: 'wrap' })}
+    <div class="label-sm" style="margin-top:14px">Text size</div>
     ${chips('text', sizes, p.text, { cls: 'wrap' })}
     <div class="ts-sample" aria-hidden="true"><b>2,928 kcal · 199 g protein</b><span>This is how report text will read.</span></div>
     ${toggle('contrast', 'Increase contrast', p.contrast || moreContrast.matches)}
@@ -62,12 +84,19 @@ export function displaySection() {
 let saveTimer = null;
 previews.display = form => {
   const f = new FormData(form);
-  const p = { text: String(f.get('text') ?? 'auto'), contrast: f.get('contrast') === 'on', solid: f.get('solid') === 'on' };
+  const theme = String(f.get('theme') ?? 'auto');
+  const p = {
+    text: String(f.get('text') ?? 'auto'),
+    theme: THEMES.some(([v]) => v === theme) ? theme : 'auto',
+    contrast: f.get('contrast') === 'on',
+    solid: f.get('solid') === 'on',
+  };
   applyDisplay(p);
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     const was = displayPrefs();
     await setKV('display', p);
     if (was.text !== p.text) toast('Text size updated', { icon: 'check' });
+    else if (was.theme !== p.theme) toast(`Appearance: ${THEMES.find(([v]) => v === p.theme)[1]}`, { icon: 'check' });
   }, 250);
 };

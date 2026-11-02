@@ -1,10 +1,50 @@
 # Loop
 
-My personal life manager for iPhone: diet, gym, sleep, uni, work and money in one place, in a soft pastel "Liquid Glass" style.
+My personal life manager for iPhone: diet, gym, sleep, uni, work and money in one place.
 
 The full plan, decisions and roadmap are in [PLAN.md](PLAN.md). Design mockups are in [`design/`](design/).
 
-## What's new in v5: built for the big iPhones
+## What's new in v5.1: one design system, and a dark theme
+
+Loop had grown from six cards on a screen to sixty numbers on one, and the soft
+pastel "Liquid Glass" look hadn't grown with it. Every surface was the same
+frosted pane, so nothing sat in front of anything else; the tile colours were
+candy bright, so six of them on one screen shouted over the data; and the type,
+spacing and corners had been chosen rule by rule, so nothing lined up with
+anything. v5.1 is a pass over the whole look, taking its cue from **Bevel**:
+calm, warm, editorial, data first.
+
+- **Two materials, and the difference is the point.** A card is paper laid on
+  the page: solid, a hairline, barely a shadow. Glass is kept for the things
+  that genuinely float over it — the tab bar, the title bar, the pinned dock,
+  sheets and toasts — which is what makes them read as floating. A long report
+  used to stack a few dozen backdrop filters down the page; now it stacks none,
+  and scrolls like it.
+- **A palette instead of a paint box.** The six domain colours are re-pitched
+  to one chroma and one lightness — sage, clay, iris, ochre, slate and teal —
+  so a screen carrying several of them reads as one family. The ground is warm
+  bone rather than blue-white, with three very low-chroma washes and a fine
+  grain over it: depth, with no colour cast under the numbers.
+- **Dark mode.** The whole sheet is tokens now, so dark is the same rules with a
+  different set of values rather than a second stylesheet to keep in step. It
+  follows your iPhone by default, and **Settings → Display → Appearance** pins
+  Light or Dark. The choice is mirrored into `localStorage` so a pinned theme is
+  already on screen at the first paint instead of flashing the other one.
+- **Scales, not guesses.** One type ramp (`--fs-micro` … `--fs-3xl`), one weight
+  ladder, one space scale and one radius scale. Display numbers are bigger and
+  tracked tighter, and every figure that can change is `tabular-nums`, so a card
+  never shifts under your thumb as it updates. Small-caps eyebrows label a
+  block; the chapter heading carries the screen and now has real air above it.
+- **The day leads.** The install hint and the backup nag used to be the first
+  two things on Today, so the app opened on housekeeping. They moved to the
+  foot of the screen — still unmissable on a screen you scroll anyway.
+- **Contrast is checked, not eyeballed.** Every piece of text clears WCAG AA
+  4.5:1 in both themes, verified by a script that composites each translucent
+  ancestor to work out what a glyph is actually sitting on. Tertiary text used
+  to aim at 4:1. **Increase contrast** and **Reduce transparency** still follow
+  the iPhone's own settings, and now strengthen the hairlines too.
+
+## What's in v5: built for the big iPhones
 
 Every Health tab had grown into a long scroll of analytics and text (Diet ran to about seven screens). v5 restructures the screens around **glance first, depth on tap**, tuned for a one-handed 6.7" iPhone 15 / 16 Pro Max.
 

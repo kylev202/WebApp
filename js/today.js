@@ -25,6 +25,10 @@ function greeting() {
   return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 }
 
+// Housekeeping: an install hint and a backup nag. They used to sit above
+// everything, so the first screenful of the app was two pieces of admin
+// rather than the day. They go at the foot now — still unmissable on a
+// screen you scroll anyway, but they no longer push the day off the top.
 function banners() {
   let html = '';
   if (!isStandalone() && !state.kv.installHintDismissed) {
@@ -71,7 +75,6 @@ function renderToday() {
   return `
   ${header(greeting(), dateLine, `<button class="icon-btn glass" data-act="nav" data-to="settings" aria-label="Settings">${icon('gear')}</button>`)}
   ${viewToggle()}
-  ${banners()}
   ${at('top')}
 
   ${sect('Today', { nav: 'Today', note: 'Where the day stands against your goals. Tap any card to log.', open: true })}
@@ -146,7 +149,8 @@ function renderToday() {
       empty: 'Log meals, water and sleep to see your week here.',
     })}
   </section>
-  ${at('week')}`;
+  ${at('week')}
+  ${banners()}`;
 }
 screens.today = renderToday;
 

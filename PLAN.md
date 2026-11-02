@@ -4,7 +4,7 @@
 
 A personal app to manage every part of my life — diet, gym, sleep, university, work, money, habits — in one place, with an AI assistant that does the logging and coaching. Built for **one user (me)**, used mainly on **iPhone**.
 
-_Last updated: Oct 27, 2026_
+_Last updated: Nov 2, 2026_
 
 ---
 
@@ -31,6 +31,7 @@ _Last updated: Oct 27, 2026_
 | v9 Long-term coach (targets, memory, trend-aware weekly, proposals) | ✅ Done |
 | v10 Health overview (default Health tab: day summary, recovery, nutrition pace, muscle recovery, day log) | ✅ Done |
 | v11 Big-iPhone redesign (whole screens with a section bar, specialist strips, pinned sub-tabs, swipe, Text Size, contrast, launch screens) | ✅ Done |
+| v5.1 Design system (tokens, warm paper + glass chrome, muted palette, type/space/radius scales, dark mode, AA contrast) | ✅ Done |
 | Next: set up relay, Gemini key, Canvas token, Google Client ID on the phone | ⏳ Your setup |
 
 Current mockup: `design/mockup.html` (open with `#today`, `#ask`, `#money`). Screenshots: `design/today-full.png`, `design/ask-full.png`, `design/money-full.png`.
@@ -101,12 +102,39 @@ back at, so the coach was given a past and a horizon.
 
 ## 3. Design Decisions (confirmed)
 
-- **Style:** Apple's recent iOS "Liquid Glass" look — translucent frosted cards, soft blurred background, rounded corners, bold large headings, floating glass tab bar.
-- **Colors:** light and soft pastels, *not* strong/saturated colors. Near-white background with faint color washes. Light theme only.
-  - Diet = mint `#8fd3a8` · Gym = blush `#f4a7b5` · Sleep = lavender `#b4b2ef`
-  - School = peach `#f7cd96` · Work = sky `#a9cdf2` · Finance = aqua (TBD, soft)
-- **Layout:** compact and small — iPhone-first (390 px wide). No desktop sidebar.
+Revised in **v5.1**, taking its cue from Bevel: calm, editorial, data-first.
+The pastel "Liquid Glass" look was right for a screen with six cards on it and
+wrong for one with sixty numbers — candy tints and a frosted pane under
+everything flattened the hierarchy just as the reports got long.
+
+- **Style:** warm paper, not blue-white glass. Two materials, and the
+  difference is the point:
+  - **Paper** — a card. Solid `--surface`, a hairline, barely a shadow.
+  - **Glass** — the floating chrome only: tab bar, title bar, pinned dock,
+    sheets, toasts. These sit *over* the page and should show it moving under
+    them. (It is also why the long reports scroll smoothly now: a screen used
+    to composite a few dozen backdrop filters.)
+- **Colors:** six domains at roughly one chroma and one lightness, so a screen
+  holding several of them reads as one palette rather than a paint box.
+  - Diet = sage `#7f9f74` · Gym = clay `#c08375` · Sleep = iris `#7f80ab`
+  - School = ochre `#c09a5e` · Work = slate `#7593b1` · Money = teal `#6b9e98`
+- **Light and dark**, from one stylesheet: every colour is a token, so dark is
+  the same rules with a different set of values. Follows the iPhone by default;
+  **Settings → Display → Appearance** pins Light or Dark.
+- **Ground:** warm bone `#f8f6f2` (near-black `#121113` in dark) with three
+  very low-chroma washes drifting over it and a fine grain on top — depth
+  without a colour cast under the data.
+- **Type:** one scale (`--fs-micro` … `--fs-3xl`), one weight ladder
+  (400/500/600/700), tight tracking on display numbers, and `tabular-nums`
+  everywhere a figure can change, so nothing shifts under your thumb.
+  Small-caps eyebrows label a block; the chapter heading carries the screen.
+- **Space and radius:** `--sp-1…7` and `--r-xs…2xl`, so padding and corners
+  come off a scale instead of being chosen per rule.
+- **Layout:** compact and small — iPhone-first (390 px wide), tuned for 430 px.
+  No desktop sidebar.
 - **Charts:** **line charts** preferred over ring/pie charts. Smooth curves, thin strokes.
+- **Contrast:** every piece of text clears **WCAG AA 4.5:1** in both themes
+  (tertiary text used to aim at 4:1), checked by script, not by eye.
 - **No account / profile / login.** Personal use only.
 - **Font:** system font (SF Pro on iPhone; Inter as fallback).
 
