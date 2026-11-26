@@ -19,7 +19,7 @@ _Last updated: Nov 2, 2026_
 | Brainstorm + detail questions answered | ✅ Done |
 | Mockup v3: Today (briefing, workout, weight, money), ✨ Ask, Money screens | ✅ Done |
 | v1 build (Today, Diet, Water, Sleep, Weight, Habits, Settings, backup, PWA) | ✅ Done — see README for install |
-| Host on GitHub Pages | ✅ Live at https://kylev202.github.io/WebApp/ |
+| Host on GitHub Pages | ✅ Live at https://kylev202.github.io/WebApp/loops/ |
 | Install on iPhone (Share → Add to Home Screen) | ⏳ Next |
 | v1.1 polish: new loop icon, edit/undo, bulk calculator, bulk rate, animations, haptics | ✅ Done |
 | v2 Gym + custom icon set | ✅ Done |

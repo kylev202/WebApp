@@ -133,7 +133,7 @@ python3 -m http.server 8000
 
 ## Put it on your iPhone
 
-1. Host the folder on HTTPS. The free option is **GitHub Pages**: repo **Settings → Pages → Deploy from a branch → `main` / root**. The app will be at `https://<username>.github.io/WebApp/`.
+1. Host the folder on HTTPS. The free option is **GitHub Pages**: repo **Settings → Pages → Deploy from a branch → `main` / root**. Loop will be at `https://<username>.github.io/WebApp/loops/`.
    GitHub Pages on a free account requires the repo to be **public**. The code holds no personal data or keys, since your data stays on your phone.
 2. Open that link in **Safari** on the iPhone.
 3. Tap **Share → Add to Home Screen**.

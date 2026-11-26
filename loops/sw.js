@@ -1,5 +1,6 @@
 // Offline support. Network first (so updates show up straight away), falling back to the
 // cached copy when offline or the network is slow. Bump CACHE when releasing.
+// Only Loop's own caches are cleared: other apps on this site keep theirs.
 const CACHE = 'loop-v5.1.0';
 const SHELL = [
   './', './index.html', './css/app.css', './js/app.js', './js/store.js', './js/charts.js', './js/util.js', './js/icons.js',
@@ -14,7 +15,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith('loop-') && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });

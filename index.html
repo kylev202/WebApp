@@ -2,53 +2,34 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f8f6f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121113" media="(prefers-color-scheme: dark)">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Loop">
-<!-- No phone-number or date links in the numbers: "2,928" is a calorie count, not a number to call. -->
-<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
-<meta name="color-scheme" content="light dark">
-<!-- Launch screens, so opening from the Home Screen shows Loop instead of a blank white page. -->
-<link rel="apple-touch-startup-image" href="icons/splash-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="icons/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="icons/splash-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="icons/splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<link rel="apple-touch-startup-image" href="icons/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
-<meta name="description" content="Loop: my personal life manager for diet, gym, sleep, uni, work and money.">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
-<link rel="stylesheet" href="css/app.css">
-<!-- Appearance before the first paint: the choice lives in IndexedDB, which
-     can only be read asynchronously, so it is mirrored into localStorage.
-     Without this a pinned Light or Dark flashes the other one on launch. -->
-<script>try{var t=localStorage.getItem('loop-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
-<title>Loop</title>
+<title>Apps</title>
+<style>
+  :root { --bg: #f8f6f2; --card: #fff; --ink: #1c1b1f; --muted: #6b6870; --line: #e7e3dc; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #121113; --card: #1d1c1f; --ink: #f2f0ec; --muted: #9a979e; --line: #2c2a2e; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 48px 20px; background: var(--bg); color: var(--ink); font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 28px; margin: 0 0 20px; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  a { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); color: inherit; text-decoration: none; }
+  img { width: 52px; height: 52px; border-radius: 12px; flex: none; }
+  b { display: block; font-size: 17px; }
+  span { color: var(--muted); font-size: 14px; }
+</style>
 </head>
 <body>
-<div class="wallpaper"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
-
-<div class="topbar" id="topbar"><span id="topbar-title">Today</span></div>
-
-<main id="main"></main>
-
-<nav class="tabbar glass" aria-label="Tabs">
-  <span class="tab-ind" id="tab-ind"></span>
-  <button class="tab" data-act="nav" data-to="today"><i data-icon="grid"></i>Today</button>
-  <button class="tab" data-act="nav" data-to="health"><i data-icon="heart"></i>Health</button>
-  <button class="tab ask" data-act="nav" data-to="ask" aria-label="Ask Loop"><div class="orb"><i data-icon="sparkle"></i></div></button>
-  <button class="tab" data-act="nav" data-to="plan"><i data-icon="calendar"></i>Plan</button>
-  <button class="tab" data-act="nav" data-to="money"><i data-icon="wallet"></i>Money</button>
-</nav>
-
-<div id="sheet"></div>
-<div id="toast" class="toast glass" role="status" aria-live="polite"></div>
-<input type="file" id="restore-input" accept="application/json,.json" hidden>
-
-<script type="module" src="js/app.js"></script>
+<main>
+  <h1>Apps</h1>
+  <ul>
+    <li><a href="loops/"><img src="loops/icons/icon-192.png" alt=""><div><b>Loop</b><span>Diet, gym, sleep, uni, work and money</span></div></a></li>
+    <!-- Add each new app here: <li><a href="folder/">…</a></li> -->
+  </ul>
+</main>
+<!-- Loop used to live at this address. Remove its old service worker here so it can't keep serving the old copy offline. -->
+<script>navigator.serviceWorker?.getRegistrations().then(rs => rs.forEach(r => { if (new URL(r.scope).pathname === location.pathname.replace(/[^/]*$/, '')) r.unregister(); })).catch(() => {});</script>
 </body>
 </html>

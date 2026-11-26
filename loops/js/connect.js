@@ -12,7 +12,7 @@ import { sendMessage } from './ask.js';
 import { setWater } from './health.js';
 import { waterOn } from './data.js';
 
-// Always the app folder (…/WebApp/), even if opened as …/index.html, so it matches Google's redirect URI exactly.
+// Always the app folder (…/WebApp/loops/), even if opened as …/index.html, so it matches Google's redirect URI exactly.
 const APP_URL = new URL('./', location.href).href;
 const relay = () => ({ url: '', token: '', ...state.kv.relay });
 const canvas = () => ({ domain: '', token: '', ...state.kv.canvas });
@@ -313,7 +313,7 @@ sheets.guideRelay = () => {
     <p class="note">A tiny free server you own on Cloudflare. It holds Apple Pay taps and Siri notes until Loop picks them up, and passes Canvas requests through (Canvas blocks apps calling it directly). It never stores your Canvas token.</p>
     <ol class="steps">
       <li>Sign up free at <b>dash.cloudflare.com</b> → <b>Workers &amp; Pages</b> → <b>Create</b> → <b>Start with Hello World!</b> (not “Import a repository”), name it <b>loop-relay</b> → <b>Deploy</b>.</li>
-      <li><b>Edit code</b>: delete everything, paste Loop's relay code, then <b>Deploy</b>. <a class="chip-btn soft" href="https://raw.githubusercontent.com/kylev202/WebApp/main/relay/worker.js" target="_blank" rel="noopener">${icon('code')} Open the code</a> (tap and hold → Select All → Copy)</li>
+      <li><b>Edit code</b>: delete everything, paste Loop's relay code, then <b>Deploy</b>. <a class="chip-btn soft" href="https://raw.githubusercontent.com/kylev202/WebApp/main/loops/relay/worker.js" target="_blank" rel="noopener">${icon('code')} Open the code</a> (tap and hold → Select All → Copy)</li>
       <li><b>Storage &amp; Databases → KV</b> → create a namespace <b>loop-inbox</b>. In the worker's <b>Settings → Bindings</b>, add KV namespace binding named <b>INBOX</b>.</li>
       <li><b>Settings → Variables and Secrets</b>: add secret <b>RELAY_TOKEN</b> (any long random password) and variable <b>ALLOWED_ORIGIN</b> = <b>${esc(location.origin)}</b>.</li>
       <li>Paste the worker URL and token below.</li>
