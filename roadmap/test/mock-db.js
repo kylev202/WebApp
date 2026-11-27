@@ -17,7 +17,7 @@
       id: path.split('/').pop(), path,
       get: async () => snapDoc(path),
       set: async d => { store.set(path, clone(d)); writes.push(['set', path, clone(d)]); notify(); },
-      update: async d => { if (!store.has(path)) throw {code: 'invalid_argument', message: 'missing'}; store.set(path, merge(store.get(path), clone(d))); writes.push(['update', path, clone(d)]); notify(); },
+      update: async d => { if (window.__failNext > 0) { window.__failNext--; throw {code: 'unavailable', message: 'simulated failure'}; } if (!store.has(path)) throw {code: 'invalid_argument', message: 'missing'}; store.set(path, merge(store.get(path), clone(d))); writes.push(['update', path, clone(d)]); notify(); },
       delete: async () => { store.delete(path); writes.push(['delete', path]); notify(); },
       onSnapshot: (next) => { const l = () => next(snapDoc(path)); listeners.add(l); setTimeout(l, 20); return () => listeners.delete(l); },
       collection: sub => query(`${path}/${sub}`),
