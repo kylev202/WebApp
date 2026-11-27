@@ -18,6 +18,7 @@ import xml.etree.ElementTree as ET
 
 SCHEMA_VERSION = 1
 SEED_VERSION = 2
+MONTHS3 = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 DOC = {"title": "AI Placement Roadmap: Week-by-Week Plan (Dec 2026 – Dec 2027)",
        "url": "https://claude.ai/artifact/SnyN66CpkWx9sqL2c1uTbg", "rev": 190}
 PLAN_START = dt.date(2026, 11, 30)  # Week 1, a Monday (doc: "Week 1 (30 Nov – 6 Dec)")
@@ -95,7 +96,7 @@ CONTENT_FIELDS = {  # the only fields a seed re-run may change
     "profile": ["goals", "routineTable", "workDays", "rules", "phases", "hoursPlan", "uniTarget", "flagships"],
     "months": ["order", "heading", "name", "theme", "goal", "block", "phase", "routine", "dsaTarget", "dsaApprox", "ifNoOffer", "weekIds"],
     "weeks": ["number", "order", "heading", "title", "dates", "start", "end", "monthId", "phase", "routine", "hoursTarget"],
-    "tasks": ["text", "weekId", "monthId", "order", "project", "dsa"],
+    "tasks": ["text", "weekId", "monthId", "order", "project", "dsa", "code"],
     "checkpoints": ["text", "monthId", "order", "dsaTarget", "dsaApprox"],
     "projects": ["title", "heading", "from", "name", "intro", "fields", "metrics", "order"],
     "guardrails": ["label", "text", "sources", "order"],
@@ -104,7 +105,8 @@ CONTENT_FIELDS = {  # the only fields a seed re-run may change
 
 GUIDE = """Placement Roadmap data (schemaVersion 1). Times are Australia/Melbourne; weeks start Monday.
 READ: profile/kyle (goals, phases, hours plan, 70% uni target, the doc's rules). Current week = the weeks doc with start <= today <= end (before 2026-11-30 it is w01; from 2027-10-04 use the months doc for today's month, whose tasks have weekId null). Its tasks: tasks where weekId == <week id>, ordered by order. Progress: tasks.status ('todo'|'done') with doneAt (YYYY-MM-DD); checkpoints.status per month; logs (kind 'hours' with date, hours, dsa; kind 'mark' with unit, assessment, mark); metrics (project, metric, value, date); skills.status ('not-started'|'learning'|'can-explain'|'proven'). Latest report: reports ordered by generatedAt desc, limit 1 (field text is the plain-text report).
-WRITE (as Claude): set by:'claude' and updatedAt (ISO 8601 with offset) on the doc you change, then add one activity doc {at, by:'claude', action, path, summary}. Examples: tick a task = update tasks/<id> {status:'done', doneAt, by, updatedAt}; untick = {status:'todo', doneAt:null}. Never edit doc-wording fields (meta.contentFields): only the seed re-run changes them, and it never changes progress fields."""
+WRITE (as Claude): set by:'claude' and updatedAt (ISO 8601 with offset) on the doc you change, then add one activity doc {at, by:'claude', action, path, summary}. Examples: tick a task = update tasks/<id> {status:'done', doneAt, by, updatedAt}; untick = {status:'todo', doneAt:null}. Never edit doc-wording fields (meta.contentFields): only the seed re-run changes them, and it never changes progress fields.
+LESSONS: every task is a lesson with a code in tasks.code: W<week number>-L<order> (W1-L2 = week w01, order 2), or OCT-L<n>, NOV-L<n>, DEC-L<n> for the Oct-Dec 2027 month blocks. When Kyle mentions a code ("Teach me W1-L2"), query tasks where code == that code and teach it from its title, learn, outcome, why, links and steps (or its text when those are missing): one idea at a time with small examples and exercises, wait for his answer before showing a solution, and don't write his project code for him. "Quiz me on <code>" = test him on that lesson. "Review my code for <code>" = review what he pastes against that lesson's goal, with hints rather than rewrites."""
 
 
 def text(el):
@@ -249,8 +251,9 @@ def build(xml):
             md = re.match(r"DSA: .*?(\d+) [A-Za-z\- ]*?problems?", t)
             if md:
                 dsa = int(md.group(1))
+            code = f"W{week['number']}-L{n}" if week else f"{MONTHS3[int(month['id'][5:7]) - 1]}-L{n}"
             put(f"tasks/{tid}", {"text": t, "weekId": week["id"] if week else None, "monthId": month["id"],
-                                 "order": n, "project": proj, "dsa": dsa},
+                                 "order": n, "project": proj, "dsa": dsa, "code": code},
                 {"status": "todo", "doneAt": None, "by": None, "updatedAt": None})
         elif k == "p" and t.startswith("Checkpoint: ") and month:
             ct = t[len("Checkpoint: "):]
