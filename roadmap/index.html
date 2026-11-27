@@ -98,6 +98,24 @@ main{max-width:var(--col);margin:0 auto;padding:max(var(--s4),env(safe-area-inse
 .stop.cp[aria-checked=true] .dot{background:var(--ink);box-shadow:none}
 .stop.cp .dot svg{stroke:var(--bg)}
 .stop:disabled{cursor:default}
+/* Task rows with details: the dot ticks, the name opens the task sheet. */
+.stop.two .tick{width:44px;height:44px;margin:-7px;padding:0;border:0;background:none;display:grid;place-items:center;color:inherit}
+.stop.two .tick:disabled{cursor:default}
+.tick[aria-checked=true] .dot{background:var(--line)}
+.tick[aria-checked=true] .dot svg{opacity:1;transform:none}
+.tick:active .dot{transform:scale(.92)}
+.stop.two:has(.tick[aria-checked=true]) .txt{color:var(--ink-muted)}
+.stop.two .more{display:flex;justify-content:space-between;align-items:start;gap:var(--s2);width:100%;min-height:var(--hit);margin:0;padding:3px 0 0;border:0;background:none;color:inherit;font:inherit;text-align:left}
+.stop.two .more .txt{padding-top:0}
+.more .chev{flex:none;width:18px;height:18px;margin-top:3px;stroke:var(--ink-muted);stroke-width:2;fill:none}
+.wk-can{margin-top:var(--s3)}
+.tsec{margin-top:var(--s5)}
+.tsec:first-child{margin-top:var(--s2)}
+.tsec h3{margin:0;font-size:var(--t-small);font-weight:600;color:var(--ink-muted)}
+.tsec p{margin:var(--s1) 0 0}
+.steps{margin:var(--s1) 0 0;padding-left:1.3em}
+.steps li,.links li{margin-top:var(--s2)}
+.links{list-style:none;margin:0;padding:0}
 .wtag{font-size:var(--t-meta);color:var(--ink-muted);font-weight:600}
 .by{font-weight:600;color:var(--ink)}
 details.later{margin-top:var(--s3);border-top:1px solid var(--border)}
@@ -325,8 +343,11 @@ const doneMeta = t => t.status === 'done' ? `<span class="when meta">Done ${t.do
 
 /* ---------- rendering ---------- */
 const segOf = t => routineOf(S.weeks[t.weekId] || S.months[t.monthId]) === 'sem' ? ' class="sem"' : '';
+const label = t => t.title || t.text;
+const CHEV = '<svg class="chev" viewBox="0 0 18 18" aria-hidden="true"><path d="M7 4l5 5-5 5"/></svg>';
 function stopRow(t, extra = '') {
   const on = t.status === 'done';
+  if (t.title) return `<li${segOf(t)}><div class="stop two"><button class="tick" role="checkbox" aria-checked="${on}" aria-label="Done: ${esc(t.title)}" data-act="tick" data-id="${esc(t.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span></button><button class="more" data-act="task" data-id="${esc(t.id)}" aria-haspopup="dialog"><span class="txt">${extra}${esc(t.title)}${doneMeta(t)}</span>${CHEV}</button></div></li>`;
   return `<li${segOf(t)}><button class="stop" role="checkbox" aria-checked="${on}" data-act="tick" data-id="${esc(t.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span><span class="txt">${extra}${esc(t.text)}${doneMeta(t)}</span></button></li>`;
 }
 function cpRow(m) {
@@ -345,6 +366,8 @@ function viewWeek() {
     if (m && (m.weekIds || []).slice(-1)[0] === w.id) lastOfMonth = {id: w.monthId, ...m};
     head = `<div class="wk"><h1><span class="wk-num">Week ${esc(w.number)}</span><span class="wk-goal">${esc(w.title)}</span></h1>
       <p class="meta">${esc(fRange(w.start, w.end))} ∙ ${esc(phaseName(w.phase))} ∙ ${esc(target)} h plan</p>
+      ${w.canDo ? `<p class="wk-can"><span class="strong">By Sunday you can:</span> ${esc(w.canDo)}</p>` : ''}
+      ${w.why ? `<p class="small muted" style="margin-top:var(--s1)">Why it matters: ${esc(w.why)}</p>` : ''}
       <p class="pace">${esc(pc.label)}</p></div>`;
     list = tasksOf('weekId', w.id); noteDoc = w; noteId = w.id;
   } else {
@@ -550,7 +573,7 @@ function viewReports() {
 function buildReport(kind) {
   const pos = position(), pc = pace(pos), now = new Date().toISOString(), L = [];
   const dsaTotal = sum(logs('hours'), l => l.dsa), nt = dsaTargets().find(x => x.end >= pos.t);
-  const taskLine = t => `${t.status === 'done' ? '[x]' : '[ ]'} ${t.text}`;
+  const taskLine = t => `${t.status === 'done' ? '[x]' : '[ ]'} ${label(t)}`;
   if (kind === 'weekly') {
     let id, title, range, list, target, note = '', nextT = '', nextList = [];
     if (pos.kind === 'week') {
@@ -567,12 +590,12 @@ function buildReport(kind) {
     L.push(title, `${fRange(range[0], range[1])} ∙ written ${fWhen(now)}`, '');
     L.push(`Planned vs done: ${done} of ${plural(list.length, 'task')}`, ...list.map(taskLine), '');
     L.push(`Hours: ${n2(hrs)} of ${target} h planned`, `DSA problems this week: ${dsaW} (total ${dsaTotal}${nt ? `; target ${nt.approx ? 'about ' : ''}${nt.target} by end of ${nt.name}` : ''})`, `Pace: ${pc.label}`, '');
-    const blockers = [...od.map(t => `Still open from Week ${S.weeks[t.weekId].number}: ${t.text}`), ...(note.trim() ? [`Note: ${note.trim()}`] : [])];
+    const blockers = [...od.map(t => `Still open from Week ${S.weeks[t.weekId].number}: ${label(t)}`), ...(note.trim() ? [`Note: ${note.trim()}`] : [])];
     L.push('Blockers', ...(blockers.length ? blockers.map(b => `- ${b}`) : ['- None recorded']), '');
-    L.push(`Next week's focus: ${nextT || 'end of plan'}`, ...nextList.map(t => `- ${t.text}`), ...(od.length ? [`- Clear ${plural(od.length, 'overdue task')} first`] : []));
+    L.push(`Next week's focus: ${nextT || 'end of plan'}`, ...nextList.map(t => `- ${label(t)}`), ...(od.length ? [`- Clear ${plural(od.length, 'overdue task')} first`] : []));
     return {id, kind, period: id.slice(7), title, start: range[0], end: range[1], generatedAt: now, text: L.join('\n'),
       numbers: {tasksPlanned: list.length, tasksDone: done, hours: hrs, hoursTarget: target, dsaWeek: dsaW, dsaTotal, behindWeeks: pc.behind, aheadWeeks: pc.ahead},
-      blockers, nextFocus: {title: nextT, tasks: nextList.map(t => t.text)}};
+      blockers, nextFocus: {title: nextT, tasks: nextList.map(label)}};
   }
   const m = pos.kind === 'week' ? {id: pos.week.monthId, ...S.months[pos.week.monthId]} : pos.month;
   const [a, b] = monthRange(m);
@@ -590,7 +613,7 @@ function buildReport(kind) {
   if (!m.weekIds?.length) L.push(...list.map(taskLine));
   if (cp) L.push(`Checkpoint (${cp.status === 'done' ? 'checked' : 'open'}): ${cp.text}`);
   L.push('', `Hours: ${n2(hrs)} of ${target} h planned`, `DSA problems this month: ${dsaIn(a, b)} (total ${dsaTotal}${m.dsaTarget != null ? `; target ${m.dsaApprox ? 'about ' : ''}${m.dsaTarget} by the end of the month` : ''})`, `Pace: ${pc.label}`, '');
-  const blockers = [...open.map(t => `Open${t.weekId ? ` from Week ${S.weeks[t.weekId].number}` : ''}: ${t.text}`), ...notes];
+  const blockers = [...open.map(t => `Open${t.weekId ? ` from Week ${S.weeks[t.weekId].number}` : ''}: ${label(t)}`), ...notes];
   L.push('Blockers', ...(blockers.length ? blockers.map(x => `- ${x}`) : ['- None recorded']), '');
   L.push(`Next month's focus: ${nm ? `${nm.name}, ${nm.theme}` : 'end of plan'}`, ...(nm ? [`- ${nm.goal || nm.block?.goal || ''}`] : []));
   return {id: `monthly-${m.id}`, kind: 'monthly', period: m.id, title, start: a, end: b, generatedAt: now, text: L.join('\n'),
@@ -673,6 +696,18 @@ function closeSheet(now) {
   if (lastFocus && document.contains(lastFocus)) lastFocus.focus({preventScroll: true}); else if (lastKey) refocus(document, lastKey);
 }
 let sheetRender = null;
+function taskSheet(id) {
+  const t = S.tasks[id]; if (!t) return;
+  const sec = (h, inner) => inner ? `<section class="tsec"><h3>${h}</h3>${inner}</section>` : '';
+  const links = (t.links || []).filter(l => safeUrl(l.url));
+  const steps = Array.isArray(t.steps) ? t.steps : [];
+  openSheet(esc(t.title), `${sec('What you’ll learn', t.learn ? `<p>${esc(t.learn)}</p>` : '')}
+    ${sec('You’ll be able to', t.outcome ? `<p>${esc(t.outcome)}</p>` : '')}
+    ${sec('Why it helps you later', t.why ? `<p>${esc(t.why)}</p>` : '')}
+    ${sec('Links', links.length ? `<ul class="links">${links.map(l => `<li><a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.label)}</a></li>`).join('')}</ul>` : '')}
+    ${sec('Steps', steps.length ? `<ol class="steps">${steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : '')}
+    ${sec('Learn it with Claude', t.prompt ? `<p class="small muted">Copy this, open a new chat with Claude and paste it in.</p><div class="slip" id="prompt-slip" style="margin-top:var(--s2)">${esc(t.prompt)}</div><div class="actions"><button class="btn" data-act="copyprompt" data-id="${esc(t.id)}">Copy prompt</button></div>` : '')}`);
+}
 function monthSheet(id) {
   const m = {id, ...S.months[id]};
   const body = () => {
@@ -819,7 +854,7 @@ async function act(el) {
     const t = S.tasks[id]; if (!t) return;
     const on = t.status !== 'done';
     el.setAttribute('aria-checked', on);
-    return revertIfFailed(el, on, await write(`tasks/${id}`, {status: on ? 'done' : 'todo', doneAt: on ? today() : null}, `${on ? 'Ticked' : 'Unticked'}: ${t.text}`));
+    return revertIfFailed(el, on, await write(`tasks/${id}`, {status: on ? 'done' : 'todo', doneAt: on ? today() : null}, `${on ? 'Ticked' : 'Unticked'}: ${label(t)}`));
   }
   if (a === 'cp') {
     const c = S.checkpoints[id]; if (!c) return; const on = c.status !== 'done';
@@ -836,6 +871,13 @@ async function act(el) {
     const {by, updatedAt, ...old} = l;
     const what = l.kind === 'mark' ? `a mark: ${l.unit} ${l.assessment}` : `${n2(l.hours)} h on ${fDay(l.date)}`;
     if (await write(`logs/${id}`, {}, `Removed ${what}`, 'delete')) toast(`Removed ${what}`, () => write(`logs/${id}`, old, `Restored ${what}`, 'set'));
+    return;
+  }
+  if (a === 'task') return taskSheet(id);
+  if (a === 'copyprompt') {
+    const t = S.tasks[id]; if (!t?.prompt) return;
+    try { await navigator.clipboard.writeText(t.prompt); toast('Copied. Paste it into a new Claude chat'); }
+    catch { const s = $('#prompt-slip'); const rg = document.createRange(); rg.selectNodeContents(s); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rg); toast('Couldn’t copy. The text is selected: copy it by hand.'); }
     return;
   }
   if (a === 'loghours') return hoursSheet();
