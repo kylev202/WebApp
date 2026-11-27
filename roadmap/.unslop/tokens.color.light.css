@@ -1,0 +1,15 @@
+:root {
+  --bg: oklch(0.99 0.003 250);
+  --surface: oklch(0.965 0.005 250);
+  --surface-2: oklch(0.93 0.007 250);
+  --ink: oklch(0.22 0.015 255);
+  --ink-muted: oklch(0.45 0.015 255);
+  --border: oklch(0.86 0.008 250);
+  --accent: oklch(0.87 0.17 95);
+  --on-accent: oklch(0.22 0.015 255);
+  --border-strong: oklch(0.58 0.012 250);
+  --focus: oklch(0.22 0.015 255);
+  --danger: oklch(0.52 0.19 25);
+  --line-break: oklch(0.6 0.17 48);
+  --line-sem: oklch(0.5 0.1 190);
+}

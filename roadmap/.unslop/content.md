@@ -1,4 +1,4 @@
-# Content (first draft; refit to layout budgets in Phase 3)
+# Content (refit to layout.md budgets, Phase 3)
 
 ## Voice rules
 1. Short declaratives. One fact per sentence. Numbers as numerals with units ("6.5 of 14 h").
@@ -17,13 +17,19 @@ Week · Roadmap · Skills · Projects · Profile · Reports
 
 ## This week
 - Title: the doc's week heading split into number and goal: "Week 7" + "pandas" (goal = the heading's text after the colon).
-- Date line: "11 – 17 Jan · Summer break · 14 h plan".
+- Date line (≤ 40 chars, app-formatted, no dashes): "11 to 17 Jan · Summer break · 14 h plan".
 - Before start: "Starts Monday 30 Nov". After the numbered weeks: "October: Interviews" with the month block's tasks.
 - Task row: the doc text; ticked rows show "Done Tue 12 Jan" and "· Claude" when Claude ticked it.
 - Overdue group heading: "Still open from earlier weeks (n)".
 - Hours: "Hours this week" · "6.5 of 14 h" · button "Log hours".
 - Log sheet: fields "Date", "Hours", "DSA problems solved" (optional), button "Save log". Error: "Hours must be between 0.25 and 16."
 - Note: label "Note for this week", helper "Blockers or anything Claude should know. Saved when you stop typing." Saved state: "Saved 9:41 pm".
+
+## Layout budgets
+- Task text: doc wording, any length; wraps under the stop, never truncated.
+- Week goal: doc heading text, wraps to 2 lines at 22px.
+- Tab labels ≤ 8 characters (fit 65px at 13px semibold).
+- Buttons one line: "Log hours", "Save log", "Write weekly report", "Write monthly report", "Copy as text", "Add a mark", "Record a result", "Add evidence".
 
 ## Roadmap
 - Title: "Dec 2026 to Dec 2027".

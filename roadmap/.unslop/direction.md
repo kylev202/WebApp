@@ -47,4 +47,15 @@ Idea: a CS student's squared notebook marked by a strict tutor: graphite text on
 ## Recommendation
 **A: Line 28.** The roadmap is the screen that has to carry "where am I, ahead or behind", and a line you travel shows that without a chart legend. It comes from Kyle's own Melbourne, keeps interaction conventional (a checklist, a tab bar, sheets) and puts identity in the line, the signage type and the coded colours. B is the strongest for density but its plate pushes the tasks down on a 390 px screen; C is the warmest but hand marks at small sizes cost legibility on a tram at night.
 
-## Chosen: (waiting for Kyle)
+## Chosen: A, Line 28 (Kyle, 2026-11-26)
+B lost because its orange plate pushes the tasks below the fold at 390 px, against the 5-second tick. C lost because hand-drawn marks lose legibility at small sizes at night.
+
+### Contract
+- Non-negotiables:
+  1. The year is one line. Phases are line segments in two coded colours: break (~14 h) and semester (~8 h). These colours mean nothing else and never colour text.
+  2. One accent, signal yellow, for the primary action and "you are here" only. In light mode it sits on ink (button) or inside an ink ring (dot), never on the page ground.
+  3. Overpass is the only family. Every number uses tabular figures.
+  4. Doc text appears exactly as written. App copy follows content.md's voice rules.
+  5. The Week screen is a checklist first: the first task is visible without scrolling at 390 x 844, and one tap ticks it.
+  6. Every number on screen comes from the db; an empty value says it is empty.
+- This direction will not: use cards for grouping, gradients, glow, glass, badges, confetti, emoji, mono labels, decorative line colours, fake charts, or an eyebrow over every section.

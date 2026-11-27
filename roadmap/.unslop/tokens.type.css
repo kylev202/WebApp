@@ -1,0 +1,8 @@
+:root {
+  --font: "Overpass", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --t-meta: 0.8125rem; --t-small: 0.9375rem; --t-body: 1.0625rem;
+  --t-head: 1.375rem; --t-title: 2rem; --t-display: 4rem;
+  --lh-meta: 1.35; --lh-small: 1.4; --lh-body: 1.42; --lh-head: 1.2; --lh-title: 1.08; --lh-display: 0.95;
+  --w-regular: 400; --w-semi: 600; --w-bold: 800;
+  --measure: 62ch;
+}
