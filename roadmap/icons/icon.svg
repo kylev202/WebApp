@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Placement Roadmap icon: the year as a tram line, read left to right. Orange = break routine,
+       teal = semester, yellow = you are here, white ring = the 2028 placement terminus.
+       Colours are the app's dark-theme tokens. PNGs in this folder are rendered from this file. -->
+  <rect width="100" height="100" fill="#161b22"/>
+  <g fill="none" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 66H34L48 52" stroke="#f28e42"/>
+    <path d="M48 52L62 38H78" stroke="#55bfb3"/>
+  </g>
+  <circle cx="26" cy="66" r="3.2" fill="#161b22"/>
+  <circle cx="78" cy="38" r="11" fill="#ebeff2"/>
+  <circle cx="78" cy="38" r="4.5" fill="#161b22"/>
+  <circle cx="48" cy="52" r="11" fill="#f5d240"/>
+</svg>
