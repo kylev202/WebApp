@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 SCHEMA_VERSION = 1
 SEED_VERSION = 2
 DOC = {"title": "AI Placement Roadmap: Week-by-Week Plan (Dec 2026 – Dec 2027)",
-       "url": "https://claude.ai/artifact/SnyN66CpkWx9sqL2c1uTbg", "rev": 83}
+       "url": "https://claude.ai/artifact/SnyN66CpkWx9sqL2c1uTbg", "rev": 87}
 PLAN_START = dt.date(2026, 11, 30)  # Week 1, a Monday (doc: "Week 1 (30 Nov – 6 Dec)")
 
 # Phases come from the doc's routine table and month notes (summer break to 2 Mar, semester from 3 Mar,
