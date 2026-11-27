@@ -25,3 +25,14 @@
 - Dark-mode focus ring is signal yellow: it reads as "you are here" for the keyboard, consistent with contract 2.
 - F1: semester is now a cased line (two rails) everywhere (roadmap, rails, legend), break stays solid, so the routine code survives grayscale and colour blindness.
 - F23 (terminus station for the 2028 goal, a labelled gap bracket) logged as an idea, not built: no feature additions this round.
+
+## Phase 6 result: critic gate passed
+- Critique 1: 31/48 (fix) -> critique 2: 36/48 (fix) -> critique 3: 38/48 (fix) -> critique 4: 40/48, ship. Three fix loops, each re-shot.
+- Final: no P0/P1/P2; every dimension 3 or 4 (Typography, Colour, Craft, AI-slop absence at 4); distinctiveness 3.
+- Open P3s: focus after "Try again" lands on Remove rather than the row; under VoiceOver the Undo toast still hides after 6 s. Idea not built: a 2028 terminus station and a labelled ahead/behind bracket.
+- Only Chromium was available: Undo and the failed-save revert need one check on Kyle's iPhone.
+
+## Phase 7: ship and learn
+- Final system: Overpass 400/600/800; neutral panels; orange = break line (solid), teal = semester line (cased); signal yellow for action and "you are here"; six layout families.
+- Logged with `log.mjs add` (score 40).
+- Lessons: simulate failed writes and keyboard focus across re-renders in the first critique; never cut doc text to fit; code routines by shape as well as hue; register listeners with addEventListener (onfocusin is not a handler property); Overpass's U+00B7 has zero advance width.
