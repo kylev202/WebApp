@@ -238,6 +238,13 @@ const fRange = (a, b) => a.slice(0, 7) === b.slice(0, 7) ? `${+a.slice(8)} to ${
 const fWhen = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${fDay(dayFmt.format(d))}, ${timeFmt.format(d).replace(' ', ' ')}`; };
 const n2 = n => String(Math.round(n * 100) / 100);
 const cap = s => (s = String(s || '')) && s.charAt(0).toUpperCase() + s.slice(1);
+// wraps text at spaces into lines of at most n characters, balanced so the last line is not a stub; never cuts a word
+const wrapWords = (s, n) => {
+  const words = String(s).split(' '), fit = w => { const out = []; let cur = ''; for (const x of words) { if (cur && `${cur} ${x}`.length > w) { out.push(cur); cur = x; } else cur = cur ? `${cur} ${x}` : x; } if (cur) out.push(cur); return out; };
+  const g = fit(n); if (g.length < 2) return g;
+  for (let w = Math.ceil(s.length / g.length); w < n; w++) { const b = fit(w); if (b.length === g.length) return b; }
+  return g;
+};
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0);
 const STUDY_DAYS = [1, 2, 4, 6]; // Mon, Tue, Thu, Sat (doc's routine table)
@@ -380,10 +387,20 @@ function drawMap() {
     if (S.checkpoints[m.id]) { rows.push({type: 'c', m, y, h: 46}); y += 46; }
     g.y1 = y; rows.push({type: 'g', ...g});
   }
+  // Terminus: the line runs on as planned track to the 2028 placement (profile goal, never cut: it wraps)
+  const goal = S.profile?.goals?.placement2028, tLines = goal ? wrapWords(cap(goal), Math.floor((W - LX - 24) / 7.2)) : [];
+  if (goal) { rows.push({type: 't', y, h: 42}); y += 42 + 26 + tLines.length * 17; }
   const H = y + 16, col = r => `var(--line-${r === 'semester' ? 'sem' : 'break'})`;
-  let line = '', marks = '', text = '', hits = '', todayY = null, progY = null;
+  let line = '', marks = '', text = '', hits = '', term = '', todayY = null, progY = null;
   const short = W < 300;
   for (const r of rows) {
+    if (r.type === 't') {
+      const yb = r.y + r.h;
+      line += `<line x1="${LX}" y1="${r.y}" x2="${LX}" y2="${yb}" stroke="var(--ink-muted)" stroke-width="6" stroke-dasharray="6 6" stroke-dashoffset="6"/>`;
+      marks += `<rect x="${LX - 14}" y="${yb - 3}" width="28" height="6" rx="1" fill="var(--ink)"/>`;
+      term = `<g><text x="${LX + 24}" y="${yb + 6}" font-size="17" font-weight="800">2028 placement</text>${tLines.map((l, i) => `<text x="${LX + 24}" y="${yb + 28 + i * 17}" font-size="13" class="mut">${esc(l)}</text>`).join('')}</g>`;
+      continue;
+    }
     if (r.type === 'g') {
       const mt2 = r.m.weekIds?.length ? r.m.weekIds.flatMap(id => tasksOf('weekId', id)) : tasksOf('monthId', r.m.id), cpx = S.checkpoints[r.m.id];
       const al = `${r.m.name}, ${mt2.filter(t => t.status === 'done').length} of ${mt2.length} tasks done${cpx ? `, checkpoint ${cpx.status === 'done' ? 'checked' : 'open'}` : ''}. Show weeks and tasks`;
@@ -417,10 +434,16 @@ function drawMap() {
   }
   if (todayY == null && pos.upcoming) todayY = rows.find(r => r.type === 'w')?.y + 14;
   let over = '';
-  if (progY != null && todayY != null && Math.abs(progY - todayY) > 1) over += `<line x1="12" y1="${progY}" x2="12" y2="${todayY}" stroke="var(--ink)" stroke-width="2" stroke-dasharray="3 3"/>`;
+  if (progY != null && todayY != null && Math.abs(progY - todayY) > 1) {
+    over += `<line x1="12" y1="${progY}" x2="12" y2="${todayY}" stroke="var(--ink)" stroke-width="2" stroke-dasharray="3 3"/>`;
+    // the gap in words, read along the bracket; centred when it fits, else starting at the diamond and running past today
+    const len = pc.label.length * 7.2, gap = Math.abs(todayY - progY), dir = todayY > progY ? 1 : -1;
+    const [ty, anchor] = gap >= len + 24 ? [(progY + todayY) / 2, 'middle'] : [progY + dir * 14, dir > 0 ? 'end' : 'start'];
+    over += `<text x="4" y="${ty}" transform="rotate(-90 4 ${ty})" text-anchor="${anchor}" dominant-baseline="central" font-size="13" font-weight="600">${esc(pc.label)}</text>`;
+  }
   if (progY != null) over += `<rect x="6" y="${progY - 6}" width="12" height="12" fill="var(--ink)" transform="rotate(45 12 ${progY})"><title>Your progress</title></rect>`;
   if (todayY != null) over += `<circle id="today-dot" cx="${LX}" cy="${todayY}" r="9" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"><title>Today</title></circle>`;
-  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="group" aria-label="Roadmap line, December 2026 to December 2027"><g aria-hidden="true">${line}${marks}${over}${text}</g>${hits}</svg>`;
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="group" aria-label="Roadmap line, December 2026 to December 2027"><g aria-hidden="true">${line}${marks}${over}${text}</g>${term}${hits}</svg>`;
   host.dataset.todayY = todayY ?? '';
 }
 
@@ -573,25 +596,35 @@ function buildReport(kind) {
 const queues = {};
 // where focus goes when its control disappears: tried in this order (a selector list would pick document order)
 const fallbackEl = () => { for (const sel of ['[data-act="rmlog"]', '[data-act="loghours"]', '[data-act="mark"]']) { const el = $(`#main ${sel}`); if (el) return el; } const h = $('#main h1'); if (h) h.tabIndex = -1; return h; };
-const toastEl = $('#toast'); let toastLong = false;
-// the toast empties when it hides, so nothing invisible stays in the tab order
-function hideToast() { clearTimeout(toast.h); const had = toastEl.contains(document.activeElement); toastEl.classList.remove('show', 'act'); toastEl.replaceChildren(); if (had) fallbackEl()?.focus({preventScroll: true}); }
-function armToast() { clearTimeout(toast.h); toast.h = setTimeout(hideToast, toastLong ? 6000 : 2600); }
-// keyboard focus or a finger on the toast holds it open; leaving restarts the timer
-toastEl.addEventListener('focusin', () => { if (toastEl.querySelector(':focus-visible')) clearTimeout(toast.h); });
-toastEl.addEventListener('focusout', () => { if (toastEl.classList.contains('show')) armToast(); });
-toastEl.addEventListener('pointerenter', () => clearTimeout(toast.h));
-toastEl.addEventListener('pointerleave', () => { if (toastEl.classList.contains('show')) armToast(); });
+const toastEl = $('#toast');
+// the toast empties when it hides, so nothing invisible stays in the tab order; focus goes back to the control
+// that had it before the toast took it (the row whose save failed), else to the fallback
+function hideToast() {
+  clearTimeout(toast.h); const had = toastEl.contains(document.activeElement), k = toast.origin; toast.origin = null;
+  toastEl.classList.remove('show', 'act'); toastEl.replaceChildren();
+  if (had) ((k && ($('#scrim') || $('#main')).querySelector(keySel(k))) || fallbackEl())?.focus({preventScroll: true});
+}
+// A plain confirmation hides after 2.6 s. A toast with an action (Undo, Try again) has no timer: it stays until a tap
+// or a click somewhere else, Escape, a screen change or the next toast, so a timer never takes it away (VoiceOver included).
 function toast(msg, action, label = 'Undo') {
-  clearTimeout(toast.h); toastEl.replaceChildren(); toastLong = !!action;
+  const inToast = toastEl.contains(document.activeElement);
+  if (!inToast) toast.origin = focusKey(document);
+  clearTimeout(toast.h); toastEl.replaceChildren(); toast.at = performance.now();
   const m = document.createElement('span'); m.textContent = msg; toastEl.append(m);
   toastEl.classList.toggle('act', !!action);
   let b = null;
   if (action) { b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.addEventListener('click', () => { hideToast(); action(); }); toastEl.append(b); }
-  toastEl.classList.add('show'); armToast();
+  toastEl.classList.add('show');
+  if (!action) toast.h = setTimeout(hideToast, 2600);
   announce(action ? `${msg}. ${label} is available.` : msg);
   if (b) b.focus({preventScroll: true});
 }
+const dismissOutside = e => { if (toastEl.classList.contains('act') && e.timeStamp > toast.at && !toastEl.contains(e.target)) hideToast(); };
+let downAt = null; // a tap is a press and release that barely moves; a scroll is not a tap
+document.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; }, true);
+document.addEventListener('pointerup', e => { if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 10) dismissOutside(e); downAt = null; }, true);
+document.addEventListener('click', e => { if (e.detail === 0) dismissOutside(e); }, true); // keyboard activation of another control
+toastEl.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); hideToast(); } });
 const announce = msg => { const r = $('#sr'); r.textContent = ''; setTimeout(() => { r.textContent = msg; }, 50); };
 async function attempt(fn, summary, retry) {
   try { await fn(); return true; } catch (e) {
@@ -762,7 +795,7 @@ function paint() {
 function route() {
   const h = location.hash.slice(1);
   const next = VIEWS[h] ? h : 'week';
-  if (next !== tab) { if ($('#main').contains(document.activeElement)) document.activeElement.blur(); paint.pending = false; tab = next; drawn = false; window.scrollTo(0, 0); }
+  if (next !== tab) { if (toastEl.classList.contains('act')) hideToast(); if ($('#main').contains(document.activeElement)) document.activeElement.blur(); paint.pending = false; tab = next; drawn = false; window.scrollTo(0, 0); }
   render();
 }
 window.addEventListener('hashchange', route);

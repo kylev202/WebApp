@@ -17,9 +17,9 @@ import json, re, sys, datetime as dt
 import xml.etree.ElementTree as ET
 
 SCHEMA_VERSION = 1
-SEED_VERSION = 1
+SEED_VERSION = 2
 DOC = {"title": "AI Placement Roadmap: Week-by-Week Plan (Dec 2026 – Dec 2027)",
-       "url": "https://claude.ai/artifact/SnyN66CpkWx9sqL2c1uTbg", "rev": 81}
+       "url": "https://claude.ai/artifact/SnyN66CpkWx9sqL2c1uTbg", "rev": 83}
 PLAN_START = dt.date(2026, 11, 30)  # Week 1, a Monday (doc: "Week 1 (30 Nov – 6 Dec)")
 
 # Phases come from the doc's routine table and month notes (summer break to 2 Mar, semester from 3 Mar,
@@ -274,18 +274,23 @@ def build(xml):
         c.pop("tasks", None)
 
     # Projects
+    doc_text = " ".join(t for _, _, t, _ in items)
     metric_defs = {
-        "p1": [("accuracy", "Test accuracy", "%", None), ("refusal", "Refusal rate", "%", None),
-               ("vi-match", "Vietnamese answers match the English source", "%", None),
+        "p1": [("accuracy", "Test accuracy", "%", "85%+ by May 2027 and 90%+ by the end of 2027"),
+               ("refusal", "Refusal rate", "%", "95%+ of the questions it shouldn't answer"),
+               ("vi-match", "Vietnamese answers match the English source", "%", "90%+"),
                ("questions", "Test questions", "", "100 real questions in both languages with checked answers"),
                ("users", "Users", "", "10–20 student testers by May 2027 and 100+ users by the end of 2027")],
-        "p2": [("accuracy", "Retrieval accuracy", "%", None), ("refusal", "Refusal rate", "%", None),
+        "p2": [("accuracy", "Retrieval accuracy", "%", "the right section in the top 5 results for 80%+ of the test questions"),
+               ("refusal", "Refusal rate", "%", "95%+ of the questions it shouldn't answer"),
                ("questions", "Test questions", "", "50 test questions checked against the Acts"), ("users", "Users", "", None)],
     }
     for o, (pid, p) in enumerate(sorted(projects.items()), 1):
         p["order"] = o
         p["intro"] = flag_intro
         p["metrics"] = [{"key": a, "label": b, "unit": u, "target": tg} for a, b, u, tg in metric_defs[pid]]
+        for m in p["metrics"]:  # targets are copied from the doc's wording, never retyped
+            assert m["target"] is None or m["target"] in doc_text, (pid, m["key"], "target not in the doc")
         put(f"projects/{pid}", p, {})
 
     # Skills

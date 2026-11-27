@@ -36,3 +36,11 @@
 - Final system: Overpass 400/600/800; neutral panels; orange = break line (solid), teal = semester line (cased); signal yellow for action and "you are here"; six layout families.
 - Logged with `log.mjs add` (score 40).
 - Lessons: simulate failed writes and keyboard focus across re-renders in the first critique; never cut doc text to fit; code routines by shape as well as hue; register listeners with addEventListener (onfocusin is not a handler property); Overpass's U+00B7 has zero advance width.
+
+## Round 2 (2026-11-27): P3 fixes, targets, terminus
+- R4-F1 fixed: a toast remembers which control had focus before it took focus; when it hides, focus goes back there (the task row after Try again), else to the fallback.
+- R4-F2 fixed: action toasts (Undo, Try again) have no timer. They stay until a tap or click elsewhere, Escape, a screen change or the next toast. A drag (scroll) is not a tap. Plain confirmations still hide after 2.6 s.
+- Targets: Kyle approved suggested targets and added them to the doc (rev 83, "What proves it works" for both projects). Seed v2 copies them; the seed now asserts every target string appears in the doc. Only projects/p1, projects/p2 and meta/app changed, so only those were written.
+- R4-F3 built: the line runs on as dashed planned track to a terminus bar labelled "2028 placement" with the profile goal in full (wrapped, never cut). The bracket between progress and today carries the pace words along it, centred when it fits, else starting at the diamond.
+- Checks: test/run.js 55/55 (new toast, terminus and bracket checks fail on the old page); lint clean; no overflow at 320/390/820, light and dark.
+- Still open: the Undo and failed-save check on Kyle's iPhone (WebKit not available here).

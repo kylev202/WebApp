@@ -97,6 +97,10 @@ const overflow = p => p.evaluate(() => document.documentElement.scrollWidth > wi
   // 5. Roadmap reflects the tick, month sheet opens
   await page.evaluate(() => { location.hash = 'roadmap'; }); await page.clock.runFor(100); await page.waitForTimeout(150);
   ok(await page.locator('#today-dot').count() === 1, 'roadmap has the today dot');
+  const term = await page.evaluate(() => [...document.querySelectorAll('#map svg > g:not([aria-hidden]) text')].map(t => t.textContent));
+  ok(term[0] === '2028 placement' && term.slice(1).join(' ') === 'A 12-month paid AI/ML placement through Swinburne for 2028, then a transfer to Computer Science (Professional) with the AI major.', `terminus: 2028 placement with the whole goal (${term.length - 1} lines)`);
+  const gapWords = await page.evaluate(() => [...document.querySelectorAll('#map text[transform^="rotate"]')].map(t => t.textContent));
+  ok(gapWords.length === 1 && gapWords[0] === '2 weeks behind', `bracket labelled with the gap: ${gapWords.join(', ')}`);
   await page.locator('g[data-act="month"][data-id="2027-01"]').dispatchEvent('click');
   await page.waitForTimeout(150);
   ok(/January 2027: Data tools and maths/.test(await page.textContent('#sheet-h')), 'month sheet opens with the doc heading');
@@ -126,6 +130,47 @@ const overflow = p => p.evaluate(() => document.documentElement.scrollWidth > wi
   ok(!errors.length, `interaction run: no script errors ${errors.join(' | ')}`);
   console.log('tick-to-saved ms (wall, incl. waits):', Date.now() - t0);
   await ctx.close();
+
+  // Toasts (critique 4: R4-F1 focus after Try again, R4-F2 no timer on action toasts)
+  {
+    const {ctx, page, errors} = await open(browser, {time: '2027-01-14T21:10:00+11:00', extra});
+    const step = async (ms = 100) => { await page.clock.runFor(ms); await page.waitForTimeout(80); };
+    const shown = () => page.evaluate(() => document.getElementById('toast').classList.contains('show'));
+    const focused = () => page.evaluate(() => { const a = document.activeElement; return a ? `${a.dataset.act || a.tagName}:${a.dataset.id || a.textContent.trim()}` : ''; });
+    // R4-F1: a failed tick by keyboard, then Try again, puts focus back on that row
+    await page.focus('[data-act="tick"][data-id="w07-2"]');
+    await page.evaluate(() => { window.__failNext = 2; });
+    await page.keyboard.press('Space'); await step(1500);
+    ok(await focused() === 'BUTTON:Try again', `failed tick: Try again is focused (${await focused()})`);
+    ok((await page.evaluate(() => window.__mock.get('tasks/w07-2'))).status === 'todo', 'failed tick: still todo in the store');
+    await page.keyboard.press('Enter'); await step(300);
+    ok((await page.evaluate(() => window.__mock.get('tasks/w07-2'))).status === 'done', 'Try again: saved as done');
+    ok(await focused() === 'tick:w07-2', `Try again: focus is back on the task row (${await focused()})`);
+    // R4-F2: Undo has no timer; a scroll keeps it; a tap elsewhere hides it
+    await page.locator('#main h1').tap(); await step(); // last input is touch, as with VoiceOver: focus on Undo is not focus-visible
+    await page.locator('[data-act="rmlog"][data-id="a1"]').tap(); await step(300);
+    ok(await shown(), 'Remove: Undo toast shows');
+    await step(20000);
+    ok(await shown(), 'Undo toast still shows after 20 s');
+    await page.mouse.move(200, 400); await page.mouse.down(); await page.mouse.move(200, 300, {steps: 4}); await page.mouse.up(); await step();
+    ok(await shown(), 'a drag (scroll) does not hide Undo');
+    await page.locator('#main h1').tap(); await step();
+    ok(!(await shown()), 'a tap elsewhere hides Undo');
+    // Escape from a focused Undo hides it; keyboard Undo still restores
+    await page.focus('[data-act="rmlog"][data-id="a2"]'); await page.keyboard.press('Enter'); await step(300);
+    ok(await focused() === 'BUTTON:Undo', 'keyboard Remove: Undo is focused');
+    await page.keyboard.press('Escape'); await step();
+    ok(!(await shown()), 'Escape hides Undo');
+    ok(!(await page.evaluate(() => window.__mock.get('logs/a2'))), 'log a2 stays removed after Escape');
+    // a screen change hides an action toast; a plain confirmation still hides on its own after 2.6 s
+    await page.evaluate(() => toast('Removed something', () => {})); await step();
+    await page.evaluate(() => { location.hash = 'roadmap'; }); await step(200);
+    ok(!(await shown()), 'screen change hides the action toast');
+    await page.evaluate(() => toast('Copied')); await step(2700);
+    ok(!(await shown()), 'plain toast hides after 2.6 s');
+    ok(!errors.length, `toast run: no script errors ${errors.join(' | ')}`);
+    await ctx.close();
+  }
 
   // States: before start, no db, unseeded, after weekly plan
   let r = await open(browser, {time: '2026-11-27T10:00:00+11:00'});
