@@ -109,8 +109,11 @@ main{max-width:var(--col);margin:0 auto;padding:max(var(--s4),env(safe-area-inse
 .stop.two .more .txt{padding-top:0}
 .more .chev{flex:none;width:18px;height:18px;margin-top:3px;stroke:var(--ink-muted);stroke-width:2;fill:none}
 .wk-can{margin-top:var(--s3)}
-.tsec{margin-top:var(--s5)}
-.tsec:first-child{margin-top:var(--s2)}
+.tdet{padding:0 0 var(--s4) calc(30px + var(--s3))}
+.more .chev{transition:transform .16s var(--ease)}
+.more[aria-expanded=true] .chev{transform:rotate(90deg)}
+.tsec{margin-top:var(--s4)}
+.tsec:first-child{margin-top:0}
 .tsec h3{margin:0;font-size:var(--t-small);font-weight:600;color:var(--ink-muted)}
 .tsec p{margin:var(--s1) 0 0}
 .steps{margin:var(--s1) 0 0;padding-left:1.3em}
@@ -344,10 +347,11 @@ const doneMeta = t => t.status === 'done' ? `<span class="when meta">Done ${t.do
 /* ---------- rendering ---------- */
 const segOf = t => routineOf(S.weeks[t.weekId] || S.months[t.monthId]) === 'sem' ? ' class="sem"' : '';
 const label = t => t.title || t.text;
+const openTasks = new Set(); // task ids whose details are open; kept across re-renders
 const CHEV = '<svg class="chev" viewBox="0 0 18 18" aria-hidden="true"><path d="M7 4l5 5-5 5"/></svg>';
 function stopRow(t, extra = '') {
   const on = t.status === 'done';
-  if (t.title) return `<li${segOf(t)}><div class="stop two"><button class="tick" role="checkbox" aria-checked="${on}" aria-label="Done: ${esc(t.title)}" data-act="tick" data-id="${esc(t.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span></button><button class="more" data-act="task" data-id="${esc(t.id)}" aria-haspopup="dialog"><span class="txt">${extra}${esc(t.title)}${doneMeta(t)}</span>${CHEV}</button></div></li>`;
+  if (t.title) { const open = openTasks.has(t.id); return `<li${segOf(t)}><div class="stop two"><button class="tick" role="checkbox" aria-checked="${on}" aria-label="Done: ${esc(t.title)}" data-act="tick" data-id="${esc(t.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span></button><button class="more" data-act="task" data-id="${esc(t.id)}" aria-expanded="${open}" aria-controls="td-${esc(t.id)}"><span class="txt">${extra}${esc(t.title)}${doneMeta(t)}</span>${CHEV}</button></div>${open ? taskDetails(t) : ''}</li>`; }
   return `<li${segOf(t)}><button class="stop" role="checkbox" aria-checked="${on}" data-act="tick" data-id="${esc(t.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span><span class="txt">${extra}${esc(t.text)}${doneMeta(t)}</span></button></li>`;
 }
 function cpRow(m) {
@@ -696,17 +700,16 @@ function closeSheet(now) {
   if (lastFocus && document.contains(lastFocus)) lastFocus.focus({preventScroll: true}); else if (lastKey) refocus(document, lastKey);
 }
 let sheetRender = null;
-function taskSheet(id) {
-  const t = S.tasks[id]; if (!t) return;
+function taskDetails(t) {
   const sec = (h, inner) => inner ? `<section class="tsec"><h3>${h}</h3>${inner}</section>` : '';
   const links = (t.links || []).filter(l => safeUrl(l.url));
   const steps = Array.isArray(t.steps) ? t.steps : [];
-  openSheet(esc(t.title), `${sec('What you’ll learn', t.learn ? `<p>${esc(t.learn)}</p>` : '')}
+  return `<div class="tdet" id="td-${esc(t.id)}">${sec('What you’ll learn', t.learn ? `<p>${esc(t.learn)}</p>` : '')}
     ${sec('You’ll be able to', t.outcome ? `<p>${esc(t.outcome)}</p>` : '')}
     ${sec('Why it helps you later', t.why ? `<p>${esc(t.why)}</p>` : '')}
     ${sec('Links', links.length ? `<ul class="links">${links.map(l => `<li><a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.label)}</a></li>`).join('')}</ul>` : '')}
-    ${sec('Steps', steps.length ? `<ol class="steps">${steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : '')}
-    ${sec('Learn it with Claude', t.prompt ? `<p class="small muted">Copy this, open a new chat with Claude and paste it in.</p><div class="slip" id="prompt-slip" style="margin-top:var(--s2)">${esc(t.prompt)}</div><div class="actions"><button class="btn" data-act="copyprompt" data-id="${esc(t.id)}">Copy prompt</button></div>` : '')}`);
+    ${sec('Steps', steps.length ? `<ol class="steps">${steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : '')}
+    ${sec('Learn it with Claude', t.prompt ? `<p class="small muted">Copy this, open a new chat with Claude and paste it in.</p><div class="slip" id="prompt-${esc(t.id)}" style="margin-top:var(--s2)">${esc(t.prompt)}</div><div class="actions"><button class="btn" data-act="copyprompt" data-id="${esc(t.id)}">Copy prompt</button></div>` : '')}</div>`;
 }
 function monthSheet(id) {
   const m = {id, ...S.months[id]};
@@ -873,11 +876,19 @@ async function act(el) {
     if (await write(`logs/${id}`, {}, `Removed ${what}`, 'delete')) toast(`Removed ${what}`, () => write(`logs/${id}`, old, `Restored ${what}`, 'set'));
     return;
   }
-  if (a === 'task') return taskSheet(id);
+  if (a === 'task') {
+    const t = S.tasks[id]; if (!t) return;
+    const open = !openTasks.has(id); open ? openTasks.add(id) : openTasks.delete(id);
+    el.setAttribute('aria-expanded', open);
+    const li = el.closest('li'), cur = li.querySelector(':scope > .tdet');
+    if (cur) cur.remove();
+    if (open) li.insertAdjacentHTML('beforeend', taskDetails(t));
+    return;
+  }
   if (a === 'copyprompt') {
     const t = S.tasks[id]; if (!t?.prompt) return;
     try { await navigator.clipboard.writeText(t.prompt); toast('Copied. Paste it into a new Claude chat'); }
-    catch { const s = $('#prompt-slip'); const rg = document.createRange(); rg.selectNodeContents(s); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rg); toast('Couldn’t copy. The text is selected: copy it by hand.'); }
+    catch { const s = document.getElementById(`prompt-${id}`); const rg = document.createRange(); rg.selectNodeContents(s); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(rg); toast('Couldn’t copy. The text is selected: copy it by hand.'); }
     return;
   }
   if (a === 'loghours') return hoursSheet();
