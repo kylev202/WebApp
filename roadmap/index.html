@@ -63,18 +63,21 @@ main{max-width:var(--col);margin:0 auto;padding:max(var(--s4),env(safe-area-inse
 
 /* Week header */
 .wk{display:grid;gap:var(--s1);padding-top:var(--s2)}
-.wk-num{font-size:var(--t-display);line-height:.95;letter-spacing:-.025em;font-weight:800}
-.wk-goal{font-size:var(--t-head);line-height:1.2;font-weight:600}
-.pace{display:inline-flex;align-items:center;gap:var(--s2);font-size:var(--t-small);font-weight:600;margin-top:var(--s2)}
-.pace i{width:10px;height:10px;border-radius:50%;background:var(--ink)}
-.pace.behind i{background:var(--danger)}
-.pace.ahead i,.pace.on i{background:var(--line)}
+.wk h1{display:grid;gap:var(--s1);text-wrap:balance}
+.wk-num{display:block;font-size:var(--t-display);line-height:.95;letter-spacing:-.025em;font-weight:800}
+.wk-goal{display:block;font-size:var(--t-head);line-height:1.2;font-weight:600;letter-spacing:0}
+.pace{font-size:var(--t-small);font-weight:600;margin-top:var(--s2)}
 
 /* Rail list: tasks are stops on the week's stretch of line */
-.rail{--line:var(--line-break);list-style:none;margin:var(--s4) 0 0;padding:0;position:relative}
-.rail.sem{--line:var(--line-sem)}
-.rail.quiet{--line:var(--border-strong)}
-.rail::before{content:"";position:absolute;left:13px;top:6px;bottom:6px;width:4px;border-radius:2px;background:var(--line)}
+.rail{list-style:none;margin:var(--s4) 0 0;padding:0}
+.rail>li{--line:var(--line-break);position:relative}
+.rail>li.sem{--line:var(--line-sem)}
+.rail.quiet>li{--line:var(--border-strong)}
+/* the week's stretch of line: solid = break routine, cased (two rails) = semester routine, so the code survives grayscale */
+.rail>li::before{content:"";position:absolute;left:13px;top:0;bottom:0;width:4px;background:var(--line)}
+.rail>li.sem::before{background:linear-gradient(90deg,var(--line) 0 1.5px,transparent 1.5px 2.5px,var(--line) 2.5px 4px)}
+.rail>li:first-child::before{top:6px}.rail>li:last-child::before{bottom:6px}
+.rail.norail>li::before{display:none}
 .stop{display:grid;grid-template-columns:30px 1fr;gap:var(--s3);align-items:start;width:100%;min-height:var(--row-min);padding:var(--s3) 0;border:0;background:none;text-align:left;position:relative}
 .stop .dot{width:30px;height:30px;border-radius:50%;background:var(--bg);border:3px solid var(--line);display:grid;place-items:center;transition:background-color .16s var(--ease),transform .16s var(--ease)}
 .stop .dot svg{width:16px;height:16px;stroke:var(--on-line);stroke-width:3;fill:none;opacity:0;transform:scale(.6);transition:opacity .16s var(--ease),transform .16s var(--ease)}
@@ -82,7 +85,8 @@ main{max-width:var(--col);margin:0 auto;padding:max(var(--s4),env(safe-area-inse
 .stop[aria-checked=true] .dot svg{opacity:1;transform:none}
 .stop[aria-checked=true] .txt{color:var(--ink-muted)}
 .stop:active .dot{transform:scale(.92)}
-.stop .txt{padding-top:3px}
+.stop .txt{padding-top:3px;text-wrap:pretty}
+.item>span,dd,td,.slip{text-wrap:pretty}
 .stop .when{display:block;margin-top:2px}
 .stop.cp .dot{border-color:var(--ink);box-shadow:inset 0 0 0 3px var(--bg),inset 0 0 0 7px var(--ink)}
 .stop.cp[aria-checked=true] .dot{background:var(--ink);box-shadow:none}
@@ -118,6 +122,7 @@ label.f{display:grid;gap:var(--s1);margin-top:var(--s4);font-weight:600;font-siz
 label.f .hint{font-weight:400;color:var(--ink-muted);font-size:var(--t-meta)}
 input.in,textarea.in,select.in{width:100%;min-height:var(--hit);padding:var(--s2) var(--s3);border:1.5px solid var(--border-strong);border-radius:var(--r-ctl);background:var(--bg);font-size:var(--t-body);font-weight:400}
 textarea.in{min-height:112px;resize:vertical;line-height:1.42}
+.in::placeholder{color:var(--ink-muted);opacity:1}
 .err{color:var(--danger);font-weight:600;font-size:var(--t-meta)}
 .seg{display:grid;grid-template-columns:repeat(var(--k),minmax(0,1fr));gap:var(--s1);background:var(--surface-2);padding:var(--s1);border-radius:var(--r-ctl)}
 .seg button{min-height:var(--hit);border:0;border-radius:calc(var(--r-ctl) - var(--s1));background:transparent;font-weight:600;font-size:var(--t-small);line-height:1.15;padding:var(--s1)}
@@ -146,10 +151,11 @@ dl.spec dd{margin:2px 0 0}
 .legend{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);margin-top:var(--s3);font-size:var(--t-meta);color:var(--ink-muted)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .sw{width:18px;height:6px;border-radius:3px;display:inline-block}
-.sw.b{background:var(--line-break)}.sw.s{background:var(--line-sem)}
+.sw.b{background:var(--line-break)}.sw.s{background:linear-gradient(var(--line-sem) 0 2px,transparent 2px 4px,var(--line-sem) 4px 6px)}
+.sw.dash{background:repeating-linear-gradient(90deg,var(--border-strong) 0 5px,transparent 5px 9px);height:3px}
 .yd{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--ink)}
 .dm{width:10px;height:10px;background:var(--ink);transform:rotate(45deg)}
-.rg{width:12px;height:12px;border-radius:50%;border:2.5px solid var(--ink)}
+.rg{width:14px;height:14px;border-radius:50%;border:2.5px solid var(--ink);box-shadow:inset 0 0 0 2px var(--bg),inset 0 0 0 5px var(--ink)}
 
 /* Roadmap */
 .map{position:relative;margin-top:var(--s4)}
@@ -182,27 +188,34 @@ nav.tabs a[aria-current=page]::before{content:"";position:absolute;top:-1px;left
 .scrim.open{background:var(--scrim)}
 .sheet{width:100%;max-width:var(--col);max-height:88dvh;overflow:auto;background:var(--bg);border-radius:var(--r-sheet) var(--r-sheet) 0 0;padding:var(--s4) max(var(--gutter),env(safe-area-inset-right)) calc(var(--s6) + env(safe-area-inset-bottom)) max(var(--gutter),env(safe-area-inset-left));transform:translateY(24px);transition:transform .22s var(--ease)}
 .scrim.open .sheet{transform:none}
-.sheet-top{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s3);position:sticky;top:calc(-1 * var(--s4));background:var(--bg);padding:var(--s2) 0 var(--s3);z-index:1}
+.sheet-top{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);position:sticky;top:calc(-1 * var(--s4));background:var(--bg);padding:var(--s2) 0 var(--s3);z-index:1}
 .x{width:var(--hit);height:var(--hit);flex:none;border-radius:50%;border:1.5px solid var(--border-strong);background:var(--bg);display:grid;place-items:center}
 .x svg{width:18px;height:18px;stroke:var(--ink);stroke-width:2.5;fill:none}
 .toast{position:fixed;left:50%;bottom:calc(var(--tab-h) + var(--s4) + env(safe-area-inset-bottom));transform:translate(-50%,8px);z-index:50;max-width:calc(100% - 2 * var(--gutter));padding:var(--s3) var(--s4);border-radius:var(--r-ctl);background:var(--ink);color:var(--bg);font-weight:600;font-size:var(--t-small);opacity:0;pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease)}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.act{pointer-events:auto;display:flex;align-items:center;gap:var(--s4)}
+.toast button{min-height:var(--hit);border:0;background:none;color:var(--bg);font-weight:800;text-decoration:underline;text-underline-offset:3px;padding:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.mark-row{display:flex;justify-content:space-between;align-items:center;gap:var(--s4);min-height:var(--hit)}
+.mark-row .nowrap{display:flex;align-items:center;gap:var(--s4)}
+.src{margin:calc(-1 * var(--s1)) 0 var(--s3);padding-left:calc(30px + var(--s3))}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<main id="main" aria-live="polite">
+<main id="main">
   <div class="state" id="boot"><p class="head">Opening your roadmap…</p><div class="skel" style="width:40%"></div><div class="skel"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:70%"></div></div>
 </main>
 <nav class="tabs" aria-label="Screens"><div>
   <a href="#week" data-tab="week"><svg viewBox="0 0 24 24"><path d="M6 3v18"/><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M12 7h8M12 17h8"/></svg>Week</a>
   <a href="#roadmap" data-tab="roadmap"><svg viewBox="0 0 24 24"><path d="M3 19h5l8-14h5"/><circle cx="3.5" cy="19" r="1.5"/><circle cx="12" cy="12" r="3"/><circle cx="20.5" cy="5" r="1.5"/></svg>Roadmap</a>
-  <a href="#skills" data-tab="skills"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.5"/><circle cx="12" cy="12" r="2.5"/><circle cx="19" cy="12" r="2.5"/><path d="M5 5v2M12 4v3M19 3v4"/></svg>Skills</a>
+  <a href="#skills" data-tab="skills"><svg viewBox="0 0 24 24"><circle cx="7" cy="7" r="4"/><circle cx="17" cy="7" r="4"/><path d="M17 3a4 4 0 0 1 0 8z" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r="4"/><path d="M7 17V13A4 4 0 1 1 3 17z" fill="currentColor" stroke="none"/><circle cx="17" cy="17" r="4" fill="currentColor"/></svg>Skills</a>
   <a href="#projects" data-tab="projects"><svg viewBox="0 0 24 24"><path d="M6 3v18M6 13c0-4 4-5 8-5h4"/><circle cx="6" cy="21" r="0.5"/><circle cx="18" cy="8" r="2.5"/></svg>Projects</a>
-  <a href="#profile" data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Profile</a>
-  <a href="#reports" data-tab="reports"><svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M9 11h6M9 15h6"/></svg>Reports</a>
+  <a href="#profile" data-tab="profile"><svg viewBox="0 0 24 24"><path d="M12 22v-9"/><circle cx="12" cy="8" r="5"/><circle cx="12" cy="8" r="1.5" fill="currentColor"/><path d="M7 22h10"/></svg>Profile</a>
+  <a href="#reports" data-tab="reports"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="8.5" cy="9" r="1.3" fill="currentColor"/><path d="M11.5 9h5"/><circle cx="8.5" cy="15" r="1.3" fill="currentColor"/><path d="M11.5 15h5"/></svg>Reports</a>
 </div></nav>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<p class="sr" id="sr" aria-live="polite"></p>
 <script>
 {
 /* ---------- helpers ---------- */
@@ -233,7 +246,7 @@ const STATUS = [['not-started', 'Not started'], ['learning', 'Learning'], ['can-
 const statusName = k => (STATUS.find(s => s[0] === k) || STATUS[0])[1];
 const glyph = k => {
   const i = Math.max(0, STATUS.findIndex(s => s[0] === k));
-  const inner = ['', '<path class="f" d="M11 3a8 8 0 0 1 0 16z"/>', '<circle class="f" cx="11" cy="11" r="3.5"/>', '<circle class="f" cx="11" cy="11" r="8"/>'][i];
+  const inner = ['', '<path class="f" d="M11 3a8 8 0 0 1 0 16z"/>', '<path class="f" d="M11 11V3A8 8 0 1 1 3 11z"/>', '<circle class="f" cx="11" cy="11" r="8"/>'][i];
   return `<svg class="glyph" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="8"/>${inner}</svg>`;
 };
 
@@ -297,14 +310,15 @@ function overdue(pos) {
 const doneMeta = t => t.status === 'done' ? `<span class="when meta">Done ${t.doneAt ? esc(fDay(t.doneAt)) : ''}${t.by === 'claude' ? ' ∙ <span class="by">Claude</span>' : ''}</span>` : '';
 
 /* ---------- rendering ---------- */
+const segOf = t => routineOf(S.weeks[t.weekId] || S.months[t.monthId]) === 'sem' ? ' class="sem"' : '';
 function stopRow(t, extra = '') {
   const on = t.status === 'done';
-  return `<li><button class="stop" role="checkbox" aria-checked="${on}" data-act="tick" data-id="${esc(t.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span><span class="txt">${extra}${esc(t.text)}${doneMeta(t)}</span></button></li>`;
+  return `<li${segOf(t)}><button class="stop" role="checkbox" aria-checked="${on}" data-act="tick" data-id="${esc(t.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span><span class="txt">${extra}${esc(t.text)}${doneMeta(t)}</span></button></li>`;
 }
 function cpRow(m) {
   const c = S.checkpoints[m.id]; if (!c) return '';
-  const on = c.status === 'done';
-  return `<li><button class="stop cp" role="checkbox" aria-checked="${on}" data-act="cp" data-id="${esc(m.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span><span class="txt"><span class="strong">${esc(m.name)} checkpoint:</span> ${esc(c.text)}${on ? `<span class="when meta">Checked ${c.doneAt ? esc(fDay(c.doneAt)) : ''}${c.by === 'claude' ? ' ∙ <span class="by">Claude</span>' : ''}</span>` : ''}</span></button></li>`;
+  const on = c.status === 'done', lw = S.weeks[(m.weekIds || []).slice(-1)[0]];
+  return `<li${routineOf(lw || m) === 'sem' ? ' class="sem"' : ''}><button class="stop cp" role="checkbox" aria-checked="${on}" data-act="cp" data-id="${esc(m.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span><span class="txt"><span class="strong">${esc(m.name)} checkpoint:</span> ${esc(c.text)}${on ? `<span class="when meta">Checked ${c.doneAt ? esc(fDay(c.doneAt)) : ''}${c.by === 'claude' ? ' ∙ <span class="by">Claude</span>' : ''}</span>` : ''}</span></button></li>`;
 }
 
 function viewWeek() {
@@ -315,15 +329,15 @@ function viewWeek() {
     const w = pos.week; r = routineOf(w); range = [w.start, w.end]; target = w.hoursTarget ?? hoursPlan(w.routine);
     const m = S.months[w.monthId];
     if (m && (m.weekIds || []).slice(-1)[0] === w.id) lastOfMonth = {id: w.monthId, ...m};
-    head = `<div class="wk"><div class="wk-num">Week ${esc(w.number)}</div><h1 class="wk-goal">${esc(w.title)}</h1>
+    head = `<div class="wk"><h1><span class="wk-num">Week ${esc(w.number)}</span><span class="wk-goal">${esc(w.title)}</span></h1>
       <p class="meta">${esc(fRange(w.start, w.end))} ∙ ${esc(phaseName(w.phase))} ∙ ${esc(target)} h plan</p>
-      <p class="pace ${pc.cls}"><i></i>${esc(pc.label)}</p></div>`;
+      <p class="pace">${esc(pc.label)}</p></div>`;
     list = tasksOf('weekId', w.id); noteDoc = w; noteId = w.id;
   } else {
     const m = pos.month; r = routineOf(m); range = [pos.start, pos.end]; target = hoursPlan(m.routine);
-    head = `<div class="wk"><div class="wk-num">${esc(m.name.split(' ')[0])}</div><h1 class="wk-goal">${esc(m.theme)}</h1>
+    head = `<div class="wk"><h1><span class="wk-num">${esc(m.name.split(' ')[0])}</span><span class="wk-goal">${esc(m.theme)}</span></h1>
       <p class="meta">This week ${esc(fRange(pos.start, pos.end))} ∙ ${esc(phaseName(m.phase))} ∙ ${esc(target)} h plan</p>
-      ${m.block?.goal ? `<p class="small muted" style="margin-top:4px">Goal: ${esc(m.block.goal)}</p>` : ''}</div>`;
+      ${m.block?.goal ? `<p class="small muted" style="margin-top:var(--s1)">Goal: ${esc(m.block.goal)}</p>` : ''}</div>`;
     list = tasksOf('monthId', m.id).filter(t => !t.weekId);
   }
   const done = list.filter(t => t.status === 'done').length;
@@ -332,8 +346,8 @@ function viewWeek() {
   const wkLogs = logs('hours').filter(l => l.date >= range[0] && l.date <= range[1]).sort((a, b) => a.date < b.date ? -1 : 1);
   return `${head}
   <section aria-label="Tasks"><p class="meta" style="margin-top:var(--s5)">${done} of ${plural(list.length, 'task')} done${pos.upcoming ? ' ∙ you can tick early' : ''}</p>
-  <ul class="rail ${r === 'sem' ? 'sem' : ''}">${list.map(t => stopRow(t)).join('')}${lastOfMonth ? cpRow(lastOfMonth) : ''}</ul>
-  ${od.length ? `<details class="later"><summary><span class="danger">Still open from earlier weeks (${od.length})</span></summary><ul class="rail quiet">${od.map(t => stopRow(t, `<span class="wtag">Week ${esc(S.weeks[t.weekId].number)}</span><br>`)).join('')}</ul></details>` : ''}
+  <ul class="rail">${list.map(t => stopRow(t)).join('')}${lastOfMonth ? cpRow(lastOfMonth) : ''}</ul>
+  ${od.length ? `<details class="later"><summary class="small"><span class="muted">Still open from earlier weeks</span>&nbsp;<span class="danger">(${od.length})</span></summary><ul class="rail quiet">${od.map(t => stopRow(t, `<span class="wtag">Week ${esc(S.weeks[t.weekId].number)}</span><br>`)).join('')}</ul></details>` : ''}
   </section>
   <section class="sec" aria-labelledby="hours-h"><div class="row-between"><h2 id="hours-h" class="head">Hours this week</h2><span class="fig nowrap">${esc(n2(hrs))} <span class="small muted">of ${esc(target)} h</span></span></div>
   <div class="meter ${r === 'sem' ? 'sem' : ''}" style="--n:${Math.max(1, target)}" role="img" aria-label="${esc(n2(hrs))} of ${esc(target)} hours"><b style="width:${Math.min(100, hrs / target * 100)}%"></b><i></i></div>
@@ -349,31 +363,34 @@ function viewRoadmap() {
   const pc = pace(pos);
   const nextCp = months().find(m => S.checkpoints[m.id] && S.checkpoints[m.id].status !== 'done');
   return `<h1 class="title">Dec 2026 to Dec 2027</h1>
-  <p class="pace ${pc.cls}" style="font-size:var(--t-body)"><i></i>${pos.kind === 'week' ? `Week ${esc(pos.K)} of ${weeks().length} ∙ ` : ''}${esc(pc.label)}</p>
+  <p class="pace" style="font-size:var(--t-body)">${pos.kind === 'week' ? `Week ${esc(pos.K)} of ${weeks().length} ∙ ` : ''}${esc(pc.label)}</p>
   ${nextCp ? `<p class="small muted">Next checkpoint: end of ${esc(nextCp.name)}</p>` : ''}
   <div class="legend" aria-label="Legend"><span><i class="sw b"></i>Break, ~${esc(hoursPlan('break'))} h a week</span><span><i class="sw s"></i>Semester, ~${esc(hoursPlan('semester'))} h</span><span><i class="yd"></i>Today</span><span><i class="dm"></i>Your progress</span><span><i class="rg"></i>Checkpoint</span></div>
   <div class="map" id="map"></div>`;
 }
 function drawMap() {
   const host = $('#map'); if (!host) return;
-  const W = host.clientWidth || 340, LX = 30, pos = position(), pc = pace(pos);
+  const W = host.clientWidth || 340, LX = 30, pos = position(), pc = pace(pos), maxc = Math.floor((W - LX - 24 - 44) / 7.2);
   const rows = []; let y = 8;
   for (const m of months()) {
     const g = {m, y0: y};
     rows.push({type: 'm', m, y, h: 58}); y += 58;
-    for (const id of m.weekIds || []) { const w = S.weeks[id]; if (w) { rows.push({type: 'w', w: {id, ...w}, m, y, h: 28}); y += 28; } }
+    for (const id of m.weekIds || []) { const w = S.weeks[id]; if (w) { const lbl = `W${w.number} ${w.title}`, two = lbl.length > maxc; rows.push({type: 'w', w: {id, ...w}, m, y, h: two ? 44 : 28, lbl, two}); y += two ? 44 : 28; } }
     if (S.checkpoints[m.id]) { rows.push({type: 'c', m, y, h: 46}); y += 46; }
     g.y1 = y; rows.push({type: 'g', ...g});
   }
   const H = y + 16, col = r => `var(--line-${r === 'semester' ? 'sem' : 'break'})`;
   let line = '', marks = '', text = '', hits = '', todayY = null, progY = null;
-  const short = W < 360;
+  const short = W < 300;
   for (const r of rows) {
     if (r.type === 'g') {
-      hits = `<g role="button" tabindex="0" data-act="month" data-id="${esc(r.m.id)}" aria-label="${esc(r.m.name)}: weeks and tasks"><rect class="hit" x="0" y="${r.y0}" width="${W}" height="${r.y1 - r.y0}" rx="8" fill="transparent"/></g>` + hits; continue;
+      const mt2 = r.m.weekIds?.length ? r.m.weekIds.flatMap(id => tasksOf('weekId', id)) : tasksOf('monthId', r.m.id), cpx = S.checkpoints[r.m.id];
+      const al = `${r.m.name}, ${mt2.filter(t => t.status === 'done').length} of ${mt2.length} tasks done${cpx ? `, checkpoint ${cpx.status === 'done' ? 'checked' : 'open'}` : ''}. Show weeks and tasks`;
+      hits += `<g role="button" tabindex="0" data-act="month" data-id="${esc(r.m.id)}" aria-label="${esc(al)}"><rect class="hit" x="0" y="${r.y0}" width="${W}" height="${r.y1 - r.y0}" rx="8" fill="transparent"/></g>`; continue;
     }
-    const routine = r.type === 'w' ? r.w.routine : r.m.routine;
+    const routine = r.type === 'w' ? r.w.routine : r.type === 'c' ? (S.weeks[(r.m.weekIds || []).slice(-1)[0]]?.routine ?? r.m.routine) : r.m.routine;
     line += `<line x1="${LX}" y1="${r.y}" x2="${LX}" y2="${r.y + r.h}" stroke="${col(routine)}" stroke-width="6"/>`;
+    if (routine === 'semester') line += `<line x1="${LX}" y1="${r.y}" x2="${LX}" y2="${r.y + r.h}" stroke="var(--bg)" stroke-width="2"/>`;
     if (r.type === 'm') {
       const mt = r.m.weekIds?.length ? r.m.weekIds.flatMap(id => tasksOf('weekId', id)) : tasksOf('monthId', r.m.id);
       const dn = mt.filter(t => t.status === 'done').length;
@@ -384,11 +401,11 @@ function drawMap() {
       if (pos.kind === 'month' && pos.month.id === r.m.id) todayY = cy;
     } else if (r.type === 'w') {
       const wt = tasksOf('weekId', r.w.id), dn = wt.filter(t => t.status === 'done').length, cy = r.y + 14, all = dn === wt.length && wt.length;
-      marks += `<circle cx="${LX}" cy="${cy}" r="${all ? 5 : 3.5}" fill="${all ? 'var(--ink)' : 'var(--bg)'}"/>`;
-      const cur = pos.kind === 'week' && pos.week.id === r.w.id;
-      const lbl = `W${r.w.number} ${r.w.title}`;
-      const maxc = Math.floor((W - LX - 24 - 44) / 7.2);
-      text += `<text x="${LX + 24}" y="${cy + 4.5}" font-size="13" ${cur ? 'font-weight="800"' : 'class="mut"'}>${esc(lbl.length > maxc ? lbl.slice(0, maxc - 1) + '…' : lbl)}</text><text x="${W}" y="${cy + 4.5}" font-size="13" text-anchor="end" ${cur ? 'font-weight="800"' : 'class="mut"'}>${dn}/${wt.length}</text>`;
+      marks += all ? `<circle cx="${LX}" cy="${cy}" r="5.5" fill="${col(r.w.routine)}" stroke="var(--bg)" stroke-width="2"/>` : `<circle cx="${LX}" cy="${cy}" r="3.5" fill="var(--ink-muted)"/>`;
+      const cur = pos.kind === 'week' && pos.week.id === r.w.id, wa = cur ? 'font-weight="800"' : 'class="mut"';
+      let l1 = r.lbl, l2 = '';
+      if (r.two) { const cut = r.lbl.lastIndexOf(' ', maxc); l1 = r.lbl.slice(0, cut > 0 ? cut : maxc); l2 = r.lbl.slice(l1.length).trim(); }
+      text += `<text x="${LX + 24}" y="${cy + 4.5}" font-size="13" ${wa}>${esc(l1)}${l2 ? `<tspan x="${LX + 24}" dy="16">${esc(l2)}</tspan>` : ''}</text><text x="${W}" y="${cy + 4.5}" font-size="13" text-anchor="end" ${wa}>${dn}/${wt.length}</text>`;
       if (cur) todayY = cy;
       if (r.w.number === pc.next && !pos.upcoming) progY = cy;
     } else {
@@ -402,7 +419,7 @@ function drawMap() {
   if (progY != null && todayY != null && Math.abs(progY - todayY) > 1) over += `<line x1="12" y1="${progY}" x2="12" y2="${todayY}" stroke="var(--ink)" stroke-width="2" stroke-dasharray="3 3"/>`;
   if (progY != null) over += `<rect x="6" y="${progY - 6}" width="12" height="12" fill="var(--ink)" transform="rotate(45 12 ${progY})"><title>Your progress</title></rect>`;
   if (todayY != null) over += `<circle id="today-dot" cx="${LX}" cy="${todayY}" r="9" fill="var(--accent)" stroke="var(--ink)" stroke-width="3"><title>Today</title></circle>`;
-  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Roadmap line from December 2026 to December 2027">${line}${marks}${over}${text}${hits}</svg>`;
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="group" aria-label="Roadmap line, December 2026 to December 2027"><g aria-hidden="true">${line}${marks}${over}${text}</g>${hits}</svg>`;
   host.dataset.todayY = todayY ?? '';
 }
 
@@ -414,7 +431,7 @@ function viewSkills() {
   return `<h1 class="title">Skills</h1><p class="small muted" style="margin-top:var(--s2)">${cnt('proven')} of ${sk.length} proven ∙ ${cnt('can-explain')} can explain ∙ ${cnt('learning')} learning</p>
   ${groups.map(([g, name]) => { const gs = sk.filter(s => s.group === g); const pr = gs.filter(s => s.status === 'proven').length;
     return `<section class="sec"><div class="row-between" style="margin-bottom:var(--s2)"><h2 class="head">${esc(name)}</h2><span class="meta nowrap">${pr} of ${gs.length} proven</span></div>
-    <ul class="list">${gs.map(s => `<li><button class="item" data-act="skill" data-id="${esc(s.id)}">${glyph(s.status)}<span>${esc(s.name)}${s.evidence?.url || s.evidence?.note ? '<span class="meta"> ∙ evidence</span>' : ''}</span><span class="end small"><span class="strong">${esc(statusName(s.status))}</span>${s.statusDate ? `<br><span class="meta">${esc(fDay(s.statusDate))}${s.by === 'claude' ? ' ∙ Claude' : ''}</span>` : ''}</span></button></li>`).join('')}</ul></section>`; }).join('')}`;
+    <ul class="list">${gs.map(s => `<li><button class="item" data-act="skill" data-id="${esc(s.id)}">${glyph(s.status)}<span>${esc(s.name)}${s.evidence?.url || s.evidence?.note ? '<span class="meta"> ∙ evidence</span>' : ''}</span><span class="end small"><span class="${(s.status || 'not-started') === 'not-started' ? 'muted' : 'strong'}">${esc(statusName(s.status))}</span>${s.statusDate ? `<br><span class="meta">${esc(fDay(s.statusDate))}${s.by === 'claude' ? ' ∙ Claude' : ''}</span>` : ''}</span></button></li>`).join('')}</ul></section>`; }).join('')}`;
 }
 
 function viewProjects() {
@@ -428,17 +445,17 @@ function viewProjects() {
   const gd = grs.filter(g => g.checks?.[p.id]?.done).length;
   return `<h1 class="title">Projects</h1>
   <div class="seg" style="--k:${ps.length};margin-top:var(--s4)" role="group" aria-label="Project">${ps.map(x => `<button data-act="proj" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${esc(x.title)}</button>`).join('')}</div>
-  <h2 class="head" style="margin-top:var(--s5)">${esc(cap(p.name))}</h2><p class="meta" style="margin-top:4px">From ${esc(p.from)}</p>
+  <h2 class="head" style="margin-top:var(--s5)">${esc(cap(p.name))}</h2><p class="meta" style="margin-top:var(--s1)">From ${esc(p.from)}</p>
   <dl class="spec">${(p.fields || []).map(f => `<div><dt>${esc(f.label)}</dt><dd>${esc(f.text)}</dd></div>`).join('')}</dl>
   <section class="sec"><div class="row-between"><h2 class="head">Stages</h2><span class="meta nowrap">${sd} of ${stages.length} done</span></div>
-  <ul class="rail ${p.id === 'p1' ? '' : 'sem'}">${stages.map(t => stopRow(t, `<span class="wtag">Week ${esc(S.weeks[t.weekId]?.number ?? '')}</span><br>`)).join('')}</ul></section>
+  <ul class="rail">${stages.map(t => stopRow(t, `<span class="wtag">Week ${esc(S.weeks[t.weekId]?.number ?? '')}</span><br>`)).join('')}</ul></section>
   <section class="sec"><h2 class="head">Targets</h2>
   <table><thead><tr><th>Metric</th><th>Target in the plan</th><th class="num">Latest</th></tr></thead><tbody>
   ${(p.metrics || []).map(m => { const l = latest(m.key); return `<tr><td class="strong">${esc(m.label)}</td><td>${m.target ? esc(m.target) : '<span class="muted">No target in the plan</span>'}</td><td class="num">${l ? `${esc(n2(l.value))}${esc(m.unit)}<br><span class="meta">${esc(fDay(l.date))}${l.by === 'claude' ? ' ∙ Claude' : ''}</span>` : '<span class="muted">None yet</span>'}</td></tr>`; }).join('')}
   </tbody></table><div class="actions"><button class="btn sec2" data-act="metric" ${S.canWrite ? '' : 'disabled'}>Record a result</button></div></section>
   <section class="sec"><div class="row-between"><h2 class="head">Legal guardrails</h2><span class="meta nowrap">${gd} of ${grs.length} met</span></div>
-  <ul class="rail quiet">${grs.map(g => { const c = g.checks?.[p.id] || {}; return `<li><button class="stop" role="checkbox" aria-checked="${!!c.done}" data-act="guard" data-id="${esc(g.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span><span class="txt"><span class="strong">${esc(g.label)}:</span> ${esc(g.text)}${c.done ? `<span class="when meta">Met ${c.at ? esc(fDay(c.at.slice(0, 10))) : ''}${c.by === 'claude' ? ' ∙ <span class="by">Claude</span>' : ''}</span>` : ''}</span></button>
-  ${(g.sources || []).filter(s => safeUrl(s.url)).length ? `<p class="meta" style="margin:-4px 0 var(--s3) 42px">Sources: ${(g.sources || []).filter(s => safeUrl(s.url)).map(s => `<a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener">${esc(s.text)}</a>`).join(', ')}</p>` : ''}</li>`; }).join('')}</ul></section>`;
+  <ul class="rail quiet norail">${grs.map(g => { const c = g.checks?.[p.id] || {}; return `<li><button class="stop" role="checkbox" aria-checked="${!!c.done}" data-act="guard" data-id="${esc(g.id)}" ${S.canWrite ? '' : 'disabled'}><span class="dot">${CHECK}</span><span class="txt"><span class="strong">${esc(g.label)}:</span> ${esc(g.text)}${c.done ? `<span class="when meta">Met ${c.at ? esc(fDay(c.at.slice(0, 10))) : ''}${c.by === 'claude' ? ' ∙ <span class="by">Claude</span>' : ''}</span>` : ''}</span></button>
+  ${(g.sources || []).filter(s => safeUrl(s.url)).length ? `<p class="meta src">Sources: ${(g.sources || []).filter(s => safeUrl(s.url)).map(s => `<a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener">${esc(s.text)}</a>`).join(', ')}</p>` : ''}</li>`; }).join('')}</ul></section>`;
 }
 
 function viewProfile() {
@@ -461,11 +478,11 @@ function viewProfile() {
    <div><div class="row-between"><span class="strong">DSA problems</span><span class="fig">${esc(dsa)}</span></div>
      <p class="meta">${nt ? `Target ${nt.approx ? 'about ' : ''}${esc(nt.target)} by the end of ${esc(nt.name.split(' ')[0])} (${esc(fDay(nt.end))})` : 'All monthly targets have passed.'}</p>
      <div class="chart" id="dsa-chart" role="img" aria-label="DSA problems logged against the monthly targets"></div>
-     <div class="legend"><span><i class="sw" style="background:var(--ink)"></i>Logged</span><span><i class="sw" style="background:var(--border-strong)"></i>Plan target</span></div></div>
+     <div class="legend"><span><i class="sw" style="background:var(--ink)"></i>Logged</span><span><i class="sw dash"></i>Plan target</span></div></div>
    <div><div class="row-between"><span class="strong">Study streak</span><span class="fig">${st}</span></div><p class="meta">Study days in a row (Mon, Tue, Thu, Sat) with hours logged. Wed, Fri and Sun are work days and don\u2019t break it.</p></div>
    <div><div class="row-between"><span class="strong">Uni average</span><span class="fig">${avg == null ? '<span class="small muted">No marks</span>' : `${esc(n2(avg))}%`}</span></div>
      <p class="meta">Target ${esc(target)}% or higher${avg != null ? (avg >= target ? ' ∙ above target' : ` ∙ ${esc(n2(target - avg))} points under`) : ''}</p>
-     ${marks.length ? `<ul class="list small" style="margin-top:var(--s2)">${marks.map(m => `<li class="row-between" style="min-height:var(--hit);align-items:center"><span>${esc(m.unit)} ∙ ${esc(m.assessment)}</span><span class="nowrap"><span class="strong">${esc(n2(m.mark))}%</span>${S.canWrite ? ` <button class="linkbtn small" data-act="rmlog" data-id="${esc(m.id)}" aria-label="Remove mark ${esc(m.unit)} ${esc(m.assessment)}">Remove</button>` : ''}</span></li>`).join('')}</ul>` : `<p class="small muted" style="margin-top:var(--s2)">No marks yet. Add one when results come out.</p>`}
+     ${marks.length ? `<ul class="list small" style="margin-top:var(--s2)">${marks.map(m => `<li class="mark-row"><span>${esc(m.unit)} ∙ ${esc(m.assessment)}</span><span class="nowrap"><span class="strong">${esc(n2(m.mark))}%</span>${S.canWrite ? `<button class="linkbtn small" data-act="rmlog" data-id="${esc(m.id)}" aria-label="Remove mark ${esc(m.unit)} ${esc(m.assessment)}">Remove</button>` : ''}</span></li>`).join('')}</ul>` : `<p class="small muted" style="margin-top:var(--s2)">No marks yet. Add one when results come out.</p>`}
      <div class="actions"><button class="btn sec2" data-act="mark" ${S.canWrite ? '' : 'disabled'}>Add a mark</button></div></div>
   </div>
   <section class="sec"><h2 class="head">Recent changes</h2>
@@ -553,7 +570,14 @@ function buildReport(kind) {
 
 /* ---------- writes: every write records by + updatedAt and adds an activity entry ---------- */
 const queues = {};
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2600); }
+function toast(msg, undo) {
+  const t = $('#toast'); t.textContent = '';
+  const m = document.createElement('span'); m.textContent = msg; t.append(m);
+  t.classList.toggle('act', !!undo);
+  if (undo) { const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Undo'; b.addEventListener('click', () => { t.classList.remove('show', 'act'); undo(); }); t.append(b); }
+  t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show', 'act'), undo ? 6000 : 2600);
+}
+const announce = msg => { const r = $('#sr'); r.textContent = ''; setTimeout(() => { r.textContent = msg; }, 50); };
 async function attempt(fn) {
   try { await fn(); return true; } catch (e) {
     if (e?.code === 'unavailable') { await new Promise(r => setTimeout(r, 400 + Math.random() * 600)); try { await fn(); return true; } catch (e2) { e = e2; } }
@@ -570,23 +594,23 @@ function write(path, data, summary, mode = 'update') {
     const ref = S.db.doc(path);
     if (mode === 'set') await ref.set(body); else if (mode === 'delete') await ref.delete(); else await ref.update(body);
     await S.db.collection('activity').add({at, by: 'kyle', action: mode, path, summary});
+    announce(summary);
   });
   return (queues[path] = (queues[path] || Promise.resolve()).then(run, run));
 }
-const short = s => (s = String(s || '')).length > 70 ? s.slice(0, 69) + '…' : s;
 
 /* ---------- sheets ---------- */
 let lastFocus = null;
-function openSheet(title, body, onReady) {
+function openSheet(title, body, onReady, focus) {
   closeSheet(true);
   lastFocus = document.activeElement;
   const el = document.createElement('div');
   el.className = 'scrim'; el.id = 'scrim';
-  el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-h"><div class="sheet-top"><h2 class="head" id="sheet-h">${title}</h2><button class="x" data-act="close" aria-label="Close">${XICON}</button></div><div id="sheet-body">${body}</div></div>`;
+  el.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-h"><div class="sheet-top"><h2 class="head" id="sheet-h" tabindex="-1">${title}</h2><button class="x" data-act="close" aria-label="Close">${XICON}</button></div><div id="sheet-body">${body}</div></div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('open'));
   el.addEventListener('click', e => { if (e.target === el) closeSheet(); });
-  (el.querySelector('input,textarea,select,.sheet button:not(.x)') || el.querySelector('.x')).focus({preventScroll: true});
+  ((focus && el.querySelector(focus)) || el.querySelector('#sheet-h')).focus({preventScroll: true});
   onReady && onReady(el);
 }
 function closeSheet(now) { const el = $('#scrim'); if (!el) return; el.remove(); sheetRender = null; if (!now && lastFocus?.focus) lastFocus.focus({preventScroll: true}); }
@@ -594,9 +618,9 @@ let sheetRender = null;
 function monthSheet(id) {
   const m = {id, ...S.months[id]};
   const body = () => {
-    const blocks = (m.weekIds || []).map(wid => { const w = S.weeks[wid]; return `<section class="sec" style="margin-top:var(--s5)"><p class="strong">Week ${esc(w.number)}: ${esc(w.title)}</p><p class="meta">${esc(fRange(w.start, w.end))} ∙ ${esc(w.hoursTarget)} h plan</p><ul class="rail ${routineOf(w) === 'sem' ? 'sem' : ''}" style="margin-top:var(--s2)">${tasksOf('weekId', wid).map(t => stopRow(t)).join('')}</ul></section>`; }).join('');
-    const loose = !(m.weekIds || []).length ? `<ul class="rail ${routineOf(m) === 'sem' ? 'sem' : ''}">${tasksOf('monthId', id).map(t => stopRow(t)).join('')}</ul>` : '';
-    const cp = S.checkpoints[id] ? `<section class="sec" style="margin-top:var(--s5)"><ul class="rail quiet">${cpRow(m)}</ul></section>` : '';
+    const blocks = (m.weekIds || []).map(wid => { const w = S.weeks[wid]; return `<section class="sec" style="margin-top:var(--s5)"><p class="strong">Week ${esc(w.number)}: ${esc(w.title)}</p><p class="meta">${esc(fRange(w.start, w.end))} ∙ ${esc(w.hoursTarget)} h plan</p><ul class="rail" style="margin-top:var(--s2)">${tasksOf('weekId', wid).map(t => stopRow(t)).join('')}</ul></section>`; }).join('');
+    const loose = !(m.weekIds || []).length ? `<ul class="rail">${tasksOf('monthId', id).map(t => stopRow(t)).join('')}</ul>` : '';
+    const cp = S.checkpoints[id] ? `<section class="sec" style="margin-top:var(--s5)"><ul class="rail">${cpRow(m)}</ul></section>` : '';
     return `${m.block ? `<p class="small muted">${esc(m.block.heading)}</p><p style="margin-top:var(--s2)"><span class="strong">Goal:</span> ${esc(m.block.goal)}</p>` : `<p><span class="strong">Month goal:</span> ${esc(m.goal || '')}</p>`}${blocks}${loose}${cp}${m.ifNoOffer ? `<p class="note-bar"><span class="strong">If you don’t get an offer:</span> ${esc(m.ifNoOffer)}</p>` : ''}`;
   };
   openSheet(esc(m.heading), body());
@@ -624,7 +648,7 @@ function hoursSheet() {
       btn.removeAttribute('aria-busy');
       if (done) { closeSheet(); toast(`Logged ${n2(hrs)} h`); }
     });
-  });
+  }, '#h-hours');
 }
 function markSheet() {
   openSheet('Add a mark', `<form novalidate>
@@ -643,7 +667,7 @@ function markSheet() {
       const ref = S.db.collection('logs').doc();
       if (await write(`logs/${ref.id}`, {kind: 'mark', date: today(), unit: unit.slice(0, 60), assessment: ass.slice(0, 80), mark}, `Added a mark: ${unit} ${ass} ${n2(mark)}%`, 'set')) { closeSheet(); toast('Mark saved'); }
     });
-  });
+  }, '#m-unit');
 }
 function metricSheet() {
   const p = S.projects[project]; if (!p) return;
@@ -661,7 +685,7 @@ function metricSheet() {
       const ref = S.db.collection('metrics').doc();
       if (await write(`metrics/${ref.id}`, {project, metric, value, date}, `${p.title}: ${def?.label || metric} ${n2(value)}${def?.unit || ''}`, 'set')) { closeSheet(); toast('Result saved'); }
     });
-  });
+  }, '#r-val');
 }
 function skillSheet(id) {
   const s = S.skills[id]; if (!s) return;
@@ -727,7 +751,7 @@ async function act(el) {
     const t = S.tasks[id]; if (!t) return;
     const on = t.status !== 'done';
     el.setAttribute('aria-checked', on);
-    return write(`tasks/${id}`, {status: on ? 'done' : 'todo', doneAt: on ? today() : null}, `${on ? 'Ticked' : 'Unticked'}: ${short(t.text)}`);
+    return write(`tasks/${id}`, {status: on ? 'done' : 'todo', doneAt: on ? today() : null}, `${on ? 'Ticked' : 'Unticked'}: ${t.text}`);
   }
   if (a === 'cp') {
     const c = S.checkpoints[id]; if (!c) return; const on = c.status !== 'done';
@@ -739,7 +763,13 @@ async function act(el) {
     el.setAttribute('aria-checked', on);
     return write(`guardrails/${id}`, {checks: {[project]: {done: on, at: on ? new Date().toISOString() : null, by: 'kyle'}}}, `${S.projects[project]?.title}: guardrail "${g.label}" ${on ? 'met' : 'reopened'}`);
   }
-  if (a === 'rmlog') { const l = S.logs[id]; if (!l) return; return write(`logs/${id}`, {}, l.kind === 'mark' ? `Removed a mark: ${l.unit} ${l.assessment}` : `Removed ${n2(l.hours)} h on ${fDay(l.date)}`, 'delete'); }
+  if (a === 'rmlog') {
+    const l = S.logs[id]; if (!l) return;
+    const {by, updatedAt, ...old} = l;
+    const what = l.kind === 'mark' ? `a mark: ${l.unit} ${l.assessment}` : `${n2(l.hours)} h on ${fDay(l.date)}`;
+    if (await write(`logs/${id}`, {}, `Removed ${what}`, 'delete')) toast(`Removed ${what}`, () => write(`logs/${id}`, old, `Restored ${what}`, 'set'));
+    return;
+  }
   if (a === 'loghours') return hoursSheet();
   if (a === 'mark') return markSheet();
   if (a === 'metric') return metricSheet();
@@ -764,6 +794,12 @@ async function act(el) {
 document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && !el.disabled) { e.preventDefault(); act(el); } });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('#scrim')) return closeSheet();
+  if (e.key === 'Tab' && $('#scrim')) {
+    const f = [...$('.sheet').querySelectorAll('button:not([disabled]),input,select,textarea,a[href],[tabindex="0"]')];
+    if (f.length) { const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !$('.sheet').contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (document.activeElement === last || !$('.sheet').contains(document.activeElement))) { e.preventDefault(); first.focus(); } }
+  }
   const el = e.target.closest?.('g[data-act]'); if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); act(el); }
 });
 let noteTimer;

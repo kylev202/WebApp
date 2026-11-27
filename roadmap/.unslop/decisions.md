@@ -19,3 +19,9 @@
 - Colour: neutral panels, coded line colours (orange break, teal semester), one accent (signal yellow) with written usage rules; contrast.mjs passes every text pairing in both themes; the two fails are by-rule (accent never on light ground, decorative hairlines).
 - Layout: six screens, six different layout families, no cards, one radius rule (10 / 16, inner = outer minus padding), 44px+ targets, safe areas.
 - Copy refit to budgets; app copy has no dashes; doc wording keeps its own en dashes (doc wins, noted for the lint step).
+
+## Phase 6: critique 1 (31/48, fix), fix loop 1
+- F6 tab icons: kept a bespoke set on purpose. The direction's imagery is "the line diagram itself", and every icon now uses the same rail-and-stop vocabulary at one 2 px stroke in a 22 px box: Week = rail with stops, Roadmap = line with an interchange, Skills = the app's four status marks (empty, half, three-quarter, full), Projects = a branch line, Profile = the terminus (goal), Reports = a timetable board with stops. A stock family (Lucide, Tabler) would bring a second visual language next to the line.
+- Dark-mode focus ring is signal yellow: it reads as "you are here" for the keyboard, consistent with contract 2.
+- F1: semester is now a cased line (two rails) everywhere (roadmap, rails, legend), break stays solid, so the routine code survives grayscale and colour blindness.
+- F23 (terminus station for the 2028 goal, a labelled gap bracket) logged as an idea, not built: no feature additions this round.

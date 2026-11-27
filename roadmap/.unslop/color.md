@@ -7,7 +7,8 @@ Strategy: neutral panels with a **coded** pair of line colours and **one** accen
 - Ink: `--ink` 16.8:1 light, 16.0:1 dark. `--ink-muted` ≥ 6:1 on every surface in both themes.
 - **Line colours (data, not accents)**: `--line-break` orange (summer and mid-year break, ~14 h a week), `--line-sem` eucalyptus teal (semester, ~8 h). Used only for line segments, done-stop fills and legend swatches. Never text. Both ≥ 4:1 against the ground as graphics (3:1 needed).
 - **Accent**: `--accent` signal yellow. Only for: the primary button (yellow text on an ink button in light mode, ink text on a yellow button in dark mode) and the "you are here" dot (yellow with an ink ring). Never on the light ground alone (1.44:1) and never for text on light.
-- `--danger`: write errors and the overdue count only. 5.5:1 light, 6.3:1 dark.
+- `--danger`: write errors and the overdue count number only (the "Still open" label is muted). 5.5:1 light, 6.3:1 dark.
+- Placeholders use `--ink-muted` (7.2:1 light, 8.3:1 dark), never the UA grey.
 - `--border` hairlines are decorative separators (no contrast requirement). Inputs and the unticked stop ring use `--border-strong` (4.2:1 light, 4.0:1 dark).
 - Focus: 2px ring in `--focus` (ink by day, yellow by night) with 2px offset.
 
